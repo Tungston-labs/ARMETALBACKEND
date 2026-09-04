@@ -225,15 +225,43 @@ CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", cast=bool, default=False)
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", cast=bool, default=False)
 CSRF_COOKIE_HTTPONLY = config("CSRF_COOKIE_HTTPONLY", cast=bool, default=False)
 
+def parse_origins(raw_str):
+    origins = []
+    if not raw_str:
+        return origins
+    for item in raw_str.split(','):
+        item = item.strip()
+        if not item:
+            continue
+        if not item.startswith(('http://', 'https://')):
+            item = f'http://{item}'
+        origins.append(item)
+    return origins
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    cast=lambda v: [s.strip() for s in v.split(",")],
-    default=[]
+    cast=parse_origins,
+    default=[
+        "http://178.248.112.6:8080",
+        "http://178.248.112.6",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
 )
 
-CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", cast=bool, default=False)
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    cast=parse_origins,
+    default=[
+        "http://178.248.112.6:8080",
+        "http://178.248.112.6",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ]
+)
 
+CORS_ALLOW_ALL_ORIGINS = config("CORS_ALLOW_ALL_ORIGINS", cast=bool, default=False)
+CORS_ALLOW_CREDENTIALS = config("CORS_ALLOW_CREDENTIALS", cast=bool, default=True)
 
 EMAIL_BACKEND = config("EMAIL_BACKEND")
 EMAIL_HOST = config("EMAIL_HOST")
