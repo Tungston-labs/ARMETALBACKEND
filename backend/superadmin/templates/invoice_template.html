@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 30px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+
+    .invoice-box {
+      background: #fff;
+      padding: 30px;
+      border: 1px solid #ddd;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      color: #2c3e50;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    td {
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #555;
+      width: 30%;
+    }
+
+    .value {
+      color: #000;
+    }
+
+    .footer {
+      margin-top: 30px;
+      font-size: 14px;
+      text-align: center;
+      color: #888;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="invoice-box">
+    <h2>{{ company }} - Subscription Invoice</h2>
+
+    <table>
+      <tr>
+        <td class="label">Invoice Month:</td>
+        <td class="value">{{ entry.month_display }} {{ entry.year }}</td>
+      </tr>
+      <tr>
+        <td class="label">Amount:</td>
+        <td class="value">{{ entry.amount }} {{ entry.currency }}</td>
+      </tr>
+      <tr>
+        <td class="label">Status:</td>
+        <td class="value">{{ entry.status|title }}</td>
+      </tr>
+      <tr>
+        <td class="label">Paid Date:</td>
+        <td class="value">{{ entry.paid_date|default:"-" }}</td>
+      </tr>
+    </table>
+
+    <div class="footer">
+      This is a system-generated invoice. For any queries, contact support.
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,129 @@
+###
+POST https://api.rekory.com/api/token/
+Content-Type: application/json
+
+{
+  "username": "jesnajamal",     
+  "password": "password"  
+}
+
+
+
+
+
+
+# create employee
+
+
+###
+POST http://127.0.0.1:8000/api/employees/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2NzE3NjgzLCJpYXQiOjE3ODY2ODg4ODMsImp0aSI6IjA0MWQ1ZGUzNjU0ZTQyYzRiMTgzOTdhYTI5MjY3YmZiIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.M7Ng4AZHEzPayOK0k_bZRI_hEL5TK7_4KLwkfqmGoHQ
+Content-Type: multipart/form-data; boundary=---011000010111000001101001
+
+
+###
+
+# create employee
+
+
+###employee list according to department
+GET http://127.0.0.1:8000/api/employees/?attendance_status=absent
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2OTc2MDg0LCJpYXQiOjE3ODY5NDcyODQsImp0aSI6ImQ0ZmE4YzZiMTJjODRlN2I4ODJjODQ1M2FiM2ZkNTA2IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Ztx64TcbVNDsVPHWMShb0xUjd7l2YWZuCdqBWLW2Ips
+
+
+# retrieve all employee
+
+###
+GET http://127.0.0.1:8000/api/employees/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2NzE3NjgzLCJpYXQiOjE3ODY2ODg4ODMsImp0aSI6IjA0MWQ1ZGUzNjU0ZTQyYzRiMTgzOTdhYTI5MjY3YmZiIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.M7Ng4AZHEzPayOK0k_bZRI_hEL5TK7_4KLwkfqmGoHQ
+### employee list without pagination
+GET http://178.248.112.16:8001/api/employeelist/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1NzUzMjk3LCJpYXQiOjE3NTU3NDk2OTcsImp0aSI6IjRkNjUwMDVjZTU3YjQ4MmFiYzVhYzE5YWEzZjBjZDQyIiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.3TsQu6OMF_SNk3AAOjGzqGJZZex5vX5gzFlCYn3C3Mg
+# retrieve one employee with id
+###
+GET http://127.0.0.1:8000/api/employee/4/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODQxNTI0LCJpYXQiOjE3NDg4Mzc5MjQsImp0aSI6ImY4MDk3NTcwM2MxMjQ3NjE5MDVlYjkxMzg5ZmJhYzZhIiwidXNlcl9pZCI6M30.sE782ASoxMZwkoJ6OFuclpEgdF5GIGlMRZAe72TImoI
+
+# update employee
+
+
+# delete employee
+###
+DELETE  http://127.0.0.1:8000/api/employees/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwMTQ3ODMzLCJpYXQiOjE3NTAxNDQyMzMsImp0aSI6IjA3ZjgxOTVmZDVkZjRlOTY5ZDA5OTlmNzQyMTc5ZDlhIiwidXNlcl9pZCI6MywiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2V9.Ravw7OppgukLgys_FLCqbaYAtC4TFCn_ib19FxrmR20
+
+### Get employees visa expiry
+GET http://178.248.112.16:8001/api/employees/upcoming-expiry/?type=visa
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU0NjU1MTYyLCJpYXQiOjE3NTQ2NTE1NjIsImp0aSI6IjgwNWRmN2Y1NWMxMDRmOTA4YWY1NWRkNjMwNWVjODEyIiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.kHZf8YXjYwknqfFobCAczGG70C7V-xlctkta8URERIE
+Accept: application/json
+
+# retirieve single bank details 
+###
+GET http://127.0.0.1:8000/api/bank-payments/28/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNDg1NzQ0LCJpYXQiOjE3NTA0ODIxNDQsImp0aSI6ImVmZDk2Yjg0NTlhOTQwMWM4MTY5YzA3MDdlODU4Y2QwIiwidXNlcl9pZCI6MywiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2V9.ETHXCcVHI4KKcr3tCLwZvRGH_NzkW1JxjxjHl8AG7oo
+
+
+# search employee by name or ID
+
+###
+GET http://127.0.0.1:8000/api/employeelist/?search=HOMHR 3RM
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODQxNTI0LCJpYXQiOjE3NDg4Mzc5MjQsImp0aSI6ImY4MDk3NTcwM2MxMjQ3NjE5MDVlYjkxMzg5ZmJhYzZhIiwidXNlcl9pZCI6M30.sE782ASoxMZwkoJ6OFuclpEgdF5GIGlMRZAe72TImoI
+
+### Get Employee Dashboard Details
+GET http://178.248.112.16:8001/api/dashboard/employee/351/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0NjYxNjA1LCJpYXQiOjE3NjQ2NTgwMDUsImp0aSI6ImQ4NmY2ZGVmYmE4YzQ5MmViMjY0OGQ1ODhhMTE3MGYzIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.MdhNdt1RUiFRyY78vv2ebpyaIRI5343OfsSspa21tE0
+###
+GET http://178.248.112.16:8001/api/admin/dashboard-summary/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYyOTI5Njk1LCJpYXQiOjE3NjI5MjYwOTUsImp0aSI6IjBlYzdjZmNlYWM1ODQ2ZWU5MjMxOWFkYmY5MDdhODg0IiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.P8uyJHKzcXXFLiIVFK_Mjws3D5mvdL6dtXjp0k-Z4rs
+
+### Send Email
+POST http://178.248.112.16:8001/api/email/send/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY0NjczMzM0LCJpYXQiOjE3NjQ2Njk3MzQsImp0aSI6Ijc3OTdiYzNmNjYxMjRmOGM4ZTA1NWU1ZmJjOTdmNzQ5IiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.h6vq-PH1K9YyLBhkkZ2OqQmoZHRcYaRF7TTrpJ5STqw
+
+{
+  "to": "nisna.u5@gmail.com",
+  "subject": "Test Email",
+  "body": "Hello, this is a test email from the HR system."
+}
+
+### profle (mobile app)
+GET http://127.0.0.1:8000/api/profile/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyODQwNzQ5LCJpYXQiOjE3NTI4MzcxNDksImp0aSI6IjE2MjU0ZmEyYmY2YjQxM2Y4NjQ2OTBkNDBhNDZjMjBmIiwidXNlcl9pZCI6OTIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.c-EZW0OM4e4iyN3XV8QZI8cj0j4YWlA5TLTzTW37X6E
+
+# =========MOBILE APP===============
+# api for listing employees of same department
+###
+GET http://127.0.0.1:8000/api/employees/my-department/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUzODc0NjAyLCJpYXQiOjE3NTM4NzEwMDIsImp0aSI6ImIwZDgyODljNmIzZDRmMGE4Njk5MmIwZWZjZThhM2I2IiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.QHGVfWwW1urfQxTr8CHGpGN11jsn3WwzeafVplp2fAo
+
+### employee monthly summary for mobile app
+
+GET http://178.248.112.16:8001/api/employee-monthly-summary/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYwNDMwNDU5LCJpYXQiOjE3NjA0MjY4NTksImp0aSI6IjY3MTUxYzc4Mjc1NTQ1ZmY5NGMxNzUzNTU0MDg0NTY0IiwidXNlcl9pZCI6IjczIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjpmYWxzZSwiaXNfZW1wbG95ZWUiOnRydWUsImlzX2hyIjp0cnVlfQ.FrTF8zU2UbLjVQ3QUjjZXGdQ7BdFfMqZ6H-qmjDBxFY
+Content-Type: application/json
+# attendance detail view(hr admin)
+
+
+
+###
+GET http://127.0.0.1:8000/api/employees/deleted/?deleted_date=2026-08-10
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2NDUyNzYzLCJpYXQiOjE3ODY0MjM5NjMsImp0aSI6IjA3NTk0NzEwMWIwOTQ5NWRiZmFkMWMxOWNjMzI3ZGI1IiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.sLOlb7F1PqT3SJl3QiCKNEcZbqwTldkGrg7JEUl7Zsc
+Content-Type: application/json
+
+
+### Rehire Employee
+POST http://127.0.0.1:8000/api/employees/2/rehire/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MjAyOTQ1LCJpYXQiOjE3ODgxNzQxNDUsImp0aSI6IjE2YWI5N2Q3NzgxMjQ2YjZiNDk4OGE4N2RlMzQzMTIyIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.lJZBjxyTWJOE80ZeD_H8Vl8y5tXUptZ9EmcQzlNLGQs
+Content-Type: application/json
+
+{
+  
+}
+
+
+
+###
+GET http://127.0.0.1:8000/api/employees/designations/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4NDUzNTI5LCJpYXQiOjE3ODg0MjQ3MjksImp0aSI6IjJiZWU1YzQ0N2RmOTQ3NmI5ZWY0MTU3OTIyZmJjOWU0IiwidXNlcl9pZCI6NywiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjpmYWxzZSwiaXNfZW1wbG95ZWUiOnRydWUsImlzX2hyIjp0cnVlfQ.dMLBbmYZVsF51QF41Fvj4k3S5j9c0xCOSQcz1By_HDE
+

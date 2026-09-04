@@ -1,0 +1,16 @@
+<h2>New Reimbursement Request</h2>
+
+<p><strong>Employee:</strong> {{ reimbursement.employee.name }}</p>
+<p><strong>Employee ID:</strong> {{ reimbursement.employee.employee_id }}</p>
+<p><strong>Department:</strong> {{ reimbursement.employee.department.name }}</p>
+
+<p><strong>Category:</strong> {{ reimbursement.get_expense_category_display }}</p>
+<p><strong>Amount:</strong> {{ reimbursement.amount }}</p>
+<p><strong>Date:</strong> {{ reimbursement.date }}</p>
+<p><strong>Status:</strong> {{ reimbursement.status }}</p>
+
+{% if reimbursement.note %}
+<p><strong>Note:</strong> {{ reimbursement.note }}</p>
+{% endif %}
+
+<p>Attached: expense images.</p>

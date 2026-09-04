@@ -1,0 +1,81 @@
+# -----------------------------API FOR LEAVE-----------------
+
+
+
+### List All Leaves (HR Admin)
+GET http://127.0.0.1:8000/api/leave/admin/?search='jesna'
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2OTY4NDE1LCJpYXQiOjE3ODY5Mzk2MTUsImp0aSI6IjVjYjkwMjQ0YmRmZjQwYjM5NDkzYTI2MmQ4NTU3M2NjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.TFOFSJCLSjSbdiQd1R7QJ_I-IkAE43a99c2h2JXrOP4
+
+
+
+#### Get Leave Detail by ID (HR Admin)
+GET http://178.248.112.16:8001/api/leave/admin/167/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxOTk0MjkxLCJpYXQiOjE3NjE5OTA2OTEsImp0aSI6IjU4YWM1ODk4M2YyZjQyZTliMDU5MmU4Zjc1YTFjZGRkIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.eCgZDQ_6EpQzjNWYipJTs06GrI4oo0vPFpurxVAzlJc
+
+
+
+### Update Leave (HR Admin) – e.g., Approve or Reject
+PATCH  http://127.0.0.1:8000/api/leave/admin/10/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxOTY0ODc4LCJpYXQiOjE3NTE5NjEyNzgsImp0aSI6IjdkY2ZlNTc2ZDM3NTQzNjdiZGJjNTZlNzUwMGZmZTY3IiwidXNlcl9pZCI6MzgsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.GhTWHkpdyhI98TQbp3o_z1pFzxdWjLTAyVepACDHgO0
+Content-Type: application/json
+
+{
+  "status": "rejected"
+  
+}
+
+
+### Delete Leave (HR Admin)
+DELETE http://127.0.0.1:8000/api/leave/admin/167/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODU0ODIzLCJpYXQiOjE3NDg4NTEyMjMsImp0aSI6Ijc3NTViNjMxMDc5NDQzNDE4ZTI3ZWY2YWI2YmYwODZkIiwidXNlcl9pZCI6M30.Me_MGEl8zfsWRUN84_wSRx-eDMswEtQAb6mj7wqW-P8
+
+
+### List All Leaves (HR Admin) according to status
+GET http://178.248.112.16:8001/api/leave/admin/?status=pending
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1MzQ0MTM5LCJpYXQiOjE3NTUzNDA1MzksImp0aSI6ImQyNWU2YTlhNzJmNjQyYzZhY2Y0ZjZkOTgwYjU1MTc2IiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.hiQfQo3Q3xyoDo1WZkmt8nlTriYbR7zXqbLWUGT4hzw
+
+### list employees on leave
+GET http://178.248.112.16:8001/api/departments/167/on-leave-employees/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxOTk0MjkxLCJpYXQiOjE3NjE5OTA2OTEsImp0aSI6IjU4YWM1ODk4M2YyZjQyZTliMDU5MmU4Zjc1YTFjZGRkIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.eCgZDQ_6EpQzjNWYipJTs06GrI4oo0vPFpurxVAzlJc
+### list employees on same department who 
+GET http://178.248.112.16:8001/api/department/167/on-leaves/?date=2025-08-21
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxOTk0MjkxLCJpYXQiOjE3NjE5OTA2OTEsImp0aSI6IjU4YWM1ODk4M2YyZjQyZTliMDU5MmU4Zjc1YTFjZGRkIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.eCgZDQ_6EpQzjNWYipJTs06GrI4oo0vPFpurxVAzlJc
+
+
+# api for applying leave.
+
+### Create Leave (Employee)
+POST http://127.0.0.1:8000/api/leave/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MjcyODY1LCJpYXQiOjE3ODgyNDQwNjUsImp0aSI6ImYxODQ3YTBkOGE4OTQzMDFhMDUxZDM0YTZmZTRmYWI3IiwidXNlcl9pZCI6MjksImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.QhYzuPkiYos87vjlsmFeAyl4kvTGmculWkPfFzmI6p0
+Content-Type: application/json
+
+{
+  "leave_type": "casual",
+  "reason": "hospital",
+  "from_date": "2026-09-11",
+  "to_date": "2026-09-20",
+  "from_date_type": "afternoon",
+  "to_date_type": "afternoon",
+  "to_email": "nisna@gmail.com",
+  "cc_email": "nisnatls@gmail.com.com"
+}
+
+
+
+### List My Leaves (Employee)
+GET http://127.0.0.1:8000/api/leave/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUzMDg1ODQ2LCJpYXQiOjE3NTMwODIyNDYsImp0aSI6IjQ4MTI1NWRlNzY4ZDRlOTg5ZGI5Mzg3YjM1ZWFkMzg2IiwidXNlcl9pZCI6OTIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.v9L2FtOqi1oMdTp_0DhrAFfhyljDIrXTBkLik3DHamk
+### Cancel My Pending Leave (Employee)
+DELETE http://127.0.0.1:8000/api/leave/9/cancel/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxOTYyNTUzLCJpYXQiOjE3NTE5NTg5NTMsImp0aSI6ImEzYWNmYWVkOGYzYTQwODc4ZWFjODU3YmYzZmViNzI0IiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.z4sM7nO-dGRqcOTmU2rw6QHEAm4pmuPg6iNs94_s78M
+
+###
+GET http://127.0.0.1:8000/api/leave/by-status/?status=rejected
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxNzExNDUzLCJpYXQiOjE3NTE3MDc4NTMsImp0aSI6Ijg1YzE0MGJlMTc5ZTQ0MGViMDY1N2UwOTYyNmI1ZjVhIiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.l9BlUkbDK831kZGsMuQatC2_Ryv9sIZq-YY_AJsf-tk
+
+
+###LEAVE COUNT SUMMARY
+
+GET http://127.0.0.1:8000/api/leave-counts/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2OTY4NDE1LCJpYXQiOjE3ODY5Mzk2MTUsImp0aSI6IjVjYjkwMjQ0YmRmZjQwYjM5NDkzYTI2MmQ4NTU3M2NjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.TFOFSJCLSjSbdiQd1R7QJ_I-IkAE43a99c2h2JXrOP4
+

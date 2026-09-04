@@ -1,0 +1,60 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+.Python
+echo "*.sqlite3" >> .gitignore
+# Django specific
+*.log
+*.pot
+*.pyc
+*.mo
+*.sqlite3
+*.db
+db.sqlite3
+.DS_Store
+# Environment variables & secrets
+.env
+.env.*
+
+# Media and static files (generated or uploaded)
+media/
+staticfiles/
+static_cdn/
+media_cdn/
+
+# IDE & editor settings
+.vscode/
+.idea/
+
+# macOS system files
+.DS_Store
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Test artifacts
+.pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Migrations (optional — if you want to ignore)
+# **/migrations/
+# !**/migrations/__init__.py
+
+# Build artifacts
+build/
+.env
+.env.*
+serviceAccountKey.json

@@ -1,0 +1,152 @@
+#api for creating companies
+###
+POST http://127.0.0.1:8000/api/create-company/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3NDA5MjE3MywiaWF0IjoxNzY4OTA4MTczLCJqdGkiOiI0MDc0NGU5ZWYwYmM0OGU3ODg0MjcxMzlkMmIzMDhmOCIsInVzZXJfaWQiOjcyLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiaXNfaHJfYWRtaW4iOnRydWUsImlzX2VtcGxveWVlIjpmYWxzZSwiaXNfaHIiOmZhbHNlfQ.R9YoIxZMQ5jNnAXAcncT3BmLpytfeGy62BwOV1Czccc
+
+{
+  "name": "tns",
+  "address": "xyz street, kochi",
+  "location": "kakanad",
+  "country":"IN",
+  "contact_number": "9996543210",
+  "email": "tns@hgh.com",
+  "modules": {
+  "holiday": true,
+  "payroll": true,
+  "employee": true,
+  "dashboard": true,
+  "daily_task": true,
+  "department": true
+}
+}
+
+
+
+# list companies
+
+### 
+GET http://127.0.0.1:8000/api/companies/list/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5ODAwMTg4LCJpYXQiOjE3NDk3OTY1ODgsImp0aSI6IjUwN2U3ZDY2YWM1OTQ1MGM4Zjc0N2U1ODIwMTkzMzcyIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.jRqwHu5Nf9LbyWS4wokIbEwQ2LBxhBMtsQ5BqKVXtJo
+
+# search comapny by name
+###
+GET http://127.0.0.1:8000/api/companies/list/?search=lumi
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5ODA0NzEwLCJpYXQiOjE3NDk4MDExMTAsImp0aSI6Ijg5MjM0NzczMWU3NDRmMzk5NzkwZmQwZjE0ZmI1ZjQwIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.aejv_GUBd-7esQC2AUjn_rNdnR7LA-Bs800v8ncgb00
+
+
+
+### Get details of a single company (replace 1 with actual ID)
+GET http://127.0.0.1:8000/api/companies/2/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNDAzMjM3LCJpYXQiOjE3NTAzOTk2MzcsImp0aSI6IjA1NjU3OWYyMjkxNjRhNGRhYzIzMWRlODIyMzZkMDE4IiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.-igFKB4tGpVq37ZC8N_m-HSpjnN6OuiEXLbTxUesZQI
+
+
+
+
+### Update a company (replace 1 with actual ID)
+PUT http://127.0.0.1:8000/api/companies/6/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxNjI4NTYyLCJpYXQiOjE3NTE2MjQ5NjIsImp0aSI6Ijk5NWQ0NjlmNWY0NDQ5NjVhNDBhZmM3MDI0MWMyZDgxIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.J7mnzgwazpV3_2ebP-qO6pUh_dlsexFSEbXLIQQoipE
+
+{
+  "name": "XZY",
+  "address": "xyz street, kochi",
+  "location": "kakanad",
+  "country":"IN",
+  "contact_number": "9876543210",
+  "email": "XYZ@hgh.com",
+  "modules": {
+  "holiday": true,
+  "payroll": true,
+  "employee": true,
+  "dashboard": true,
+  "daily_task": true,
+  "department": true
+}
+}
+
+
+
+### Delete a company with id
+DELETE http://127.0.0.1:8000/api/companies/4/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4NTExODIwLCJpYXQiOjE3NDg1MDgyMjAsImp0aSI6ImMyYmMxZmRhNTMyNDQ3YjU5MmZlNmE0MzUxYmVlZThiIiwidXNlcl9pZCI6Mn0.3FUWk6avJUq1AmfRGZrip8RG9Bj5shf5Fw_u-HERfLw
+
+
+# list subscription plan for comapany
+###
+GET https://api.rekory.com/api/subscriptions/107/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzNzA2MTE3LCJpYXQiOjE3ODM2NzczMTcsImp0aSI6ImJmZTAxMGE2ZmU2OTRiMzA5OGE5Yzk0OGY0YTIzOTMxIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.IGr3tpyPq8BVRSQFW5-wmBVGI06Ccsq8sTHciHqdIh4
+# update subscription status for company
+###
+PUT http://localhost:8000/api/subscriptions/mark-paid/5/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwNDA5NzE3LCJpYXQiOjE3NTA0MDYxMTcsImp0aSI6IjMwYzM4NmQ0ZDcwZjRlZmNhMmYwMjk2ODA1Mzk0ZjJiIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.9jO_r8Uiwrw9vmGLIAS6oB-kEy919wlv1AEuV4o7H-c
+
+# api for email
+###
+POST http://localhost:8000/api/invoice/send-email/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwODI5NDYwLCJpYXQiOjE3NTA4MjU4NjAsImp0aSI6IjY4ZjcyZmQ3Njk5ZjRmOWM5ZTExNjY0ZGQ4ZGM4NDlhIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2V9.b9dwwb6DH9V6rNeSej61dbXpXuGcGCySAz16wtjToDo
+Content-Type: application/json
+
+{
+  "entry": {
+    "month_display": "June",
+    "year": 2025,
+    "amount": 299.99,
+    "status": "Paid",
+    
+    "paid_date": "2025-06-20",
+    "currency": "USD"
+  },
+  "email": "customer@example.com",
+  "company_name": "Tungston Labs"
+}
+
+###get company details
+GET http://178.248.112.16:8001/api/company/self/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzY4OTcxOTY2LCJpYXQiOjE3Njg5NjgzNjYsImp0aSI6ImFkMGU3ZmM4NzdiOTQzZGU4MDliOGM4MDZjY2QyODkyIiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.ImZQi2GMQJuSa4hrYf6HheBGpGCJSZpqHaJfy-AplkI
+
+###update company
+PATCH http://localhost:8000/api/company/self/
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+{
+  "name": "Tungston Labs",
+  "location": "Kakkanad",
+  "latitude": 10.0159,
+  "longitude": 76.3419,
+  "country": "IN"
+}
+
+
+
+
+### Freeze Company
+POST https://api.rekory.com/api/subscription/company-status/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0OTEwNDU3LCJpYXQiOjE3ODQ4ODE2NTcsImp0aSI6Ijk4YTk2YzVjZGM5ZjQ3NzQ5N2E0NzljOTExOTM4NjMyIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZuDMMpZPneeH6oipRnhQMBBbsw_yWA-f_kVbgjBEUNI
+Content-Type: application/json
+
+
+{
+    "company_id": 13,
+    "action": "unfreeze"
+}
+
+### Send Subscription Reminder
+POST https://api.rekory.com/api/subscription/send-reminder/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg1NDMyNjQxLCJpYXQiOjE3ODU0MDM4NDEsImp0aSI6IjFjYzc1OTYzMTBhNDRiNDNiZGZlN2Q5MjQwMWI1NGJkIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.wuuEl2l4mc-Cj4biMSu5bsGyyEB7---CbEpWR0ECyKg
+Content-Type: application/json
+
+{
+    "company_id": 110
+}
+
+
+
+### Send Subscription Reminder
+POST https://api.rekory.com/api/subscription/send-reminder-email/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg1NDMyNjQxLCJpYXQiOjE3ODU0MDM4NDEsImp0aSI6IjFjYzc1OTYzMTBhNDRiNDNiZGZlN2Q5MjQwMWI1NGJkIiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.wuuEl2l4mc-Cj4biMSu5bsGyyEB7---CbEpWR0ECyKg
+Content-Type: application/json
+
+{
+    "company_id": 110
+}

@@ -1,0 +1,115 @@
+
+#------------------ PAYROLL APIS FOR HR ADMIN-----------
+
+# list all bank details + basic details employee
+
+###
+GET http://127.0.0.1:8000/api/employees/bank-details/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNDcxOTQzLCJpYXQiOjE3NTI0NjgzNDMsImp0aSI6IjA1MWExYjJjZDliNDQzN2Q4YWIwNzBmZDQ5ZTA5MDkxIiwidXNlcl9pZCI6MzgsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.K6RMAH1rvBfW38E901XMYuCrb6BaHin8LewSOE65MAs
+
+### Get payroll records for a specific month and year
+GET http://178.248.112.16:8001/api/payroll/?month=7&year=2025
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU4MTY3NTI0LCJpYXQiOjE3NTgxNjU3MjQsImp0aSI6IjViZDRhZjdhMWIyYTQ2YjBhZGFmYzI1YjJhOWU3NTExIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.qps1JvUcXWh9IR7qU3LTohhjsGXcOBo0OZhN-KrmhWA
+
+### Create or update payroll records for selected employees
+POST http://178.248.112.16:8001/api/payroll/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU4MTY3NTI0LCJpYXQiOjE3NTgxNjU3MjQsImp0aSI6IjViZDRhZjdhMWIyYTQ2YjBhZGFmYzI1YjJhOWU3NTExIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.qps1JvUcXWh9IR7qU3LTohhjsGXcOBo0OZhN-KrmhWA
+
+{
+  "month": 7,
+  "year": 2025,
+  "employee_ids": [53],
+  "status": "Paid"
+}
+
+
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNGRAS82",     
+  "password": "athul"  
+}
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "snv_arm_kak_117",     
+  "password": "password1234"  
+}
+
+
+
+### ✅ Verify Payroll for Employee
+POST http://178.248.112.16:8001/api/payroll/53/verify/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU4MTcxODY2LCJpYXQiOjE3NTgxNzAwNjYsImp0aSI6IjQxZmVlMGYzNGZiMjQ2ZmFhMmI3MTc2MjU4ZDFkYWU4IiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Z-RliBI1Kq9ZFn0GI1Daq9JbBvRsMH6IvLVDUji7Srg
+Content-Type: application/json
+
+{
+  "month": 10,
+  "year": 2025
+}
+
+
+### Update payroll status for a single employee (HR selects month/year)
+PATCH http://178.248.112.16:8001/api/payroll/53/status/update/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU1NTgxMTQ4LCJpYXQiOjE3NTU1Nzc1NDgsImp0aSI6Ijk3NDgwMTRiYzU0MTRmNmQ5ZTE1MjM2NGI1OGVmZTUyIiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.bOKexdPiiwTI3oqo_qP3TF3pB0sCdGh8bhp9gTLljNM
+
+{
+  "month": 7,
+  "year": 2025,
+  "status": "Pending"
+}
+
+# payroll record detail
+###
+GET http://localhost:8000/api/payroll/record/2
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxNzE3MTAzLCJpYXQiOjE3NTE3MTM1MDMsImp0aSI6IjcwZDhlN2E3MGMyYTQyMTk4ZmQyYjJiZmNkMDM3MmViIiwidXNlcl9pZCI6MzgsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.0Gfe_uVpYn-qVof491gdlSp4E5PCoOKOjPlX9oN50BY
+
+
+###payroll self view for employee
+
+GET http://127.0.0.1:8000/api/employee/payslips/?year=2025
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyMTQ4MzIwLCJpYXQiOjE3NTIxNDQ3MjAsImp0aSI6Ijc5YzdmN2RmNjU4NzQzYzFhYzc2ZTk0ZjdiMGM2NDI1IiwidXNlcl9pZCI6NjksImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.-m354Xp-4BqMLDI15X6kZ03_j9ozB0ERsqBxq7dpMuU
+###employee details
+GET http://178.248.112.16:8001/api/employee/document-summary/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYyNDkyNDgwLCJpYXQiOjE3NjI0ODg4ODAsImp0aSI6ImIyMWJhYTZhN2FmZTQ2M2ZiNDhmN2QzZjAxOGMwNjc0IiwidXNlcl9pZCI6IjUwMSIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.uJsKSNIlbi9koRMd4LprOtatLJ5Np4eXn_YMfUpfF_k
+Content-Type: application/json
+
+
+###employee details
+GET http://localhost:8000/api/employees/48/documents/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyMTMxMTc2LCJpYXQiOjE3NTIxMjc1NzYsImp0aSI6IjBhYzUyN2QwZjFhMDQ0NWU4MDFmNjcyYTdiNTc5MzVhIiwidXNlcl9pZCI6NzAsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.OYPrEjhxNI6yquehjHATQkKWZ1flcnmEmIlRESIakhQ
+Content-Type: application/json
+
+
+
+###PAYSLIP FOR EMPLOYEE
+GET https://api.rekory.com/api/employee/payslip/download/?month=06&year=2026
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzNTI2MDI5LCJpYXQiOjE3ODM0OTcyMjksImp0aSI6ImMyOGViMjAyMDM3NDRiZWZhODQ3OGQwMjdkMzc5ZGI2IiwidXNlcl9pZCI6NDkzLCJpc19zdXBlcmFkbWluIjpmYWxzZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6dHJ1ZSwiaXNfaHIiOmZhbHNlfQ.zvmjsmmn4eMUDSQOYBoAcc0Iv9-zOhW1N21Q09W52x0
+
+
+### ADD / UPDATE PAYROLL INCENTIVE
+
+PATCH https://api.rekory.com/api/payroll/incentive/351/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc4MTY3MjA2LCJpYXQiOjE3NzgxMzg0MDYsImp0aSI6IjM0Y2RiZjZiYjg0YzRkNWVhYjVjNzI1NzE5ZjNmMWJlIiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.QTerqoSCuO2eXeHBlo96gkxtcMWsbZvEOtkRU63Bq5w
+Content-Type: application/json
+
+{
+    "month": 4,
+    "year": 2026,
+    "incentive_amount": 1000,
+    "incentive_type": "Performance Bonus",
+    "incentive_reason": "Completed monthly target successfully"
+}
+
+###payslip counts
+GET http://127.0.0.1:8000/api/payroll-counts/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4NDYyMzI1LCJpYXQiOjE3ODg0MzM1MjUsImp0aSI6ImFlNDk5MTBiYzU1ZjQwN2E5YTVlNWU3MWJmMDI0YzBmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.mQvVjUKZ1JsKYIrxVaNK1P1PU0vRIGlyuDl7-okfNeg
+

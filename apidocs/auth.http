@@ -1,0 +1,101 @@
+###LOGIN TO OBTAIN THE TOKEN PAIRS-FOR COMAPNY
+
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "dummycompany",
+  "password": "Password@123"
+}
+###local sqlite super admin
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "jesna@gmail.com",
+  "password": "Password@123"
+}
+
+
+###local comapny login
+POST https://api.rekory.com/api/token/
+Content-Type: application/json
+
+{
+  "username": "Tungstonlabs",
+  "password": "password123"
+}
+
+
+
+###LOGIN FOR EMPLOYEE
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "test12@gmail.com",
+  "password": "EMPQ0DOLDU8"
+}
+
+# common logout for super admin,hr comapny,employee
+
+###
+POST http://178.248.112.16:8000//api/logout/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5Nzk1NTU0LCJpYXQiOjE3NDk3OTE5NTQsImp0aSI6IjI2YjNhZmE3ZDU1NTRiMDBiNTNmYTU1MmE2MmU4MzMyIiwidXNlcl9pZCI6MX0.nqiJ5M8wuC57RbmRKXJt1ckQXt8S1LdmzQ47JIK2smA
+{
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc0ODk0MzcyNCwiaWF0IjoxNzQ4ODU3MzI0LCJqdGkiOiIzNTk1NDFkMjMzMzY0NGFjYmE1NWY4NTI5M2ZhNDM4ZiIsInVzZXJfaWQiOjJ9.XBDxkP19tY9Z_wBG4sRl4lYBWInp8H_B2qkafZFGIe8"
+}
+
+### Refresh Access Token
+POST http://178.248.112.16:8001/api/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2MzE4MDUxOSwiaWF0IjoxNzU3OTk2NTE5LCJqdGkiOiJhOThhZjE5Y2M0YTM0N2ZkOGI3Nzk3NjdmYmNlNmFlNyIsInVzZXJfaWQiOiI3MiIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.P0o2GRnBLvHxriRFr8UDEagUrIYWuimnYCCDbDzPG7Y"
+}
+
+
+# common change password for all users
+
+### Change Password (Employee, HR, Superadmin)
+POST http://localhost:8000/api/change-password/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5ODE4MDk0LCJpYXQiOjE3NDk4MTQ0OTQsImp0aSI6IjI0YjM4MDYzYTJlNzQ2MTI5ODg3MzM5OTBjYmU3MTRkIiwidXNlcl9pZCI6MTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.pjUe3KfOPzqvPH5m3LCnAOX040fuTA8kikqU3m5gFS8
+Content-Type: application/json
+
+{
+  "old_password": "CMPX3PBGL801",
+  "new_password": "123"
+}
+
+# forgot password
+###
+POST https://api.rekory.com/api/forgot-password/send-otp/
+Content-Type: application/json
+
+{
+  "email": "test@gmail.com"
+}
+# verify OPTIONS 
+###
+POST http://178.248.112.16:8001/api/forgot-password/verify-otp/
+Content-Type: application/json
+
+{
+  "email": "sharanyamol2@gmail.com",
+  "otp": "801348"
+}
+
+# reset password after otp verification
+###
+
+POST http://178.248.112.16:8001/api/forgot-password/reset/
+Content-Type: application/json
+
+{
+  "email": "sharanyamol2@gmail.com",
+  "new_password": "password123",
+  "confirm_password": "password123"
+}
+
+

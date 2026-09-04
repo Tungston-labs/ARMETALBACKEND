@@ -1,0 +1,45 @@
+###LOGIN TO OBTAIN THE TOKEN PAIRS-FOR COMAPNY
+
+# @baseUrl = http://127.0.0.1:8000/api/admindashboard/
+POST https://api.rekory.com/api/token/
+Content-Type: application/json
+
+{
+  "username": "snv_arm_kak_117",
+  "password": "password1234"
+}
+###create finance record category
+
+POST https://api.rekory.com/api/finance/categories/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcyMDkyMTg2LCJpYXQiOjE3NzIwODg1ODYsImp0aSI6ImRmMjcxOGExNmYyYzQxZGM5NjE1OWQ4NjdhYzUxNDA1IiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.kIdFNy6mPdZxvtwqphPQljPsrGEqIgo7vxWD7DzBrMQ
+Content-Type: application/json
+
+{
+  "name": "reimbursement",
+  "payment_type": "OUT"
+}
+
+
+###get finance record category
+
+GET http://178.248.112.25:8001/api/finance/categories/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcxOTA3NzI3LCJpYXQiOjE3NzE5MDQxMjcsImp0aSI6ImEyNzRhYWQyMzA4MjQwOThiMDMzNGYwMTNiYjVkZGI0IiwidXNlcl9pZCI6NzIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.kUtK4HPY2Vw4ir2gAJpTwICbnGjaeo_49OItYN3rL6Y
+
+
+###create finance record
+
+POST  http://127.0.0.1:8000/api/finance/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2NzE1NDI4LCJpYXQiOjE3ODY2ODY2MjgsImp0aSI6ImJjM2E1NmEyZDcyNDRmNjg5ZDRlYWE4NzNjMzYwOWMxIiwidXNlcl9pZCI6NCwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.fsbR6_ubBZdAlzy0269mr8CPrTFoQ_6Ql-PTEzHlrJE
+Content-Type: application/json
+
+{
+  "date": "2026-01-25",
+  "amount": 1500,
+  "payment_type": "OUT",
+  "category": 1,
+  "note": "Team lunch"
+}
+
+###
+GET http://178.248.112.16:8001/api/finance/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzcxODM0ODQ3LCJpYXQiOjE3NzE4MzEyNDcsImp0aSI6IjBiOTY3NmJiZTQ1OTRlMWViOWU4NWU5MDk2YmY1MzA0IiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.AXzAEa83-livpE11yNcZPZM4GvV5tnuNWyXwffnb-QY

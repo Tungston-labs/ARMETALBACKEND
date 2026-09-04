@@ -1,0 +1,196 @@
+###############################################################
+### Subscription Feature APIs
+###############################################################
+
+@baseUrl = https://api.rekory.com/api
+@token =eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MDMwODM5LCJpYXQiOjE3ODYwMDIwMzksImp0aSI6IjViODA5MTk0ZGRhNjRiMTdhMTBkYmExM2E5NDdhNTY4IiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JrSy5M5aN3XHJztq990B4vw700NF-Q11twO9q53awHw
+###############################################################
+### Create Feature
+###############################################################
+
+POST {{baseUrl}}/subscription-features/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "",
+    "description": "",
+    "is_active": true
+}
+
+
+
+
+###
+
+###############################################################
+### Create Feature
+###############################################################
+
+POST {{baseUrl}}/subscription-features/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Leave Management",
+    "description": "Employee Leave Module",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### List Features
+###############################################################
+
+GET {{baseUrl}}/subscription-features/
+Authorization: Bearer {{token}}
+
+###
+
+###############################################################
+### Retrieve Feature
+###############################################################
+
+GET {{baseUrl}}/subscription-features/1/
+Authorization: Bearer {{token}}
+
+###
+
+###############################################################
+### Update Feature
+###############################################################
+
+PUT {{baseUrl}}/subscription-features/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Attendance Management",
+    "description": "Employee Attendance Module",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### Delete Feature
+###############################################################
+
+DELETE {{baseUrl}}/subscription-features/1/
+Authorization: Bearer {{token}}
+
+###
+###############################################################
+### Subscription Plan APIs
+###############################################################
+
+###############################################################
+### Create Basic Plan
+###############################################################
+
+POST {{baseUrl}}/plans/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Basic Plan",
+    "plan_type": "basic",
+    "description": "Suitable for small businesses",
+    "feature_ids": [1],
+    "base_price": "2000.00",
+    "extra_employee_price": "100.00",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### Create Enterprise Plan
+###############################################################
+
+POST {{baseUrl}}/plans/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Enterprise Plan",
+    "plan_type": "enterprise",
+    "description": "Suitable for medium and large businesses",
+    "feature_ids": [1,2],
+    "base_price": "5000.00",
+    "extra_employee_price": "75.00",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### Create Pro Plan
+###############################################################
+
+POST {{baseUrl}}/plans/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Pro Plan",
+    "plan_type": "pro",
+    "description": "Advanced HR package",
+    "feature_ids": [1,2,3],
+    "base_price": "8000.00",
+    "extra_employee_price": "50.00",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### List Plans
+###############################################################
+
+GET {{baseUrl}}/plans/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg2MDMwODM5LCJpYXQiOjE3ODYwMDIwMzksImp0aSI6IjViODA5MTk0ZGRhNjRiMTdhMTBkYmExM2E5NDdhNTY4IiwidXNlcl9pZCI6MSwiaXNfc3VwZXJhZG1pbiI6dHJ1ZSwiaXNfaHJfYWRtaW4iOmZhbHNlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JrSy5M5aN3XHJztq990B4vw700NF-Q11twO9q53awHw
+
+###
+
+###############################################################
+### Retrieve Plan
+###############################################################
+
+GET {{baseUrl}}/plans/1/
+Authorization: Bearer {{token}}
+
+###
+
+###############################################################
+### Update Plan
+###############################################################
+
+PUT {{baseUrl}}/plans/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "Basic Plan Updated",
+    "plan_type": "basic",
+    "description": "Updated Basic Subscription",
+    "feature_ids": [1,2],
+    "base_price": "2500.00",
+    "extra_employee_price": "120.00",
+    "is_active": true
+}
+
+###
+
+###############################################################
+### Delete Plan
+###############################################################
+
+DELETE {{baseUrl}}/plans/1/
+Authorization: Bearer {{token}}
+
+###
+
+GET {{baseUrl}}/plans/summary/
+Authorization: Bearer {{token}}

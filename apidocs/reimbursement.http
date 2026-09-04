@@ -1,0 +1,67 @@
+# -----REIMBURSMENT MODULE------
+
+###add 
+POST http://127.0.0.1:8000/api/reimbursements/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MDA4Nzg0LCJpYXQiOjE3ODc5Nzk5ODQsImp0aSI6ImQxZWUyMzVkM2Y0MjQwZGNiNWYwZDM5NTBlZWVhMmZhIiwidXNlcl9pZCI6MjksImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.BblaqZWy_hwOl79oGOb5hlMFEYgvAzqYDwvHdsfIB9Q
+Content-Type: multipart/form-data
+
+{
+  "expense_category": "TRAVEL",
+  "to_mail": "manager@example.com",
+  "note": "Taxi fare",
+  "date": "2026-08-29",
+  "amount": "100.50",
+  "uploaded_images": ["<file1>", "<file2>"]
+}
+
+###list
+GET http://127.0.0.1:8000/api/reimbursements/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MDA4Nzg0LCJpYXQiOjE3ODc5Nzk5ODQsImp0aSI6ImQxZWUyMzVkM2Y0MjQwZGNiNWYwZDM5NTBlZWVhMmZhIiwidXNlcl9pZCI6MjksImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.BblaqZWy_hwOl79oGOb5hlMFEYgvAzqYDwvHdsfIB9Q
+Content-Type: application/json
+
+
+###retrieve single record
+GET http://127.0.0.1:8000/api/reimbursements/141/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4MDA4Nzg0LCJpYXQiOjE3ODc5Nzk5ODQsImp0aSI6ImQxZWUyMzVkM2Y0MjQwZGNiNWYwZDM5NTBlZWVhMmZhIiwidXNlcl9pZCI6MjksImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.BblaqZWy_hwOl79oGOb5hlMFEYgvAzqYDwvHdsfIB9Q
+
+
+###list by department
+GET http://127.0.0.1:8000/api/reimbursements/department/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3OTIzNTYzLCJpYXQiOjE3ODc4OTQ3NjMsImp0aSI6ImY4MDk3OGU2NTA3OTQ4NDFiNjZkZWI5MzA2ZWQyNjJhIiwidXNlcl9pZCI6NCwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.eU-M1tfwZ6odOJuWtpC2pZ90k87qrG6V-SEJxuPFoVQ
+Content-Type: application/json
+
+
+### update status by admin
+PATCH http://127.0.0.1:8000/api/reimbursements/157/   
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg3OTIzNTYzLCJpYXQiOjE3ODc4OTQ3NjMsImp0aSI6ImY4MDk3OGU2NTA3OTQ4NDFiNjZkZWI5MzA2ZWQyNjJhIiwidXNlcl9pZCI6NCwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.eU-M1tfwZ6odOJuWtpC2pZ90k87qrG6V-SEJxuPFoVQ
+Content-Type: application/json
+
+{
+  "status": "Approve"
+}
+
+### Get reimbursements grouped by date
+GET http://178.248.112.16:8001/api/reimbursements/grouped/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MDk5OTI1LCJpYXQiOjE3NTYwOTYzMjUsImp0aSI6ImVlZWE5MzE4YmI4NDQzZTdhNjYzZGQ5ZmI2OTJhYThlIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.0kBTS1wWLMJS2dAypCpqj7B1_yGMgjDIF_Yy8Xd9KaM
+
+
+
+
+### 1️⃣ List logged-in employee reimbursements
+GET http://178.248.112.16:8001/api/reimbursements/my-reimbursements/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MzgzOTYxLCJpYXQiOjE3NTYzODAzNjEsImp0aSI6ImU1ZTg1ZGI4NTdhMzQyYzg4NGI4ODA4M2ZlN2Y1ZDMxIiwidXNlcl9pZCI6IjczIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjpmYWxzZSwiaXNfZW1wbG95ZWUiOnRydWUsImlzX2hyIjpmYWxzZX0.OsyrBCizOWZrIkWZurycQSMeiRNbLPBVbojcfS_4kP8
+Content-Type: application/json
+
+###
+
+### 2️⃣ Retrieve a single reimbursement by ID
+GET http://178.248.112.16:8001/api/reimbursements/my-reimbursements/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MzgzOTYxLCJpYXQiOjE3NTYzODAzNjEsImp0aSI6ImU1ZTg1ZGI4NTdhMzQyYzg4NGI4ODA4M2ZlN2Y1ZDMxIiwidXNlcl9pZCI6IjczIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjpmYWxzZSwiaXNfZW1wbG95ZWUiOnRydWUsImlzX2hyIjpmYWxzZX0.OsyrBCizOWZrIkWZurycQSMeiRNbLPBVbojcfS_4kP8
+Content-Type: application/json
+
+###
+
+### 3️⃣ Delete a single reimbursement by ID
+DELETE http://178.248.112.16:8001/api/reimbursements/my-reimbursements/1/
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json

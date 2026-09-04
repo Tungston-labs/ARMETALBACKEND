@@ -1,0 +1,144 @@
+#----------- ----------------------API FOR SUPER ADMIN-------------------------
+
+
+#api for generating token pair
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "snv_arm_kak_117",
+  "password": "password1234"
+}
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNDEVT1V",
+  "password": "EMPO4PRQ6U0"
+}
+
+# common logout for super admin,hr comapny,employee
+
+###
+POST http://178.248.112.16:8000//api/logout/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5Nzk1NTU0LCJpYXQiOjE3NDk3OTE5NTQsImp0aSI6IjI2YjNhZmE3ZDU1NTRiMDBiNTNmYTU1MmE2MmU4MzMyIiwidXNlcl9pZCI6MX0.nqiJ5M8wuC57RbmRKXJt1ckQXt8S1LdmzQ47JIK2smA
+{
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc0ODk0MzcyNCwiaWF0IjoxNzQ4ODU3MzI0LCJqdGkiOiIzNTk1NDFkMjMzMzY0NGFjYmE1NWY4NTI5M2ZhNDM4ZiIsInVzZXJfaWQiOjJ9.XBDxkP19tY9Z_wBG4sRl4lYBWInp8H_B2qkafZFGIe8"
+}
+
+### Refresh Access Token
+POST http://178.248.112.16:8001/api/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc2MzE4MDUxOSwiaWF0IjoxNzU3OTk2NTE5LCJqdGkiOiJhOThhZjE5Y2M0YTM0N2ZkOGI3Nzk3NjdmYmNlNmFlNyIsInVzZXJfaWQiOiI3MiIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlLCJpc19ociI6ZmFsc2V9.P0o2GRnBLvHxriRFr8UDEagUrIYWuimnYCCDbDzPG7Y"
+}
+
+
+# common change password for all users
+
+### Change Password (Employee, HR, Superadmin)
+POST http://localhost:8000/api/change-password/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5ODE4MDk0LCJpYXQiOjE3NDk4MTQ0OTQsImp0aSI6IjI0YjM4MDYzYTJlNzQ2MTI5ODg3MzM5OTBjYmU3MTRkIiwidXNlcl9pZCI6MTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.pjUe3KfOPzqvPH5m3LCnAOX040fuTA8kikqU3m5gFS8
+Content-Type: application/json
+
+{
+  "old_password": "CMPX3PBGL801",
+  "new_password": "123"
+}
+
+
+
+
+
+
+# ----------------------------API FOR HR ADMIN:HR COMPANY--------------------------------
+
+# API for generating token pair for company HR
+
+
+
+
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNGRAS82",     
+  "password": "Athul"  
+}
+
+
+
+# ----------------------------------API FOR EMPLOYEE-----------------------
+
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "snv_arm_kak_117",     
+  "password": "password1234"  
+}
+
+
+# dashboard Summary 
+
+###
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 🔍 Search Employees
+GET http://178.248.112.16:8001/api/employees/search/?q=ajay
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYzMTgyMjY5LCJpYXQiOjE3NjMxNzg2NjksImp0aSI6IjAxYzk1YWVkNzNjZDRmYzg4MjE4NGY4ZjNhYzY0MmFkIiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.jvNAiudzzNfxW4EjgCwkr2kMzff6_hm-Bw7Q-CKtVQQ
+Accept: application/json
+
+
+#-------------------------------------------------------- API FOR MOBILE APPLICATION
+
+
+# api for creating token pair for employee
+
+###
+POST http://178.248.112.16:8001/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNDEV4QN",     
+  "password": "password123"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,43 @@
+# --------------PUBLIC HOLIDAY ----------------------------------
+
+### Create Holiday
+POST http://127.0.0.1:8000/api/holidays/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyNDcxMjU5LCJpYXQiOjE3NTI0Njc2NTksImp0aSI6IjZlMTU3MTRiZjkxZTQxYzg5YjkxNDk2YjcwNzlmNGJiIiwidXNlcl9pZCI6OTcsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.NakR6laItRMqpP-aa1MiiMehdBTQOkVUcOvhX1yN634
+Content-Type: application/json
+
+{
+  "date": "2025-12-31",
+  "description": "new year celebration",
+  "holiday_type":"public"
+}
+
+
+### List Holidays (HR Admin)
+GET http://127.0.0.1:8000/api/holidays/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwODM0MzE5LCJpYXQiOjE3NTA4MzA3MTksImp0aSI6IjAwOGE4M2UxY2IxYjQ5MGM5YmNjOWY0NmFmMWE4MGI3IiwidXNlcl9pZCI6MywiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2V9.tlA-Xh-OJFF-7rxwXoZ_dsQMNo3KAuscAGMxgfdaD64
+
+### Get Single Holiday by ID
+GET http://127.0.0.1:8000/api/holidays/3/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4OTI4NDM2LCJpYXQiOjE3NDg5MjQ4MzYsImp0aSI6IjM5ZGEzOGRiYjAyODRkOTM5ZDgxZjI1YTZlNTM4ZTkyIiwidXNlcl9pZCI6M30.9VK8uzpdHaP3_BcP2LKSGvrzzr9CdssbFRt41jgEwjs
+
+
+### Update Holiday by ID
+PUT http://127.0.0.1:8000/api/holidays/3/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4OTI4NDM2LCJpYXQiOjE3NDg5MjQ4MzYsImp0aSI6IjM5ZGEzOGRiYjAyODRkOTM5ZDgxZjI1YTZlNTM4ZTkyIiwidXNlcl9pZCI6M30.9VK8uzpdHaP3_BcP2LKSGvrzzr9CdssbFRt41jgEwjs
+Content-Type: application/json
+
+{
+  "date": "2025-06-07",
+  "description": "Eid"
+}
+
+
+### Delete Holiday
+DELETE http://127.0.0.1:8000/api/holidays/3/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4OTI4NDM2LCJpYXQiOjE3NDg5MjQ4MzYsImp0aSI6IjM5ZGEzOGRiYjAyODRkOTM5ZDgxZjI1YTZlNTM4ZTkyIiwidXNlcl9pZCI6M30.9VK8uzpdHaP3_BcP2LKSGvrzzr9CdssbFRt41jgEwjs
+
+
+### List Holidays (Employee)
+GET http://178.248.112.16:8001/api/holidays/employee/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYyNzcwNDk5LCJpYXQiOjE3NjI3NjY4OTksImp0aSI6ImI3YmQ4MmU3ZjgwNzQ5OWI5OTNkN2JmMDhkNjkzYWNlIiwidXNlcl9pZCI6IjUwMSIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlLCJpc19ociI6dHJ1ZX0.Pu8zUlt4r8hnEcOPCrRSZGcnFrfyuQHyWJxWpp_1G4s
+

@@ -1,0 +1,56 @@
+# =-------------------------API FOR TASK MANAGEMENT--------------------------
+
+
+### Get Specific Task (Employee)
+GET http://127.0.0.1:8000/api/employee/tasks/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODU5NDgzLCJpYXQiOjE3NDg4NTU4ODMsImp0aSI6IjgzZjdhNGUwNTNmNTQyMjY5NTc1MmQ2MTExYjJiMmJkIiwidXNlcl9pZCI6MTh9.DCOA_M_IZv5Cl5Yjql0th-biI78T45bebG0PFg88Yi8
+
+### Update Task (Employee)
+PUT http://127.0.0.1:8000/api/employee/tasks/1/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwMTQxODExLCJpYXQiOjE3NTAxMzgyMTEsImp0aSI6IjEwYjljZTViM2RlNzQzMjA4NWQ5YTk2Mzg2OTkyZWM2IiwidXNlcl9pZCI6MjIsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.fLXDeCVy27Sa_5byAYV3PWynmI53Ntgugi6v6QUtihM
+Content-Type: application/json
+
+{
+  "project": "Project A",
+  "task": "Updated: Fixed bugs in login flow",
+  "time_taken": 4.0
+}
+
+### Delete Task (Employee)
+DELETE http://127.0.0.1:8000/api/employee/tasks/2/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODU5NDgzLCJpYXQiOjE3NDg4NTU4ODMsImp0aSI6IjgzZjdhNGUwNTNmNTQyMjY5NTc1MmQ2MTExYjJiMmJkIiwidXNlcl9pZCI6MTh9.DCOA_M_IZv5Cl5Yjql0th-biI78T45bebG0PFg88Yi8
+
+
+### List All Tasks (HR Admin)
+GET http://127.0.0.1:8000/api/admin/tasks/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ4ODU5OTEyLCJpYXQiOjE3NDg4NTYzMTIsImp0aSI6ImNmYTViNGEyZDg4YzQxZTJiNzM2ODMyNzM5ZWIzNzdmIiwidXNlcl9pZCI6M30.fUCQkANJ3_SYvBIB8djOGCrNaH1HvGqvcc5l98wKZoU
+
+### HR Admin: List Tasks by Employee ID
+GET http://178.248.112.16:8001/api/admin/tasks/employee/343/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYzNzE2MDIxLCJpYXQiOjE3NjM3MTI0MjEsImp0aSI6IjdjOGFiZmNjZDRmZTQwODQ4YTYxYTc1NGJhMGZlOTQ4IiwidXNlcl9pZCI6IjcyIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.wYZM2eXxTse9yNgQrkq9Yi_yxJsVsAWUh--sVdF3M14
+
+### Create a Task (Employee)
+POST http://127.0.0.1:8000/api/employee/tasks/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUxOTcxNzg4LCJpYXQiOjE3NTE5NjgxODgsImp0aSI6IjFlNjg2MjBmNmE2NjQ2MGVhOGI4ODEyMDc1NDdkZjA0IiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.kIL0sh2bFG4hL4PZFUe8E07Dpm1wN2ILr9vGBZAQlG4
+Content-Type: application/json
+
+{
+  "project": "ABC",
+  "task": "API INTEGRATION",
+  "time_taken": 3.5 
+}
+
+### List Own Tasks (Employee)
+GET http://127.0.0.1:8000/api/employee/tasks/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUyMTIzODkzLCJpYXQiOjE3NTIxMjAyOTMsImp0aSI6IjBkODdlMDMxZDBlYzQyODM4NjAxYjk4NzdhYzg0ODdhIiwidXNlcl9pZCI6OTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6ZmFsc2UsImlzX2VtcGxveWVlIjp0cnVlfQ.tkMEtX_OEG4d1FGYE__IqXspjMel_-16roER3QfQn9Y
+
+###schedule reminder
+POST http://178.248.112.16:8001/api/reminders/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MjcxMzkyLCJpYXQiOjE3NTYyNjc3OTIsImp0aSI6ImRhZTY0ODg5YjUwMTQ3Yzk4ZTc4NWVkNTY4MmJlOWQ4IiwidXNlcl9pZCI6IjczIiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjpmYWxzZSwiaXNfZW1wbG95ZWUiOnRydWUsImlzX2hyIjpmYWxzZX0.T2IXH7yIygORpxAkomagGEfZHjT3M9yuRsgv3EsDf_s
+
+{
+  "title": "Project Deadline",
+  "body": "Submit project report before end of day",
+  "scheduled_datetime": "09:45"
+}
