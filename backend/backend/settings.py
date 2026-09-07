@@ -64,6 +64,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',
     'finance.category',
+    'finance.warehouse',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -182,6 +184,19 @@ REST_FRAMEWORK = {
 
     'EXCEPTION_HANDLER': 'shared.utils.exception_handler.custom_exception_handler',
 
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header using the Bearer scheme. Format: "Bearer <your_token>"'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
 }
 
 

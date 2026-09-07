@@ -3,12 +3,12 @@
 
 #api for generating token pair
 ###
-POST http://178.248.112.16:8001/api/token/
+POST http://localhost:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "snv_arm_kak_117",
-  "password": "password1234"
+  "username": "dummy",
+  "password": "password123"
 }
 
 ###

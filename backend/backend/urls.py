@@ -20,7 +20,24 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Armetal Backend API",
+      default_version='v1',
+      description="API documentation for Armetal Backend system including Warehouse & Product module",
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
+
 urlpatterns = [
+    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('admin/', admin.site.urls),
     path('api/',include('user.urls')),
     path('api/',include('superadmin.urls')),
@@ -36,13 +53,5 @@ urlpatterns = [
     path('api/admindashboard/',include('hr.dashboard.urls')),
     path('api/finance/',include('hr.finance.urls')),
     path('api/finance/category/', include('finance.category.urls')),
-
-
-
-
-
-
-
-
-
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('api/finance/warehouse/', include('finance.warehouse.urls')),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
