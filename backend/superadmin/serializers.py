@@ -12,8 +12,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 import json
 from decimal import Decimal
-from finance.models import FinanceCategory
-from employee.models import Employee_db
+from hr.finance.models import FinanceCategory
+from hr.employee.models import Employee_db
 
 
 COUNTRY_CURRENCY = {

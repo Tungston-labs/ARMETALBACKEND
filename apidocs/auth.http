@@ -12,7 +12,7 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "jesna@gmail.com",
+  "username": "admin",
   "password": "Password@123"
 }
 
