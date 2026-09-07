@@ -35,10 +35,11 @@ urlpatterns = [
     path('api/project/',include('hr.project.urls')),
     path('api/admindashboard/',include('hr.dashboard.urls')),
     path('api/finance/',include('hr.finance.urls')),
+    path('api/finance/category/', include('finance.category.urls')),
 
 
 
-    
+
 
 
 
