@@ -1,5 +1,4 @@
 from django.db import models
-from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from shared.models import TimeStampedModel
@@ -19,14 +18,15 @@ class Category(TimeStampedModel):
 
     id = models.BigAutoField(primary_key=True)
 
-    code = models.CharField(
-        max_length=50,
-        unique=True
+    company = models.ForeignKey(
+        "superadmin.Company",
+        on_delete=models.CASCADE,
+        related_name="f_categories"
     )
 
-    category_name = models.CharField(
-        max_length=150
-    )
+    code = models.CharField(max_length=50)
+
+    category_name = models.CharField(max_length=150)
 
     parent_category = models.ForeignKey(
         "self",
@@ -73,3 +73,9 @@ class Category(TimeStampedModel):
     class Meta:
         db_table = "finance_category"
         ordering = ["category_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "code"],
+                name="unique_category_code_per_company"
+            )
+        ]
