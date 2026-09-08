@@ -1,0 +1,118 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg4ODAzNTYwLCJpYXQiOjE3ODg3NzQ3NjAsImp0aSI6IjY0NjdlNTI1NjlhZjQ5MjFhZGFlNDA4NjY4Y2U0NjkyIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.FtPXfqIpFFwT8Gzkv5R6mv6VJIJg425iW4B9f_E50x0
+
+
+### List Categories
+GET {{baseUrl}}/api/finance/category/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Create Category
+POST {{baseUrl}}/api/finance/category/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "code": "CAT-003",
+    "category_name": "web",
+    "parent_category": "hardware",
+    "category_type": "service",
+    "status": "active"
+}
+
+
+### Search Category
+GET {{baseUrl}}/api/finance/category/?search=Electronics
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Filter Product
+GET {{baseUrl}}/api/finance/category/?category_type=product
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Filter Service
+GET {{baseUrl}}/api/finance/category/?category_type=service
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Filter Active
+GET {{baseUrl}}/api/finance/category/?status=active
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Filter Inactive
+GET {{baseUrl}}/api/finance/category/?status=inactive
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Search + Type + Status
+GET {{baseUrl}}/api/finance/category/?search=Electronics&category_type=product&status=active
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Category Detail
+GET {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+
+### Update Category
+PUT {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "code": "CAT-001",
+    "category_name": "ConsumerElectronics",
+    "parent_category": 1,
+    "category_type": "product",
+    "status": "active"
+}
+
+
+### Partial Update
+PATCH {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "category_name": "Electronics & Gadgets"
+}
+
+
+### Deactivate Category
+PATCH {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "status": "inactive"
+}
+
+
+### Activate Category
+PATCH {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "status": "active"
+}
+
+
+### Delete Category
+DELETE {{baseUrl}}/api/finance/category/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###get parent category
+GET {{baseUrl}}/api/finance/category/parents/
+Authorization: Bearer {{token}}
