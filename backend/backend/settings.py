@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'channels',
     'finance.category',
     'finance.warehouse',
+    'finance.product',
     'drf_yasg',
 ]
 

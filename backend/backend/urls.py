@@ -54,4 +54,5 @@ urlpatterns = [
     path('api/finance/',include('hr.finance.urls')),
     path('api/finance/category/', include('finance.category.urls')),
     path('api/finance/warehouse/', include('finance.warehouse.urls')),
+    path('api/finance/product/', include('finance.product.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

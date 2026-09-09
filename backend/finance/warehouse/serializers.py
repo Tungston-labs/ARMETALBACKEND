@@ -4,7 +4,7 @@ from .utils import generate_next_warehouse_code
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
-    code = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    code = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
     manager_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     company_name = serializers.SerializerMethodField()

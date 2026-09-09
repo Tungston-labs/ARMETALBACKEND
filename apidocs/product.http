@@ -1,0 +1,135 @@
+# ==============================================================================
+# PRODUCT API DOCUMENTATION & HTTP TEST SUITE
+# ==============================================================================
+
+### 1. Authenticate to get JWT token
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNGRAS82",
+  "password": "password123"
+}
+
+###
+
+# Set variable for JWT access token
+@authToken = Bearer YOUR_ACCESS_TOKEN_HERE
+
+
+# ------------------------------------------------------------------------------
+# 2. CREATE PRODUCT (Add New Product / Service)
+# ------------------------------------------------------------------------------
+### Add a New Physical Product
+POST http://127.0.0.1:8000/api/finance/product/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "product_name": "Cisco Router C9300",
+  "product_type": "product",
+  "sku": "1253698",
+  "category": 1,
+  "warehouse": 1,
+  "brand": "Cisco",
+  "supplier": "Cisco Systems",
+  "unit": "PCS",
+  "hsn_sac_code": "85176290",
+  "cost_price": "9500.00",
+  "selling_price": "12000.00",
+  "opening_stock_qty": 125,
+  "current_stock": 125,
+  "reorder_level": 10,
+  "tax_type": "vat",
+  "tax_rate": 15.00,
+  "description": "High performance enterprise networking router.",
+  "status": "active"
+}
+
+### Add a New Service
+POST http://127.0.0.1:8000/api/finance/product/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "product_name": "Managed IT Support",
+  "product_type": "service",
+  "unit": "Month",
+  "cost_price": "8500.00",
+  "selling_price": "15000.00",
+  "description": "Monthly recurring IT management & support service.",
+  "status": "active"
+}
+
+
+# ------------------------------------------------------------------------------
+# 3. LIST PRODUCTS & SERVICES (With Filters, Search, & Summary Stats)
+# ------------------------------------------------------------------------------
+### List all products for user's company
+GET http://127.0.0.1:8000/api/finance/product/
+Authorization: {{authToken}}
+
+### Search products by keyword (name, code, sku, brand, supplier)
+GET http://127.0.0.1:8000/api/finance/product/?search=Cisco
+Authorization: {{authToken}}
+
+### Filter products by type, status, warehouse, category
+GET http://127.0.0.1:8000/api/finance/product/?product_type=product&status=active&warehouse=1
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 4. GET PRODUCT DETAILS
+# ------------------------------------------------------------------------------
+### Get product by ID
+GET http://127.0.0.1:8000/api/finance/product/1/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 5. EDIT / UPDATE PRODUCT
+# ------------------------------------------------------------------------------
+### Partial update product (PATCH)
+PATCH http://127.0.0.1:8000/api/finance/product/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "selling_price": "12500.00",
+  "current_stock": 120
+}
+
+### Full update product (PUT)
+PUT http://127.0.0.1:8000/api/finance/product/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "code": "PRD-001",
+  "product_name": "Cisco Router C9300 Enterprise",
+  "product_type": "product",
+  "sku": "1253698-V2",
+  "category": 1,
+  "warehouse": 1,
+  "brand": "Cisco",
+  "supplier": "Cisco Systems Global",
+  "unit": "PCS",
+  "hsn_sac_code": "85176290",
+  "cost_price": "9500.00",
+  "selling_price": "12500.00",
+  "opening_stock_qty": 125,
+  "current_stock": 120,
+  "reorder_level": 15,
+  "tax_type": "vat",
+  "tax_rate": 15.00,
+  "description": "Updated enterprise router specs.",
+  "status": "active"
+}
+
+
+# ------------------------------------------------------------------------------
+# 6. DELETE PRODUCT
+# ------------------------------------------------------------------------------
+### Delete a product by ID
+DELETE http://127.0.0.1:8000/api/finance/product/1/
+Authorization: {{authToken}}

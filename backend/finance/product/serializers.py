@@ -1,25 +1,43 @@
 from rest_framework import serializers
-from .models import Category
-from .utils import generate_next_category_code
+from .models import Product
+from .utils import generate_next_product_code
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class ProductSerializer(serializers.ModelSerializer):
     code = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
     company_name = serializers.SerializerMethodField()
-    parent_category_name = serializers.SerializerMethodField()
+    category_name = serializers.SerializerMethodField()
+    warehouse_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
+    stock_status = serializers.ReadOnlyField()
 
     class Meta:
-        model = Category
+        model = Product
         fields = [
             "id",
             "company",
             "company_name",
             "code",
+            "product_name",
+            "product_type",
+            "sku",
+            "category",
             "category_name",
-            "parent_category",
-            "parent_category_name",
-            "category_type",
+            "warehouse",
+            "warehouse_name",
+            "brand",
+            "supplier",
+            "unit",
+            "hsn_sac_code",
+            "cost_price",
+            "selling_price",
+            "opening_stock_qty",
+            "current_stock",
+            "reorder_level",
+            "stock_status",
+            "tax_type",
+            "tax_rate",
+            "description",
             "status",
             "created_by",
             "created_by_name",
@@ -30,7 +48,9 @@ class CategorySerializer(serializers.ModelSerializer):
             "id",
             "company",
             "company_name",
-            "parent_category_name",
+            "category_name",
+            "warehouse_name",
+            "stock_status",
             "created_by",
             "created_by_name",
             "created_at",
@@ -42,9 +62,14 @@ class CategorySerializer(serializers.ModelSerializer):
             return getattr(obj.company, "name", str(obj.company))
         return None
 
-    def get_parent_category_name(self, obj):
-        if obj.parent_category:
-            return obj.parent_category.category_name
+    def get_category_name(self, obj):
+        if obj.category:
+            return getattr(obj.category, "category_name", str(obj.category))
+        return None
+
+    def get_warehouse_name(self, obj):
+        if obj.warehouse:
+            return getattr(obj.warehouse, "warehouse_name", str(obj.warehouse))
         return None
 
     def get_created_by_name(self, obj):
@@ -60,17 +85,19 @@ class CategorySerializer(serializers.ModelSerializer):
             company = getattr(request.user, "company", None)
 
         code = attrs.get("code")
+
+        # Auto-generate code if missing/empty on create
         if not self.instance and not code:
-            code = generate_next_category_code(company)
+            code = generate_next_product_code(company)
             attrs["code"] = code
 
         if code and company:
-            qs = Category.objects.filter(company=company, code=code)
+            qs = Product.objects.filter(company=company, code=code)
             if self.instance:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise serializers.ValidationError(
-                    {"code": f"A category with code '{code}' already exists for your company."}
+                    {"code": f"A product with code '{code}' already exists for your company."}
                 )
 
         return attrs

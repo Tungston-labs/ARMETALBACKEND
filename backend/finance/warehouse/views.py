@@ -1,4 +1,5 @@
 from rest_framework import generics, filters, status
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +9,53 @@ from drf_yasg import openapi
 from .models import Warehouse
 from .serializers import WarehouseSerializer
 from shared.pagination import CustomPagination
+
+
+class WarehouseKPICardView(APIView):
+    """
+    API view to retrieve KPI card counts for Warehouses (Total, Active, Inactive).
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="Get Warehouse KPI Card Metrics",
+        operation_description="Returns KPI card statistics for warehouses under the authenticated user's company.",
+        responses={
+            200: openapi.Response(
+                description="Warehouse KPI Statistics",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'total_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=5),
+                        'active_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=4),
+                        'inactive_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
+                    }
+                )
+            )
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if getattr(user, "is_superadmin", False):
+            company_id = request.query_params.get("company")
+            if company_id:
+                base_qs = Warehouse.objects.filter(company_id=company_id)
+            else:
+                base_qs = Warehouse.objects.all()
+        elif hasattr(user, "company") and user.company:
+            base_qs = Warehouse.objects.filter(company=user.company)
+        else:
+            base_qs = Warehouse.objects.none()
+
+        total_warehouses = base_qs.count()
+        active_warehouses = base_qs.filter(status="active").count()
+        inactive_warehouses = base_qs.filter(status="inactive").count()
+
+        return Response({
+            "total_warehouses": total_warehouses,
+            "active_warehouses": active_warehouses,
+            "inactive_warehouses": inactive_warehouses,
+        })
 
 
 class WarehouseListCreateView(generics.ListCreateAPIView):
