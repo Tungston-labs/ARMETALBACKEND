@@ -74,3 +74,4 @@ class CategorySerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+

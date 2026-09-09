@@ -28,6 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "brand",
             "supplier",
             "unit",
+            "quantity",
             "hsn_sac_code",
             "cost_price",
             "selling_price",

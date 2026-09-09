@@ -235,3 +235,39 @@ class ProductAPITestCase(APITestCase):
         self.assertEqual(res.data["out_of_stock"], 1)
         self.assertEqual(res.data["total_categories"], 2)
 
+    def test_create_product_with_quantity_increases_current_stock(self):
+        res = self.client.post("/api/finance/product/", {
+            "product_name": "Ethernet Switch 24P",
+            "product_type": "product",
+            "opening_stock_qty": 10,
+            "quantity": 25,
+            "cost_price": "1500.00",
+            "selling_price": "2000.00"
+        }, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["quantity"], 25)
+        self.assertEqual(res.data["opening_stock_qty"], 10)
+        # current_stock should equal opening_stock_qty (10) + quantity (25) = 35
+        self.assertEqual(res.data["current_stock"], 35)
+
+    def test_update_product_quantity_adjusts_current_stock(self):
+        # Create product initial
+        prd = Product.objects.create(
+            company=self.company,
+            code="PRD-QTY-TEST",
+            product_name="Server Rack Drawer",
+            opening_stock_qty=5,
+            quantity=10,
+            current_stock=15
+        )
+        self.assertEqual(prd.current_stock, 15)
+
+        # Update quantity from 10 to 20 (+10 diff)
+        patch_res = self.client.patch(f"/api/finance/product/{prd.id}/", {
+            "quantity": 20
+        }, format="json")
+        self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_res.data["quantity"], 20)
+        self.assertEqual(patch_res.data["current_stock"], 25)
+
+

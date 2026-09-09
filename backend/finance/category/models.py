@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from shared.models import TimeStampedModel
 
 
@@ -28,12 +27,10 @@ class Category(TimeStampedModel):
 
     category_name = models.CharField(max_length=150)
 
-    parent_category = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
+    parent_category = models.CharField(
+        max_length=150,
         null=True,
-        blank=True,
-        related_name="sub_categories"
+        blank=True
     )
 
     category_type = models.CharField(
@@ -54,18 +51,6 @@ class Category(TimeStampedModel):
         blank=True,
         related_name="created_categories"
     )
-
-    def clean(self):
-        if self.parent_category:
-            if self.parent_category.category_type != self.category_type:
-                raise ValidationError(
-                    "Parent category must have the same category type."
-                )
-
-            if self.parent_category.pk == self.pk:
-                raise ValidationError(
-                    "A category cannot be its own parent."
-                )
 
     def __str__(self):
         return f"{self.code} - {self.category_name}"

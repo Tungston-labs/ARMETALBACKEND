@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'channels',
     'finance.category',
+    "drf_spectacular",
     'finance.warehouse',
     'finance.product',
     'drf_yasg',
@@ -185,6 +186,8 @@ REST_FRAMEWORK = {
 
     'EXCEPTION_HANDLER': 'shared.utils.exception_handler.custom_exception_handler',
 
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
 }
 
 SWAGGER_SETTINGS = {
@@ -285,5 +288,27 @@ CELERY_BEAT_SCHEDULE = {
 SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Rekory Finance API",
+    "DESCRIPTION": "API documentation for Rekory Finance",
+    "VERSION": "1.0.0",
 
+    "SERVE_INCLUDE_SCHEMA": False,
+
+    "COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+
+    "SECURITY": [
+        {
+            "BearerAuth": []
+        }
+    ],
+}
 

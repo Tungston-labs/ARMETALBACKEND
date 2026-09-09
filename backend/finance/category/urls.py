@@ -6,3 +6,4 @@ urlpatterns = [
     path("kpi/", CategoryKPICardView.as_view(), name="category-kpi"),
     path("<int:pk>/", CategoryDetailView.as_view(), name="category-detail"),
 ]
+

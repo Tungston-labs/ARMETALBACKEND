@@ -92,6 +92,7 @@ class Product(TimeStampedModel):
     )
 
     opening_stock_qty = models.IntegerField(default=0)
+    quantity = models.IntegerField(default=0)
     current_stock = models.IntegerField(default=0)
     reorder_level = models.IntegerField(default=10)
 
@@ -137,8 +138,19 @@ class Product(TimeStampedModel):
             from .utils import generate_next_product_code
             self.code = generate_next_product_code(self.company)
 
-        if self.pk is None and self.current_stock == 0 and self.opening_stock_qty > 0:
-            self.current_stock = self.opening_stock_qty
+        if self.pk is None:
+            if self.current_stock == 0:
+                self.current_stock = self.opening_stock_qty + self.quantity
+            elif self.quantity > 0 and self.current_stock == self.opening_stock_qty:
+                self.current_stock = self.opening_stock_qty + self.quantity
+        else:
+            try:
+                old_instance = Product.objects.get(pk=self.pk)
+                if self.quantity != old_instance.quantity:
+                    qty_diff = self.quantity - old_instance.quantity
+                    self.current_stock += qty_diff
+            except Product.DoesNotExist:
+                pass
 
         super().save(*args, **kwargs)
 
