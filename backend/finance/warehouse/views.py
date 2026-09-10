@@ -55,7 +55,7 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["status", "warehouse_type", "city", "country"]
-    search_fields = ["warehouse_name", "code", "city", "country", "phone_number", "email"]
+    search_fields = ["warehouse_name", "code", "manager", "city", "country", "phone_number", "email"]
     ordering_fields = ["warehouse_name", "code", "created_at", "status"]
     ordering = ["-created_at"]
 
@@ -72,7 +72,7 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
         else:
             qs = Warehouse.objects.none()
 
-        return qs.select_related("manager", "created_by", "company")
+        return qs.select_related("created_by", "company")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -141,7 +141,7 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
         else:
             qs = Warehouse.objects.none()
 
-        return qs.select_related("manager", "created_by", "company")
+        return qs.select_related("created_by", "company")
 
     @extend_schema(
         summary="Get Warehouse Details",

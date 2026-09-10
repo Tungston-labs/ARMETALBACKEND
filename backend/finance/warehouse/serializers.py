@@ -5,6 +5,7 @@ from .utils import generate_next_warehouse_code
 
 class WarehouseSerializer(serializers.ModelSerializer):
     code = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
+    manager = serializers.CharField(max_length=150, required=False, allow_blank=True, allow_null=True)
     manager_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     company_name = serializers.SerializerMethodField()
@@ -48,10 +49,7 @@ class WarehouseSerializer(serializers.ModelSerializer):
         ]
 
     def get_manager_name(self, obj):
-        if obj.manager:
-            full_name = obj.manager.get_full_name().strip()
-            return full_name if full_name else obj.manager.username
-        return None
+        return obj.manager if obj.manager else ""
 
     def get_created_by_name(self, obj):
         if obj.created_by:

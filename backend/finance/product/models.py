@@ -60,6 +60,14 @@ class Product(TimeStampedModel):
         related_name="products"
     )
 
+    sub_category = models.ForeignKey(
+        "category.Category",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sub_category_products"
+    )
+
     warehouse = models.ForeignKey(
         "warehouse.Warehouse",
         on_delete=models.SET_NULL,

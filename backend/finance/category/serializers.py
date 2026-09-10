@@ -5,6 +5,11 @@ from .utils import generate_next_category_code
 
 class CategorySerializer(serializers.ModelSerializer):
 
+    company_name = serializers.CharField(
+        source="company.name",
+        read_only=True
+    )
+
     parent_category_name = serializers.CharField(
         source="parent_category.category_name",
         read_only=True

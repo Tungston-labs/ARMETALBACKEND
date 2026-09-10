@@ -37,12 +37,10 @@ class Warehouse(TimeStampedModel):
         default="main"
     )
 
-    manager = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
+    manager = models.CharField(
+        max_length=150,
         blank=True,
-        related_name="managed_warehouses"
+        default=""
     )
 
     status = models.CharField(

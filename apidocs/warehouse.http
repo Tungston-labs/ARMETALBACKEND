@@ -7,7 +7,7 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "TUNGRAS82",
+  "username": "dummy",
   "password": "password123"
 }
 
