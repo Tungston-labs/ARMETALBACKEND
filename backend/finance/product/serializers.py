@@ -10,6 +10,7 @@ class ProductSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     stock_status = serializers.ReadOnlyField()
+    inventory_value = serializers.ReadOnlyField()
 
     class Meta:
         model = Product
@@ -34,8 +35,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "selling_price",
             "opening_stock_qty",
             "current_stock",
+            "reserved_qty",
             "reorder_level",
             "stock_status",
+            "inventory_value",
             "tax_type",
             "tax_rate",
             "description",
@@ -52,6 +55,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "category_name",
             "warehouse_name",
             "stock_status",
+            "inventory_value",
             "created_by",
             "created_by_name",
             "created_at",

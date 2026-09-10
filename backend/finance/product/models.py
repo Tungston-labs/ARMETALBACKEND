@@ -94,6 +94,7 @@ class Product(TimeStampedModel):
     opening_stock_qty = models.IntegerField(default=0)
     quantity = models.IntegerField(default=0)
     current_stock = models.IntegerField(default=0)
+    reserved_qty = models.IntegerField(default=0)
     reorder_level = models.IntegerField(default=10)
 
     tax_type = models.CharField(
@@ -132,6 +133,10 @@ class Product(TimeStampedModel):
         elif self.current_stock < 10 or self.current_stock < self.reorder_level:
             return "Low Stock"
         return "In Stock"
+
+    @property
+    def inventory_value(self):
+        return self.current_stock * self.selling_price
 
     def save(self, *args, **kwargs):
         if not self.code or not str(self.code).strip():

@@ -4,8 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import F, Q
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -18,24 +17,10 @@ class ProductKPICardView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary="Get Product KPI Card Metrics",
-        operation_description="Returns KPI card statistics for products and categories under the authenticated user's company.",
-        responses={
-            200: openapi.Response(
-                description="KPI Statistics",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'total_products': openapi.Schema(type=openapi.TYPE_INTEGER, example=1248),
-                        'active_products': openapi.Schema(type=openapi.TYPE_INTEGER, example=1175),
-                        'low_stock': openapi.Schema(type=openapi.TYPE_INTEGER, example=10),
-                        'out_of_stock': openapi.Schema(type=openapi.TYPE_INTEGER, example=22),
-                        'total_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=12),
-                    }
-                )
-            )
-        }
+    @extend_schema(
+        summary="Get Product KPI Card Metrics",
+        description="Returns KPI card statistics for products and categories under the authenticated user's company.",
+        responses={200: OpenApiResponse(description="KPI Statistics")}
     )
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -100,21 +85,21 @@ class ProductListCreateView(generics.ListCreateAPIView):
         company = getattr(user, "company", None)
         serializer.save(company=company, created_by=user)
 
-    @swagger_auto_schema(
-        operation_summary="List Products & Services",
-        operation_description="Retrieves a paginated list of products for the company, including summary counters (total, active, low stock, out of stock, total categories).",
+    @extend_schema(
+        summary="List Products & Services",
+        description="Retrieves a paginated list of products for the company, including summary counters (total, active, low stock, out of stock, total categories).",
         responses={200: ProductSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Add New Product / Service",
-        operation_description="Creates a new product or service. Auto-generates product code (PRD-001) if omitted.",
-        request_body=ProductSerializer,
+    @extend_schema(
+        summary="Add New Product / Service",
+        description="Creates a new product or service. Auto-generates product code (PRD-001) if omitted.",
+        request=ProductSerializer,
         responses={
             201: ProductSerializer,
-            400: "Validation Error"
+            400: OpenApiResponse(description="Validation Error")
         }
     )
     def post(self, request, *args, **kwargs):
@@ -173,36 +158,37 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         return Product.objects.none()
 
-    @swagger_auto_schema(
-        operation_summary="Get Product Details",
-        operation_description="Retrieves the detailed information of a specific product by ID.",
-        responses={200: ProductSerializer, 404: "Product Not Found"}
+    @extend_schema(
+        summary="Get Product Details",
+        description="Retrieves the detailed information of a specific product by ID.",
+        responses={200: ProductSerializer, 404: OpenApiResponse(description="Product Not Found")}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Product (Full)",
-        operation_description="Updates all fields of an existing product.",
-        request_body=ProductSerializer,
-        responses={200: ProductSerializer, 400: "Validation Error", 404: "Product Not Found"}
+    @extend_schema(
+        summary="Edit/Update Product (Full)",
+        description="Updates all fields of an existing product.",
+        request=ProductSerializer,
+        responses={200: ProductSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Product Not Found")}
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Product (Partial)",
-        operation_description="Partially updates fields of an existing product.",
-        request_body=ProductSerializer,
-        responses={200: ProductSerializer, 400: "Validation Error", 404: "Product Not Found"}
+    @extend_schema(
+        summary="Edit/Update Product (Partial)",
+        description="Partially updates fields of an existing product.",
+        request=ProductSerializer,
+        responses={200: ProductSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Product Not Found")}
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Delete Product",
-        operation_description="Deletes a product by ID.",
-        responses={204: "No Content", 404: "Product Not Found"}
+    @extend_schema(
+        summary="Delete Product",
+        description="Deletes a product by ID.",
+        responses={204: OpenApiResponse(description="No Content"), 404: OpenApiResponse(description="Product Not Found")}
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+

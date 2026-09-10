@@ -3,8 +3,7 @@ from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .models import Warehouse
 from .serializers import WarehouseSerializer
@@ -17,22 +16,10 @@ class WarehouseKPICardView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary="Get Warehouse KPI Card Metrics",
-        operation_description="Returns KPI card statistics for warehouses under the authenticated user's company.",
-        responses={
-            200: openapi.Response(
-                description="Warehouse KPI Statistics",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'total_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=5),
-                        'active_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=4),
-                        'inactive_warehouses': openapi.Schema(type=openapi.TYPE_INTEGER, example=1),
-                    }
-                )
-            )
-        }
+    @extend_schema(
+        summary="Get Warehouse KPI Card Metrics",
+        description="Returns KPI card statistics for warehouses under the authenticated user's company.",
+        responses={200: OpenApiResponse(description="Warehouse KPI Statistics")}
     )
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -90,21 +77,21 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
         company = getattr(user, "company", None)
         serializer.save(company=company, created_by=user)
 
-    @swagger_auto_schema(
-        operation_summary="List Warehouses",
-        operation_description="Retrieves a paginated list of warehouses for the authenticated company, along with overall statistics (total, active, inactive count).",
+    @extend_schema(
+        summary="List Warehouses",
+        description="Retrieves a paginated list of warehouses for the authenticated company, along with overall statistics (total, active, inactive count).",
         responses={200: WarehouseSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Add New Warehouse",
-        operation_description="Creates a new warehouse under the user's company.",
-        request_body=WarehouseSerializer,
+    @extend_schema(
+        summary="Add New Warehouse",
+        description="Creates a new warehouse under the user's company.",
+        request=WarehouseSerializer,
         responses={
             201: WarehouseSerializer,
-            400: "Validation Error (e.g. duplicate warehouse code)"
+            400: OpenApiResponse(description="Validation Error (e.g. duplicate warehouse code)")
         }
     )
     def post(self, request, *args, **kwargs):
@@ -153,36 +140,36 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         return Warehouse.objects.none()
 
-    @swagger_auto_schema(
-        operation_summary="Get Warehouse Details",
-        operation_description="Retrieves the detailed information of a specific warehouse by ID.",
-        responses={200: WarehouseSerializer, 404: "Warehouse Not Found"}
+    @extend_schema(
+        summary="Get Warehouse Details",
+        description="Retrieves the detailed information of a specific warehouse by ID.",
+        responses={200: WarehouseSerializer, 404: OpenApiResponse(description="Warehouse Not Found")}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Warehouse (Full)",
-        operation_description="Updates all fields of an existing warehouse.",
-        request_body=WarehouseSerializer,
-        responses={200: WarehouseSerializer, 400: "Validation Error", 404: "Warehouse Not Found"}
+    @extend_schema(
+        summary="Edit/Update Warehouse (Full)",
+        description="Updates all fields of an existing warehouse.",
+        request=WarehouseSerializer,
+        responses={200: WarehouseSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Warehouse Not Found")}
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Warehouse (Partial)",
-        operation_description="Partially updates fields of an existing warehouse.",
-        request_body=WarehouseSerializer,
-        responses={200: WarehouseSerializer, 400: "Validation Error", 404: "Warehouse Not Found"}
+    @extend_schema(
+        summary="Edit/Update Warehouse (Partial)",
+        description="Partially updates fields of an existing warehouse.",
+        request=WarehouseSerializer,
+        responses={200: WarehouseSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Warehouse Not Found")}
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Delete Warehouse",
-        operation_description="Deletes a warehouse by ID.",
-        responses={24: "No Content", 404: "Warehouse Not Found"}
+    @extend_schema(
+        summary="Delete Warehouse",
+        description="Deletes a warehouse by ID.",
+        responses={204: OpenApiResponse(description="No Content"), 404: OpenApiResponse(description="Warehouse Not Found")}
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)

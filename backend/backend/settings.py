@@ -67,7 +67,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     'finance.warehouse',
     'finance.product',
-    'drf_yasg',
+    'finance.inventory',
 ]
 
 MIDDLEWARE = [

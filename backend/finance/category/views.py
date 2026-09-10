@@ -3,8 +3,7 @@ from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .models import Category
 from .serializers import CategorySerializer
@@ -17,24 +16,10 @@ class CategoryKPICardView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(
-        operation_summary="Get Category KPI Card Metrics",
-        operation_description="Retrieves KPI summary metrics for categories under the authenticated user's company.",
-        responses={
-            200: openapi.Response(
-                description="Category KPI Statistics",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={
-                        'total_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=12),
-                        'active_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=10),
-                        'inactive_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=2),
-                        'product_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=8),
-                        'service_categories': openapi.Schema(type=openapi.TYPE_INTEGER, example=4),
-                    }
-                )
-            )
-        }
+    @extend_schema(
+        summary="Get Category KPI Card Metrics",
+        description="Retrieves KPI summary metrics for categories under the authenticated user's company.",
+        responses={200: OpenApiResponse(description="Category KPI Statistics")}
     )
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -96,21 +81,21 @@ class CategoryListCreateView(generics.ListCreateAPIView):
         company = getattr(user, "company", None)
         serializer.save(company=company, created_by=user)
 
-    @swagger_auto_schema(
-        operation_summary="List Categories",
-        operation_description="Retrieves a paginated list of categories for the company, including summary metrics.",
+    @extend_schema(
+        summary="List Categories",
+        description="Retrieves a paginated list of categories for the company, including summary metrics.",
         responses={200: CategorySerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Add New Category",
-        operation_description="Creates a new category under the user's company.",
-        request_body=CategorySerializer,
+    @extend_schema(
+        summary="Add New Category",
+        description="Creates a new category under the user's company.",
+        request=CategorySerializer,
         responses={
             201: CategorySerializer,
-            400: "Validation Error"
+            400: OpenApiResponse(description="Validation Error")
         }
     )
     def post(self, request, *args, **kwargs):
@@ -165,36 +150,36 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         return Category.objects.none()
 
-    @swagger_auto_schema(
-        operation_summary="Get Category Details",
-        operation_description="Retrieves detailed information of a specific category by ID.",
-        responses={200: CategorySerializer, 404: "Category Not Found"}
+    @extend_schema(
+        summary="Get Category Details",
+        description="Retrieves detailed information of a specific category by ID.",
+        responses={200: CategorySerializer, 404: OpenApiResponse(description="Category Not Found")}
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Category (Full)",
-        operation_description="Updates all fields of an existing category.",
-        request_body=CategorySerializer,
-        responses={200: CategorySerializer, 400: "Validation Error", 404: "Category Not Found"}
+    @extend_schema(
+        summary="Edit/Update Category (Full)",
+        description="Updates all fields of an existing category.",
+        request=CategorySerializer,
+        responses={200: CategorySerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Category Not Found")}
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Edit/Update Category (Partial)",
-        operation_description="Partially updates fields of an existing category.",
-        request_body=CategorySerializer,
-        responses={200: CategorySerializer, 400: "Validation Error", 404: "Category Not Found"}
+    @extend_schema(
+        summary="Edit/Update Category (Partial)",
+        description="Partially updates fields of an existing category.",
+        request=CategorySerializer,
+        responses={200: CategorySerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Category Not Found")}
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
 
-    @swagger_auto_schema(
-        operation_summary="Delete Category",
-        operation_description="Deletes a category by ID.",
-        responses={204: "No Content", 404: "Category Not Found"}
+    @extend_schema(
+        summary="Delete Category",
+        description="Deletes a category by ID.",
+        responses={204: OpenApiResponse(description="No Content"), 404: OpenApiResponse(description="Category Not Found")}
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
