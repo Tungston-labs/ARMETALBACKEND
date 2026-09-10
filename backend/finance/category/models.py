@@ -23,14 +23,23 @@ class Category(TimeStampedModel):
         related_name="f_categories"
     )
 
-    code = models.CharField(max_length=50)
+    code = models.CharField(
+        max_length=50
+    )
 
-    category_name = models.CharField(max_length=150)
+    category_name = models.CharField(
+        max_length=150
+    )
 
-    parent_category = models.CharField(
-        max_length=150,
+    # Parent Category
+    # NULL = this is a parent/root category
+    # ID   = this is a sub-category
+    parent_category = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
         null=True,
-        blank=True
+        blank=True,
+        related_name="sub_categories"
     )
 
     category_type = models.CharField(
@@ -58,6 +67,7 @@ class Category(TimeStampedModel):
     class Meta:
         db_table = "finance_category"
         ordering = ["category_name"]
+
         constraints = [
             models.UniqueConstraint(
                 fields=["company", "code"],

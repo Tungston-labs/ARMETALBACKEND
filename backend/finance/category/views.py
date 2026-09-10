@@ -9,9 +9,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from user.permissions import IsHRAdmin, IsCompanyActive
 
 from .models import Category
-from .serializers import (
-    CategorySerializer
-)
+from .serializers import CategorySerializer
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -33,12 +31,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
     filterset_fields = [
         "category_type",
         "status",
+        "parent_category",
     ]
 
     search_fields = [
         "code",
         "category_name",
-        "parent_category",
+        "parent_category__category_name",
     ]
 
     ordering_fields = [
@@ -53,6 +52,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ]
 
     def get_queryset(self):
+
         user = self.request.user
 
         if not user.is_authenticated:
@@ -65,10 +65,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
             company=user.company
         ).select_related(
             "company",
-            "created_by"
+            "created_by",
+            "parent_category"
         )
 
+    # ---------------------------------------------------------
     # CREATE
+    # ---------------------------------------------------------
+
     def create(self, request, *args, **kwargs):
 
         serializer = self.get_serializer(
@@ -98,7 +102,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED
         )
 
+    # ---------------------------------------------------------
     # LIST
+    # ---------------------------------------------------------
+
     def list(self, request, *args, **kwargs):
 
         queryset = self.filter_queryset(
@@ -131,7 +138,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    # ---------------------------------------------------------
     # DETAIL
+    # ---------------------------------------------------------
+
     def retrieve(self, request, *args, **kwargs):
 
         instance = self.get_object()
@@ -148,7 +158,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    # ---------------------------------------------------------
     # UPDATE / PATCH
+    # ---------------------------------------------------------
+
     def update(self, request, *args, **kwargs):
 
         partial = kwargs.pop(
@@ -184,7 +197,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    # ---------------------------------------------------------
     # DELETE
+    # ---------------------------------------------------------
+
     def destroy(self, request, *args, **kwargs):
 
         instance = self.get_object()
@@ -195,13 +211,18 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
         return Response(
             {
-                "message":
-                    f"Category '{category_name}' deleted successfully."
+                "message": (
+                    f"Category '{category_name}' "
+                    "deleted successfully."
+                )
             },
             status=status.HTTP_200_OK
         )
 
-    # PARENT CATEGORY LIST
+    # ---------------------------------------------------------
+    # PARENT CATEGORIES
+    # ---------------------------------------------------------
+
     @action(
         detail=False,
         methods=["get"],
@@ -209,39 +230,51 @@ class CategoryViewSet(viewsets.ModelViewSet):
     )
     def parents(self, request):
 
-        queryset = (
-            Category.objects
-            .filter(
-                company=request.user.company,
-                status="active"
-            )
-            .exclude(
-                parent_category__isnull=True
-            )
-            .exclude(
-                parent_category=""
-            )
-            .values_list(
-                "parent_category",
-                flat=True
-            )
-            .distinct()
-            .order_by(
-                "parent_category"
-            )
+        queryset = self.get_queryset().filter(
+            parent_category__isnull=True,
+            status="active"
         )
 
-        data = [
-            {
-                "parent_category": parent
-            }
-            for parent in queryset
-        ]
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
 
         return Response(
             {
                 "message": "Parent categories retrieved successfully.",
-                "data": data
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # SUB-CATEGORIES
+    # ---------------------------------------------------------
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="subcategories"
+    )
+    def subcategories(self, request, pk=None):
+
+        parent = self.get_object()
+
+        queryset = self.get_queryset().filter(
+            parent_category=parent,
+            status="active"
+        )
+
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
+
+        return Response(
+            {
+                "message": "Sub-categories retrieved successfully.",
+                "data": serializer.data
             },
             status=status.HTTP_200_OK
         )
