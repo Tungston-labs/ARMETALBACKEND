@@ -43,8 +43,37 @@ class CategorySerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def validate_parent_category(self, value):
+    def validate_code(self, value):
+        request = self.context.get("request")
 
+        if not request or not request.user.is_authenticated:
+            return value
+
+        company = request.user.company
+
+        if not company:
+            raise serializers.ValidationError(
+                "User is not associated with a company."
+            )
+
+        queryset = Category.objects.filter(
+            company=company,
+            code=value,
+        )
+
+        if self.instance:
+            queryset = queryset.exclude(
+                id=self.instance.id
+            )
+
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "A category with this code already exists."
+            )
+
+        return value
+
+    def validate_parent_category(self, value):
         if value is None:
             return value
 
@@ -60,19 +89,16 @@ class CategorySerializer(serializers.ModelSerializer):
                 "User is not associated with a company."
             )
 
-        # Parent must belong to same company
         if value.company_id != company.id:
             raise serializers.ValidationError(
                 "Parent category must belong to the same company."
             )
 
-        # A category cannot be its own parent
         if self.instance and value.id == self.instance.id:
             raise serializers.ValidationError(
                 "A category cannot be its own parent."
             )
 
-        # Parent must itself be a parent category
         if value.parent_category_id is not None:
             raise serializers.ValidationError(
                 "A sub-category cannot be used as a parent category."
