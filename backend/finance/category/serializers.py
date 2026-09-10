@@ -4,13 +4,20 @@ from .utils import generate_next_category_code
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    code = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
-    company_name = serializers.SerializerMethodField()
-    parent_category_name = serializers.SerializerMethodField()
-    created_by_name = serializers.SerializerMethodField()
+
+    parent_category_name = serializers.CharField(
+        source="parent_category.category_name",
+        read_only=True
+    )
+
+    created_by_name = serializers.CharField(
+        source="created_by.username",
+        read_only=True
+    )
 
     class Meta:
         model = Category
+
         fields = [
             "id",
             "company",
@@ -33,45 +40,44 @@ class CategorySerializer(serializers.ModelSerializer):
             "parent_category_name",
             "created_by",
             "created_by_name",
+            "parent_category_name",
             "created_at",
             "updated_at",
         ]
 
-    def get_company_name(self, obj):
-        if obj.company:
-            return getattr(obj.company, "name", str(obj.company))
-        return None
+    def validate_parent_category(self, value):
 
-    def get_parent_category_name(self, obj):
-        if obj.parent_category:
-            return obj.parent_category.category_name
-        return None
+        if value is None:
+            return value
 
-    def get_created_by_name(self, obj):
-        if obj.created_by:
-            full_name = obj.created_by.get_full_name().strip()
-            return full_name if full_name else obj.created_by.username
-        return None
-
-    def validate(self, attrs):
         request = self.context.get("request")
-        company = None
-        if request and hasattr(request, "user"):
-            company = getattr(request.user, "company", None)
 
-        code = attrs.get("code")
-        if not self.instance and not code:
-            code = generate_next_category_code(company)
-            attrs["code"] = code
+        if not request or not request.user.is_authenticated:
+            return value
 
-        if code and company:
-            qs = Category.objects.filter(company=company, code=code)
-            if self.instance:
-                qs = qs.exclude(pk=self.instance.pk)
-            if qs.exists():
-                raise serializers.ValidationError(
-                    {"code": f"A category with code '{code}' already exists for your company."}
-                )
+        company = request.user.company
 
-        return attrs
+        if not company:
+            raise serializers.ValidationError(
+                "User is not associated with a company."
+            )
 
+        # Parent must belong to same company
+        if value.company_id != company.id:
+            raise serializers.ValidationError(
+                "Parent category must belong to the same company."
+            )
+
+        # A category cannot be its own parent
+        if self.instance and value.id == self.instance.id:
+            raise serializers.ValidationError(
+                "A category cannot be its own parent."
+            )
+
+        # Parent must itself be a parent category
+        if value.parent_category_id is not None:
+            raise serializers.ValidationError(
+                "A sub-category cannot be used as a parent category."
+            )
+
+        return value

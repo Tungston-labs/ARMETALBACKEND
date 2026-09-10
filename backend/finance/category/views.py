@@ -1,186 +1,321 @@
-from rest_framework import generics, filters, status
-from rest_framework.views import APIView
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiResponse
 
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+
+from user.permissions import IsHRAdmin, IsCompanyActive
+from django.db.models import Count
 from .models import Category
 from .serializers import CategorySerializer
-from shared.pagination import CustomPagination
 
 
-class CategoryKPICardView(APIView):
-    """
-    API view to retrieve Category KPI summary metrics (total, active, inactive, product, service).
-    """
-    permission_classes = [IsAuthenticated]
+class CategoryViewSet(viewsets.ModelViewSet):
 
-    @extend_schema(
-        summary="Get Category KPI Card Metrics",
-        description="Retrieves KPI summary metrics for categories under the authenticated user's company.",
-        responses={200: OpenApiResponse(description="Category KPI Statistics")}
-    )
-    def get(self, request, *args, **kwargs):
-        user = request.user
-        if getattr(user, "is_superadmin", False):
-            company_id = request.query_params.get("company")
-            if company_id:
-                base_qs = Category.objects.filter(company_id=company_id)
-            else:
-                base_qs = Category.objects.all()
-        elif hasattr(user, "company") and user.company:
-            base_qs = Category.objects.filter(company=user.company)
-        else:
-            base_qs = Category.objects.none()
-
-        total_categories = base_qs.count()
-        active_categories = base_qs.filter(status="active").count()
-        inactive_categories = base_qs.filter(status="inactive").count()
-        product_categories = base_qs.filter(category_type="product").count()
-        service_categories = base_qs.filter(category_type="service").count()
-
-        return Response({
-            "total_categories": total_categories,
-            "active_categories": active_categories,
-            "inactive_categories": inactive_categories,
-            "product_categories": product_categories,
-            "service_categories": service_categories,
-        })
-
-
-class CategoryListCreateView(generics.ListCreateAPIView):
-    """
-    API view to list all categories or create a new category for the authenticated user's company.
-    """
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = CustomPagination
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["category_type", "status", "parent_category"]
-    search_fields = ["category_name", "code"]
-    ordering_fields = ["category_name", "code", "created_at"]
-    ordering = ["-created_at"]
+    permission_classes = [
+        IsAuthenticated,
+        IsCompanyActive,
+        IsHRAdmin,
+    ]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    filterset_fields = [
+        "category_type",
+        "status",
+        "parent_category",
+    ]
+
+    search_fields = [
+        "code",
+        "category_name",
+        "parent_category__category_name",
+    ]
+
+    ordering_fields = [
+        "code",
+        "category_name",
+        "created_at",
+        "updated_at",
+    ]
+
+    ordering = [
+        "category_name"
+    ]
 
     def get_queryset(self):
+
         user = self.request.user
-        if getattr(user, "is_superadmin", False):
-            company_id = self.request.query_params.get("company")
-            if company_id:
-                return Category.objects.filter(company_id=company_id)
-            return Category.objects.all()
 
-        if hasattr(user, "company") and user.company:
-            return Category.objects.filter(company=user.company)
+        if not user.is_authenticated:
+            return Category.objects.none()
 
-        return Category.objects.none()
+        if not user.company:
+            return Category.objects.none()
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+        return Category.objects.filter(
+            company=user.company
+        ).select_related(
+            "company",
+            "created_by",
+            "parent_category"
+        )
 
-    @extend_schema(
-        summary="List Categories",
-        description="Retrieves a paginated list of categories for the company, including summary metrics.",
-        responses={200: CategorySerializer(many=True)}
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+    # ---------------------------------------------------------
+    # CREATE
+    # ---------------------------------------------------------
 
-    @extend_schema(
-        summary="Add New Category",
-        description="Creates a new category under the user's company.",
-        request=CategorySerializer,
-        responses={
-            201: CategorySerializer,
-            400: OpenApiResponse(description="Validation Error")
-        }
-    )
-    def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+    def create(self, request, *args, **kwargs):
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        if not serializer.is_valid():
+
+            return Response(
+                {
+                    "message": "Category creation failed.",
+                    "errors": serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer.save(
+            company=request.user.company,
+            created_by=request.user
+        )
+
+        return Response(
+            {
+                "message": "Category created successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
+
+    # ---------------------------------------------------------
+    # LIST
+    # ---------------------------------------------------------
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        base_qs = self.get_queryset()
 
-        total_categories = base_qs.count()
-        active_categories = base_qs.filter(status="active").count()
-        inactive_categories = base_qs.filter(status="inactive").count()
-        product_categories = base_qs.filter(category_type="product").count()
-        service_categories = base_qs.filter(category_type="service").count()
+        queryset = self.filter_queryset(
+            self.get_queryset()
+        )
 
         page = self.paginate_queryset(queryset)
+
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            response = self.get_paginated_response(serializer.data)
-            response.data["total_categories"] = total_categories
-            response.data["active_categories"] = active_categories
-            response.data["inactive_categories"] = inactive_categories
-            response.data["product_categories"] = product_categories
-            response.data["service_categories"] = service_categories
-            return response
 
-        serializer = self.get_serializer(queryset, many=True)
-        return Response({
-            "results": serializer.data,
-            "total_categories": total_categories,
-            "active_categories": active_categories,
-            "inactive_categories": inactive_categories,
-            "product_categories": product_categories,
-            "service_categories": service_categories,
-        })
+            serializer = self.get_serializer(
+                page,
+                many=True
+            )
 
+            return self.get_paginated_response(
+                serializer.data
+            )
 
-class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API view to retrieve, edit (PUT/PATCH), or delete a category by ID.
-    """
-    serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
 
-    def get_queryset(self):
-        user = self.request.user
-        if getattr(user, "is_superadmin", False):
-            return Category.objects.all()
+        return Response(
+            {
+                "message": "Categories retrieved successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
 
-        if hasattr(user, "company") and user.company:
-            return Category.objects.filter(company=user.company)
+    # ---------------------------------------------------------
+    # DETAIL
+    # ---------------------------------------------------------
 
-        return Category.objects.none()
+    def retrieve(self, request, *args, **kwargs):
 
-    @extend_schema(
-        summary="Get Category Details",
-        description="Retrieves detailed information of a specific category by ID.",
-        responses={200: CategorySerializer, 404: OpenApiResponse(description="Category Not Found")}
+        instance = self.get_object()
+
+        serializer = self.get_serializer(
+            instance
+        )
+
+        return Response(
+            {
+                "message": "Category retrieved successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # UPDATE / PATCH
+    # ---------------------------------------------------------
+
+    def update(self, request, *args, **kwargs):
+
+        partial = kwargs.pop(
+            "partial",
+            False
+        )
+
+        instance = self.get_object()
+
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial
+        )
+
+        if not serializer.is_valid():
+
+            return Response(
+                {
+                    "message": "Category update failed.",
+                    "errors": serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer.save()
+
+        return Response(
+            {
+                "message": "Category updated successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # DELETE
+    # ---------------------------------------------------------
+
+    def destroy(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+
+        category_name = instance.category_name
+
+        instance.delete()
+
+        return Response(
+            {
+                "message": (
+                    f"Category '{category_name}' "
+                    "deleted successfully."
+                )
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # PARENT CATEGORIES
+    # ---------------------------------------------------------
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="parents"
     )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
+    def parents(self, request):
 
-    @extend_schema(
-        summary="Edit/Update Category (Full)",
-        description="Updates all fields of an existing category.",
-        request=CategorySerializer,
-        responses={200: CategorySerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Category Not Found")}
+        queryset = self.get_queryset().filter(
+            parent_category__isnull=True,
+            status="active"
+        )
+
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
+
+        return Response(
+            {
+                "message": "Parent categories retrieved successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # SUB-CATEGORIES
+    # ---------------------------------------------------------
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="subcategories"
     )
-    def put(self, request, *args, **kwargs):
-        return super().put(request, *args, **kwargs)
+    def subcategories(self, request, pk=None):
 
-    @extend_schema(
-        summary="Edit/Update Category (Partial)",
-        description="Partially updates fields of an existing category.",
-        request=CategorySerializer,
-        responses={200: CategorySerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Category Not Found")}
+        parent = self.get_object()
+
+        queryset = self.get_queryset().filter(
+            parent_category=parent,
+            status="active"
+        )
+
+        serializer = self.get_serializer(
+            queryset,
+            many=True
+        )
+
+        return Response(
+            {
+                "message": "Sub-categories retrieved successfully.",
+                "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(
+    detail=False,
+    methods=["get"],
+    url_path="summary"
     )
-    def patch(self, request, *args, **kwargs):
-        return super().patch(request, *args, **kwargs)
+    def summary(self, request):
 
-    @extend_schema(
-        summary="Delete Category",
-        description="Deletes a category by ID.",
-        responses={204: OpenApiResponse(description="No Content"), 404: OpenApiResponse(description="Category Not Found")}
-    )
-    def delete(self, request, *args, **kwargs):
-        return super().delete(request, *args, **kwargs)
+        queryset = self.get_queryset()
 
+        total_categories = queryset.count()
+
+        active_categories = queryset.filter(
+            status="active"
+        ).count()
+
+        inactive_categories = queryset.filter(
+            status="inactive"
+        ).count()
+
+        parent_categories = queryset.filter(
+            parent_category__isnull=True
+        ).count()
+
+        sub_categories = queryset.filter(
+            parent_category__isnull=False
+        ).count()
+
+        return Response(
+            {
+                "message": "Category summary retrieved successfully.",
+                "data": {
+                    "total_categories": total_categories,
+                    "active_categories": active_categories,
+                    "inactive_categories": inactive_categories,
+                    "parent_categories": parent_categories,
+                    "sub_categories": sub_categories,
+                }
+            },
+            status=status.HTTP_200_OK
+        )
