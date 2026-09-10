@@ -115,3 +115,8 @@ Content-Type: application/json
 ###get parent category
 GET {{baseUrl}}/api/finance/category/parents/
 Authorization: Bearer {{token}}
+
+
+### card summary counts
+GET {{baseUrl}}/api/finance/category/summary/
+Authorization: Bearer {{token}}

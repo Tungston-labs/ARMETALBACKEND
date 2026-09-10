@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from user.permissions import IsHRAdmin, IsCompanyActive
-
+from django.db.models import Count
 from .models import Category
 from .serializers import CategorySerializer
 
@@ -275,6 +275,47 @@ class CategoryViewSet(viewsets.ModelViewSet):
             {
                 "message": "Sub-categories retrieved successfully.",
                 "data": serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(
+    detail=False,
+    methods=["get"],
+    url_path="summary"
+    )
+    def summary(self, request):
+
+        queryset = self.get_queryset()
+
+        total_categories = queryset.count()
+
+        active_categories = queryset.filter(
+            status="active"
+        ).count()
+
+        inactive_categories = queryset.filter(
+            status="inactive"
+        ).count()
+
+        parent_categories = queryset.filter(
+            parent_category__isnull=True
+        ).count()
+
+        sub_categories = queryset.filter(
+            parent_category__isnull=False
+        ).count()
+
+        return Response(
+            {
+                "message": "Category summary retrieved successfully.",
+                "data": {
+                    "total_categories": total_categories,
+                    "active_categories": active_categories,
+                    "inactive_categories": inactive_categories,
+                    "parent_categories": parent_categories,
+                    "sub_categories": sub_categories,
+                }
             },
             status=status.HTTP_200_OK
         )
