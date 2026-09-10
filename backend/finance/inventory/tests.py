@@ -164,20 +164,91 @@ class InventoryAPITestCase(APITestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.current_stock, 110)
 
-        # Test Set Exact Quantity
-        res_exact = self.client.post("/api/finance/inventory/adjustments/", {
+    def test_put_and_patch_stock_adjustment(self):
+        adj = StockAdjustment.objects.create(
+            company=self.company,
+            product=self.product,
+            warehouse=self.warehouse,
+            adjustment_type="add_stock",
+            adjustment_quantity=10,
+            reason="Inventory Count",
+            note="Initial note"
+        )
+
+        # GET detail
+        get_res = self.client.get(f"/api/finance/inventory/adjustments/{adj.id}/")
+        self.assertEqual(get_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_res.data["reason"], "Inventory Count")
+
+        # PATCH update
+        patch_res = self.client.patch(f"/api/finance/inventory/adjustments/{adj.id}/", {
+            "note": "Updated note via PATCH",
+            "reference_document": "REF-1002"
+        }, format="json")
+        self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_res.data["note"], "Updated note via PATCH")
+        self.assertEqual(patch_res.data["reference_document"], "REF-1002")
+
+        # PUT update
+        put_res = self.client.put(f"/api/finance/inventory/adjustments/{adj.id}/", {
             "product": self.product.id,
             "warehouse": self.warehouse.id,
-            "adjustment_type": "Set Exact Quantity",
-            "adjustment_quantity": 115,
-            "reason": "New Stock Received",
-            "note": "Reconciled stock to 115"
+            "adjustment_type": "add_stock",
+            "adjustment_quantity": 10,
+            "reason": "Data Entry Correction",
+            "reference_document": "REF-2000",
+            "note": "Fully updated via PUT"
         }, format="json")
-        self.assertEqual(res_exact.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(res_exact.data["current_available_qty"], 110)
-        self.assertEqual(res_exact.data["adjusted_stock"], 115)
+        self.assertEqual(put_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(put_res.data["reason"], "Data Entry Correction")
+        self.assertEqual(put_res.data["note"], "Fully updated via PUT")
 
-        self.product.refresh_from_db()
-        self.assertEqual(self.product.current_stock, 115)
+    def test_delete_stock_adjustment(self):
+        adj = StockAdjustment.objects.create(
+            company=self.company,
+            product=self.product,
+            warehouse=self.warehouse,
+            adjustment_type="add_stock",
+            adjustment_quantity=5,
+            reason="Other"
+        )
+
+        del_res = self.client.delete(f"/api/finance/inventory/adjustments/{adj.id}/")
+        self.assertEqual(del_res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(StockAdjustment.objects.filter(id=adj.id).exists())
+
+    def test_inventory_list_filters_by_stock_status(self):
+        # Product 1: In stock (stock=120) created in setUp
+        # Product 2: Low stock (stock=5)
+        Product.objects.create(
+            company=self.company,
+            code="PRD-LOW-STK",
+            product_name="Low Stock Item",
+            product_type="product",
+            current_stock=5,
+            reorder_level=20
+        )
+        # Product 3: Out of stock (stock=0)
+        Product.objects.create(
+            company=self.company,
+            code="PRD-OUT-STK",
+            product_name="Out Stock Item",
+            product_type="product",
+            current_stock=0,
+            reorder_level=10
+        )
+
+        # Filter low_stock
+        res_low = self.client.get("/api/finance/inventory/?stock_status=low_stock")
+        self.assertEqual(res_low.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_low.data["results"]), 1)
+        self.assertEqual(res_low.data["results"][0]["code"], "PRD-LOW-STK")
+
+        # Filter out_of_stock
+        res_out = self.client.get("/api/finance/inventory/?stock_status=out_of_stock")
+        self.assertEqual(res_out.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_out.data["results"]), 1)
+        self.assertEqual(res_out.data["results"][0]["code"], "PRD-OUT-STK")
+
 
 

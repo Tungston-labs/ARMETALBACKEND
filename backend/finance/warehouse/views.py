@@ -64,13 +64,15 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
         if getattr(user, "is_superadmin", False):
             company_id = self.request.query_params.get("company")
             if company_id:
-                return Warehouse.objects.filter(company_id=company_id)
-            return Warehouse.objects.all()
+                qs = Warehouse.objects.filter(company_id=company_id)
+            else:
+                qs = Warehouse.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = Warehouse.objects.filter(company=user.company)
+        else:
+            qs = Warehouse.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return Warehouse.objects.filter(company=user.company)
-
-        return Warehouse.objects.none()
+        return qs.select_related("manager", "created_by", "company")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -133,12 +135,13 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         if getattr(user, "is_superadmin", False):
-            return Warehouse.objects.all()
+            qs = Warehouse.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = Warehouse.objects.filter(company=user.company)
+        else:
+            qs = Warehouse.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return Warehouse.objects.filter(company=user.company)
-
-        return Warehouse.objects.none()
+        return qs.select_related("manager", "created_by", "company")
 
     @extend_schema(
         summary="Get Warehouse Details",

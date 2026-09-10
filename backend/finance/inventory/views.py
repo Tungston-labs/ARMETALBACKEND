@@ -110,7 +110,7 @@ class InventoryListView(generics.ListAPIView):
         if end_date:
             qs = qs.filter(updated_at__date__lte=end_date)
 
-        return qs
+        return qs.select_related("company", "category", "warehouse")
 
     @extend_schema(
         summary="List Inventory Items",
@@ -179,13 +179,15 @@ class StockAdjustmentListCreateView(generics.ListCreateAPIView):
         if getattr(user, "is_superadmin", False):
             company_id = self.request.query_params.get("company")
             if company_id:
-                return StockAdjustment.objects.filter(company_id=company_id)
-            return StockAdjustment.objects.all()
+                qs = StockAdjustment.objects.filter(company_id=company_id)
+            else:
+                qs = StockAdjustment.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = StockAdjustment.objects.filter(company=user.company)
+        else:
+            qs = StockAdjustment.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return StockAdjustment.objects.filter(company=user.company)
-
-        return StockAdjustment.objects.none()
+        return qs.select_related("company", "product", "warehouse", "created_by")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -213,9 +215,9 @@ class StockAdjustmentListCreateView(generics.ListCreateAPIView):
         return super().post(request, *args, **kwargs)
 
 
-class StockAdjustmentDetailView(generics.RetrieveDestroyAPIView):
+class StockAdjustmentDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    API view to retrieve or delete a stock adjustment audit record by ID.
+    API view to retrieve, edit (PUT/PATCH), or delete a stock adjustment audit record by ID.
     """
     serializer_class = StockAdjustmentSerializer
     permission_classes = [IsAuthenticated]
@@ -223,12 +225,13 @@ class StockAdjustmentDetailView(generics.RetrieveDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         if getattr(user, "is_superadmin", False):
-            return StockAdjustment.objects.all()
+            qs = StockAdjustment.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = StockAdjustment.objects.filter(company=user.company)
+        else:
+            qs = StockAdjustment.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return StockAdjustment.objects.filter(company=user.company)
-
-        return StockAdjustment.objects.none()
+        return qs.select_related("company", "product", "warehouse", "created_by")
 
     @extend_schema(
         summary="Get Stock Adjustment Details",
@@ -237,6 +240,24 @@ class StockAdjustmentDetailView(generics.RetrieveDestroyAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Edit/Update Stock Adjustment (Full)",
+        description="Updates all fields of an existing stock adjustment record.",
+        request=StockAdjustmentSerializer,
+        responses={200: StockAdjustmentSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Not Found")}
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+
+    @extend_schema(
+        summary="Edit/Update Stock Adjustment (Partial)",
+        description="Partially updates fields of an existing stock adjustment record.",
+        request=StockAdjustmentSerializer,
+        responses={200: StockAdjustmentSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Not Found")}
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
 
     @extend_schema(
         summary="Delete Stock Adjustment Record",

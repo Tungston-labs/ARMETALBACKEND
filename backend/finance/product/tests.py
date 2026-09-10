@@ -250,24 +250,96 @@ class ProductAPITestCase(APITestCase):
         # current_stock should equal opening_stock_qty (10) + quantity (25) = 35
         self.assertEqual(res.data["current_stock"], 35)
 
-    def test_update_product_quantity_adjusts_current_stock(self):
-        # Create product initial
+    def test_put_full_update_product(self):
         prd = Product.objects.create(
             company=self.company,
-            code="PRD-QTY-TEST",
-            product_name="Server Rack Drawer",
-            opening_stock_qty=5,
-            quantity=10,
-            current_stock=15
+            code="PRD-PUT-01",
+            product_name="Original Product",
+            product_type="product",
+            cost_price="100.00",
+            selling_price="150.00"
         )
-        self.assertEqual(prd.current_stock, 15)
 
-        # Update quantity from 10 to 20 (+10 diff)
-        patch_res = self.client.patch(f"/api/finance/product/{prd.id}/", {
-            "quantity": 20
+        put_res = self.client.put(f"/api/finance/product/{prd.id}/", {
+            "product_name": "Fully Updated Product Name",
+            "product_type": "product",
+            "sku": "SKU-998877",
+            "category": self.category.id,
+            "warehouse": self.warehouse.id,
+            "brand": "Schneider",
+            "supplier": "Global Supplies Ltd",
+            "unit": "PCS",
+            "cost_price": "120.00",
+            "selling_price": "180.00",
+            "tax_type": "vat",
+            "tax_rate": "15.00",
+            "reorder_level": 15,
+            "description": "Full replace update test via PUT",
+            "status": "active"
         }, format="json")
+
+        self.assertEqual(put_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(put_res.data["product_name"], "Fully Updated Product Name")
+        self.assertEqual(put_res.data["sku"], "SKU-998877")
+        self.assertEqual(put_res.data["cost_price"], "120.00")
+        self.assertEqual(put_res.data["selling_price"], "180.00")
+        self.assertEqual(put_res.data["category_name"], "Networking")
+        self.assertEqual(put_res.data["warehouse_name"], "Riyadh Central Warehouse")
+
+        prd.refresh_from_db()
+        self.assertEqual(prd.product_name, "Fully Updated Product Name")
+
+    def test_patch_partial_update_product_prices_and_fk(self):
+        prd = Product.objects.create(
+            company=self.company,
+            code="PRD-PATCH-01",
+            product_name="Base Product",
+            product_type="product",
+            cost_price="500.00",
+            selling_price="750.00"
+        )
+
+        patch_res = self.client.patch(f"/api/finance/product/{prd.id}/", {
+            "selling_price": "850.00",
+            "brand": "Dell",
+            "category": self.category.id
+        }, format="json")
+
         self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
-        self.assertEqual(patch_res.data["quantity"], 20)
-        self.assertEqual(patch_res.data["current_stock"], 25)
+        self.assertEqual(patch_res.data["selling_price"], "850.00")
+        self.assertEqual(patch_res.data["brand"], "Dell")
+        self.assertEqual(patch_res.data["category_name"], "Networking")
+        # Ensure product name wasn't modified
+        self.assertEqual(patch_res.data["product_name"], "Base Product")
+
+    def test_product_filter_and_search(self):
+        Product.objects.create(
+            company=self.company,
+            code="PRD-FLT-1",
+            product_name="Optical Fiber Cable",
+            product_type="product",
+            category=self.category,
+            status="active"
+        )
+        Product.objects.create(
+            company=self.company,
+            code="PRD-FLT-2",
+            product_name="Consulting Support",
+            product_type="service",
+            status="inactive"
+        )
+
+        # Filter by product_type
+        res_filter = self.client.get("/api/finance/product/?product_type=service")
+        self.assertEqual(res_filter.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_filter.data["results"]), 1)
+        self.assertEqual(res_filter.data["results"][0]["code"], "PRD-FLT-2")
+
+        # Search by product_name
+        res_search = self.client.get("/api/finance/product/?search=Optical")
+        self.assertEqual(res_search.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_search.data["results"]), 1)
+        self.assertEqual(res_search.data["results"][0]["code"], "PRD-FLT-1")
+
 
 

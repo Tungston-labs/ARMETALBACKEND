@@ -91,18 +91,30 @@ class StockAdjustmentSerializer(serializers.ModelSerializer):
         return None
 
     def validate(self, attrs):
-        adj_type = str(attrs.get("adjustment_type", "add_stock")).lower().strip()
-        qty = attrs.get("adjustment_quantity", 0)
-        product = attrs.get("product")
+        instance = getattr(self, "instance", None)
 
-        if adj_type in ["set_exact_quantity", "set_exact", "set exact quantity"]:
+        adj_type = attrs.get("adjustment_type")
+        if adj_type is None and instance:
+            adj_type = instance.adjustment_type
+        adj_type_str = str(adj_type or "add_stock").lower().strip()
+
+        qty = attrs.get("adjustment_quantity")
+        if qty is None and instance:
+            qty = instance.adjustment_quantity
+        qty = qty if qty is not None else 0
+
+        product = attrs.get("product")
+        if product is None and instance:
+            product = instance.product
+
+        if adj_type_str in ["set_exact_quantity", "set_exact", "set exact quantity"]:
             if qty < 0:
                 raise serializers.ValidationError({"adjustment_quantity": "Exact stock quantity cannot be negative."})
         else:
             if qty <= 0:
                 raise serializers.ValidationError({"adjustment_quantity": "Adjustment quantity must be greater than 0."})
 
-        if adj_type in ["subtraction", "decrease", "reduce_stock", "remove_stock", "reduce stock", "remove stock"] and product:
+        if adj_type_str in ["subtraction", "decrease", "reduce_stock", "remove_stock", "reduce stock", "remove stock"] and product:
             if product.current_stock < qty:
                 raise serializers.ValidationError({
                     "adjustment_quantity": f"Cannot reduce quantity by {qty}. Current available stock is only {product.current_stock}."

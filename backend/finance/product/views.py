@@ -72,13 +72,15 @@ class ProductListCreateView(generics.ListCreateAPIView):
         if getattr(user, "is_superadmin", False):
             company_id = self.request.query_params.get("company")
             if company_id:
-                return Product.objects.filter(company_id=company_id)
-            return Product.objects.all()
+                qs = Product.objects.filter(company_id=company_id)
+            else:
+                qs = Product.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = Product.objects.filter(company=user.company)
+        else:
+            qs = Product.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return Product.objects.filter(company=user.company)
-
-        return Product.objects.none()
+        return qs.select_related("company", "category", "warehouse", "created_by")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -151,12 +153,13 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         if getattr(user, "is_superadmin", False):
-            return Product.objects.all()
+            qs = Product.objects.all()
+        elif hasattr(user, "company") and user.company:
+            qs = Product.objects.filter(company=user.company)
+        else:
+            qs = Product.objects.none()
 
-        if hasattr(user, "company") and user.company:
-            return Product.objects.filter(company=user.company)
-
-        return Product.objects.none()
+        return qs.select_related("company", "category", "warehouse", "created_by")
 
     @extend_schema(
         summary="Get Product Details",
