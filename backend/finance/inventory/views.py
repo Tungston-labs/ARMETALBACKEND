@@ -91,6 +91,10 @@ class InventoryListView(generics.ListAPIView):
         else:
             return Product.objects.none()
 
+        product_param = self.request.query_params.get("product")
+        if product_param:
+            qs = qs.filter(id=product_param)
+
         stock_status = self.request.query_params.get("stock_status")
         if stock_status:
             stock_status = stock_status.lower().strip()

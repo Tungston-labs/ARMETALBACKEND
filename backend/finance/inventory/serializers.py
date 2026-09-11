@@ -5,11 +5,13 @@ from .models import StockAdjustment
 
 
 class InventoryListSerializer(ProductSerializer):
+    product = serializers.IntegerField(source="id", read_only=True)
     available_qty = serializers.IntegerField(source="current_stock", read_only=True)
 
     class Meta(ProductSerializer.Meta):
         fields = [
             "id",
+            "product",
             "code",
             "product_name",
             "sku",
