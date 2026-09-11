@@ -280,22 +280,34 @@ class CategoryViewSet(viewsets.ModelViewSet):
         )
     
     @action(
-    detail=False,
-    methods=["get"],
-    url_path="summary"
+        detail=False,
+        methods=["get"],
+        url_path="summary"
     )
     def summary(self, request):
+
+        queryset = self.get_queryset()
 
         # ---------------------------------------------
         # CATEGORY COUNTS
         # ---------------------------------------------
 
-        queryset = self.get_queryset()
-
         total_categories = queryset.count()
 
         active_categories = queryset.filter(
             status="active"
+        ).count()
+
+        inactive_categories = queryset.filter(
+            status="inactive"
+        ).count()
+
+        parent_categories = queryset.filter(
+            parent_category__isnull=True
+        ).count()
+
+        sub_categories = queryset.filter(
+            parent_category__isnull=False
         ).count()
 
         # ---------------------------------------------
@@ -359,6 +371,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
                 "data": {
                     "total_categories": total_categories,
                     "active_categories": active_categories,
+                    "inactive_categories": inactive_categories,
+                    "parent_categories": parent_categories,
+                    "sub_categories": sub_categories,
                     "assigned_product_count": assigned_product_count,
                     "empty_category_product_count": empty_category_product_count,
                     "most_assigned_category": most_assigned_category_data,
