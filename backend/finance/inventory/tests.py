@@ -64,6 +64,7 @@ class InventoryAPITestCase(APITestCase):
         self.assertEqual(len(list_res.data["results"]), 1)
         item = list_res.data["results"][0]
         self.assertEqual(item["code"], "CAT-001")
+        self.assertEqual(item["product"], self.product.id)
         self.assertEqual(item["available_qty"], 120)
         self.assertEqual(item["stock_status"], "In Stock")
 
@@ -249,6 +250,13 @@ class InventoryAPITestCase(APITestCase):
         self.assertEqual(res_out.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_out.data["results"]), 1)
         self.assertEqual(res_out.data["results"][0]["code"], "PRD-OUT-STK")
+
+    def test_inventory_list_filter_by_product(self):
+        res = self.client.get(f"/api/finance/inventory/?product={self.product.id}")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data["results"]), 1)
+        self.assertEqual(res.data["results"][0]["product"], self.product.id)
+
 
 
 
