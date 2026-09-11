@@ -4,6 +4,20 @@ from rest_framework.exceptions import AuthenticationFailed
 
 class CompanyJWTAuthentication(JWTAuthentication):
 
+    def get_raw_token(self, header):
+        parts = header.split()
+        if len(parts) == 0:
+            return None
+
+        if len(parts) == 1:
+            # Accepts raw token even if 'Bearer ' prefix was omitted in Swagger UI or client
+            return parts[0]
+
+        if len(parts) == 2:
+            return parts[1]
+
+        return super().get_raw_token(header)
+
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
 

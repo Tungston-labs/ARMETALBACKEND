@@ -30,6 +30,7 @@ django-phonenumber-field==8.1.0
 django-timezone-field==7.1
 django-widget-tweaks==1.5.0
 djangorestframework==3.16.0
+drf-yasg==1.21.15
 djangorestframework_simplejwt==5.5.0
 drf-spectacular==0.30.0
 et_xmlfile==2.0.0

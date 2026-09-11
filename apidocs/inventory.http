@@ -1,0 +1,92 @@
+# ==============================================================================
+# INVENTORY & STOCK ADJUSTMENT API DOCUMENTATION & HTTP TEST SUITE
+# ==============================================================================
+
+### 1. Authenticate to get JWT token
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "TUNGRAS82",
+  "password": "password123"
+}
+
+###
+
+@authToken = Bearer YOUR_ACCESS_TOKEN_HERE
+
+
+# ------------------------------------------------------------------------------
+# 2. GET INVENTORY KPI METRICS
+# ------------------------------------------------------------------------------
+### Get Inventory KPI summary (Total Items, In Stock, Low Stock, Out of Stock, Inventory Value)
+GET http://127.0.0.1:8000/api/finance/inventory/kpi/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 3. LIST INVENTORY ITEMS
+# ------------------------------------------------------------------------------
+### List all inventory stock items
+GET http://127.0.0.1:8000/api/finance/inventory/
+Authorization: {{authToken}}
+
+### Search inventory by product name, code, sku
+GET http://127.0.0.1:8000/api/finance/inventory/?search=Cisco
+Authorization: {{authToken}}
+
+### Filter inventory by warehouse and stock status (in_stock, low_stock, out_of_stock)
+GET http://127.0.0.1:8000/api/finance/inventory/?warehouse=1&stock_status=in_stock
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 4. CREATE / CONFIRM STOCK ADJUSTMENT
+# ------------------------------------------------------------------------------
+### Add stock (Stock Addition +)
+POST http://127.0.0.1:8000/api/finance/inventory/adjustments/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "product": 1,
+  "warehouse": 1,
+  "adjustment_type": "addition",
+  "adjustment_quantity": 25,
+  "reason": "inventory_count",
+  "reference_document": "INV-COUNT-2026",
+  "adjustment_date": "2026-09-09",
+  "note": "Recounted warehouse stock and added 25 units."
+}
+
+### Subtract stock (Stock Subtraction -)
+POST http://127.0.0.1:8000/api/finance/inventory/adjustments/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "product": 1,
+  "warehouse": 1,
+  "adjustment_type": "subtraction",
+  "adjustment_quantity": 5,
+  "reason": "damaged",
+  "reference_document": "DMG-LOG-102",
+  "adjustment_date": "2026-09-09",
+  "note": "Damaged during transport."
+}
+
+
+# ------------------------------------------------------------------------------
+# 5. LIST & RETRIEVE STOCK ADJUSTMENTS AUDIT LOG
+# ------------------------------------------------------------------------------
+### List all stock adjustment records
+GET http://127.0.0.1:8000/api/finance/inventory/adjustments/
+Authorization: {{authToken}}
+
+### Filter stock adjustments by reason or adjustment_type
+GET http://127.0.0.1:8000/api/finance/inventory/adjustments/?adjustment_type=addition&reason=inventory_count
+Authorization: {{authToken}}
+
+### Get stock adjustment details by ID
+GET http://127.0.0.1:8000/api/finance/inventory/adjustments/1/
+Authorization: {{authToken}}

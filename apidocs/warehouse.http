@@ -1,0 +1,112 @@
+# ==============================================================================
+# WAREHOUSE API DOCUMENTATION & HTTP TEST SUITE
+# ==============================================================================
+
+### 1. Authenticate to get JWT token
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "dummy",
+  "password": "password123"
+}
+
+###
+
+# Set variable for JWT access token
+@authToken = Bearer YOUR_ACCESS_TOKEN_HERE
+
+
+# ------------------------------------------------------------------------------
+# 2. CREATE WAREHOUSE (Add New Warehouse)
+# ------------------------------------------------------------------------------
+### Add a New Warehouse
+POST http://127.0.0.1:8000/api/finance/warehouse/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "code": "WH-001",
+  "warehouse_name": "Riyadh Central Warehouse",
+  "warehouse_type": "main",
+  "status": "active",
+  "operating_since": "2024-01-15",
+  "country": "Saudi Arabia",
+  "city": "Riyadh",
+  "address_line_1": "King Fahd Road, Sector 4",
+  "address_line_2": "Building 12",
+  "postal_code": "12211",
+  "phone_number": "+966500000000",
+  "email": "riyadh.wh@company.com",
+  "storage_capacity": "50000 SQFT",
+  "notes": "Main distribution hub for central region."
+}
+
+
+# ------------------------------------------------------------------------------
+# 3. LIST WAREHOUSES (With Pagination, Summary Counts, & Filters)
+# ------------------------------------------------------------------------------
+### List all warehouses for user's company
+GET http://127.0.0.1:8000/api/finance/warehouse/
+Authorization: {{authToken}}
+
+### Search warehouses by keyword
+GET http://127.0.0.1:8000/api/finance/warehouse/?search=Riyadh
+Authorization: {{authToken}}
+
+### Filter warehouses by status and type
+GET http://127.0.0.1:8000/api/finance/warehouse/?status=active&warehouse_type=main
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 4. GET WAREHOUSE DETAILS
+# ------------------------------------------------------------------------------
+### Get warehouse by ID
+GET http://127.0.0.1:8000/api/finance/warehouse/1/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 5. EDIT / UPDATE WAREHOUSE
+# ------------------------------------------------------------------------------
+### Partial update warehouse (PATCH)
+PATCH http://127.0.0.1:8000/api/finance/warehouse/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "warehouse_name": "Riyadh Central Distribution Hub",
+  "phone_number": "+966511111111",
+  "status": "active"
+}
+
+### Full update warehouse (PUT)
+PUT http://127.0.0.1:8000/api/finance/warehouse/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "code": "WH-001",
+  "warehouse_name": "Riyadh Central Warehouse Updated",
+  "warehouse_type": "main",
+  "status": "active",
+  "operating_since": "2024-01-15",
+  "country": "Saudi Arabia",
+  "city": "Riyadh",
+  "address_line_1": "King Fahd Road, Sector 4",
+  "address_line_2": "Building 12 B",
+  "postal_code": "12211",
+  "phone_number": "+966522222222",
+  "email": "riyadh.wh.updated@company.com",
+  "storage_capacity": "60000 SQFT",
+  "notes": "Expanded storage capacity."
+}
+
+
+# ------------------------------------------------------------------------------
+# 6. DELETE WAREHOUSE
+# ------------------------------------------------------------------------------
+### Delete a warehouse by ID
+DELETE http://127.0.0.1:8000/api/finance/warehouse/1/
+Authorization: {{authToken}}

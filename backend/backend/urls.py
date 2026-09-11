@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 from drf_spectacular.views import (
@@ -26,28 +26,29 @@ from drf_spectacular.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/',include('user.urls')),
-    path('api/',include('superadmin.urls')),
-    path('api/',include('hr.departments.urls')),
+    path('api/', include('user.urls')),
+    path('api/', include('superadmin.urls')),
+    path('api/', include('hr.departments.urls')),
     path('api/', include('hr.employee.urls')),
-    path('api/',include('hr.leave.urls')),
-    path('api/',include('hr.task.urls')),
-    path('api/',include('hr.attendance.urls')),
-    path('api/',include('hr.holidays.urls')),
-    path('api/',include('hr.payroll.urls')),
-    path('api/reimbursements/',include('hr.reimbursement.urls')),
-    path('api/project/',include('hr.project.urls')),
-    path('api/admindashboard/',include('hr.dashboard.urls')),
-    path('api/finance/',include('hr.finance.urls')),
+    path('api/', include('hr.leave.urls')),
+    path('api/', include('hr.task.urls')),
+    path('api/', include('hr.attendance.urls')),
+    path('api/', include('hr.holidays.urls')),
+    path('api/', include('hr.payroll.urls')),
+    path('api/reimbursements/', include('hr.reimbursement.urls')),
+    path('api/project/', include('hr.project.urls')),
+    path('api/admindashboard/', include('hr.dashboard.urls')),
+    path('api/finance/', include('hr.finance.urls')),
     path('api/finance/category/', include('finance.category.urls')),
-
+    path('api/finance/warehouse/', include('finance.warehouse.urls')),
+    path('api/finance/product/', include('finance.product.urls')),
+    path('api/finance/inventory/', include('finance.inventory.urls')),
 
     path(
         "api/schema/",
         SpectacularAPIView.as_view(),
         name="schema"
     ),
-
     path(
         "api/docs/",
         SpectacularSwaggerView.as_view(
@@ -55,7 +56,6 @@ urlpatterns = [
         ),
         name="swagger-ui"
     ),
-
     path(
         "api/redoc/",
         SpectacularRedocView.as_view(
@@ -63,13 +63,5 @@ urlpatterns = [
         ),
         name="redoc"
     ),
-
-
-
-
-
-
-
-
-
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    

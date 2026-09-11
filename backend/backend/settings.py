@@ -65,6 +65,9 @@ INSTALLED_APPS = [
     'channels',
     'finance.category',
     "drf_spectacular",
+    'finance.warehouse',
+    'finance.product',
+    'finance.inventory',
 ]
 
 MIDDLEWARE = [
@@ -185,6 +188,19 @@ REST_FRAMEWORK = {
 
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header using the Bearer scheme. Format: "Bearer <your_token>"'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
 }
 
 

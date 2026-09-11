@@ -1,9 +1,14 @@
 from rest_framework import serializers
-
 from .models import Category
+from .utils import generate_next_category_code
 
 
 class CategorySerializer(serializers.ModelSerializer):
+
+    company_name = serializers.CharField(
+        source="company.name",
+        read_only=True
+    )
 
     parent_category_name = serializers.CharField(
         source="parent_category.category_name",
@@ -21,6 +26,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "company",
+            "company_name",
             "code",
             "category_name",
             "parent_category",
@@ -32,10 +38,11 @@ class CategorySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-
         read_only_fields = [
             "id",
             "company",
+            "company_name",
+            "parent_category_name",
             "created_by",
             "created_by_name",
             "parent_category_name",
