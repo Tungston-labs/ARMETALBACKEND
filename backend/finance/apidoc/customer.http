@@ -1,0 +1,241 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5MTUzNzIyLCJpYXQiOjE3ODkxMjQ5MjIsImp0aSI6ImEzYjAzYjA5ZjM5ODRkYjNhNDVkYzJiNTFjOWFlMDhkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.XqR1NLCe9aSq04VK9Te9nFJz7_NCJRkOp1cOHcYnYHc
+
+### ============================================================
+### CUSTOMER API
+### ============================================================
+
+
+### 1. CREATE CUSTOMER
+### Content-Type: multipart/form-data
+POST {{baseUrl}}/api/finance/customer/
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----CustomerBoundary
+
+------CustomerBoundary
+Content-Disposition: form-data; name="customer_name"
+
+ABC Trading LLC
+------CustomerBoundary
+Content-Disposition: form-data; name="company_name"
+
+ABC Trading Company
+------CustomerBoundary
+Content-Disposition: form-data; name="industry"
+
+manufacturing
+------CustomerBoundary
+Content-Disposition: form-data; name="website"
+
+https://www.abctrading.com
+------CustomerBoundary
+Content-Disposition: form-data; name="cr_number"
+
+CR123456
+------CustomerBoundary
+Content-Disposition: form-data; name="currency"
+
+AED
+------CustomerBoundary
+Content-Disposition: form-data; name="vat_number"
+
+VAT123456789
+------CustomerBoundary
+Content-Disposition: form-data; name="payment_term"
+
+30_days
+------CustomerBoundary
+Content-Disposition: form-data; name="cr_expiry_date"
+
+2027-12-31
+------CustomerBoundary
+Content-Disposition: form-data; name="billing_address"
+
+123 Business Street
+------CustomerBoundary
+Content-Disposition: form-data; name="city"
+
+Dubai
+------CustomerBoundary
+Content-Disposition: form-data; name="state"
+
+Dubai
+------CustomerBoundary
+Content-Disposition: form-data; name="country"
+
+UAE
+------CustomerBoundary
+Content-Disposition: form-data; name="postal"
+
+00000
+------CustomerBoundary
+Content-Disposition: form-data; name="phno"
+
++971501234567
+------CustomerBoundary
+Content-Disposition: form-data; name="admin_email"
+
+admin@abctrading.com
+------CustomerBoundary
+Content-Disposition: form-data; name="financial_email"
+
+finance@abctrading.com
+------CustomerBoundary
+Content-Disposition: form-data; name="technical_email"
+
+technical@abctrading.com
+------CustomerBoundary
+Content-Disposition: form-data; name="client_status"
+
+active
+------CustomerBoundary
+Content-Disposition: form-data; name="credit_limit"
+
+50000.00
+------CustomerBoundary
+Content-Disposition: form-data; name="opening_balance"
+
+10000.00
+------CustomerBoundary
+Content-Disposition: form-data; name="notes"
+
+Important customer account
+------CustomerBoundary--
+
+
+### 2. CREATE CUSTOMER - MINIMUM DATA
+POST {{baseUrl}}/api/finance/customer/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "customer_name": "XYZ Customer3",
+    "industry": "retail",
+    "currency": "AED",
+    "payment_term": "30_days",
+    "client_status": "active",
+    "credit_limit": "25000.00",
+    "opening_balance": "0.00"
+}
+
+
+### 3. LIST ALL CUSTOMERS
+GET {{baseUrl}}/api/finance/customer/
+Authorization: Bearer {{token}}
+
+
+### 4. LIST CUSTOMERS - SEARCH
+GET {{baseUrl}}/api/finance/customer/?search=XYZ
+Authorization: Bearer {{token}}
+
+
+### 5. SEARCH BY CUSTOMER ID
+GET {{baseUrl}}/api/finance/customer/?search=CUS001
+Authorization: Bearer {{token}}
+
+
+### 6. SEARCH BY CUSTOMER NAME
+GET {{baseUrl}}/api/finance/customer/?search=Trading
+Authorization: Bearer {{token}}
+
+
+### 7. FILTER ACTIVE CUSTOMERS
+GET {{baseUrl}}/api/finance/customer/?client_status=active
+Authorization: Bearer {{token}}
+
+
+### 8. FILTER INACTIVE CUSTOMERS
+GET {{baseUrl}}/api/finance/customer/?client_status=inactive
+Authorization: Bearer {{token}}
+
+
+### 9. LATEST CUSTOMERS
+GET {{baseUrl}}/api/finance/customer/?ordering=-created_at
+Authorization: Bearer {{token}}
+
+
+### 10. OLDEST CUSTOMERS
+GET {{baseUrl}}/api/finance/customer/?ordering=created_at
+Authorization: Bearer {{token}}
+
+
+### 11. SORT CUSTOMER NAME - ASCENDING
+GET {{baseUrl}}/api/finance/customer/?ordering=customer_name
+Authorization: Bearer {{token}}
+
+
+### 12. SORT CUSTOMER NAME - DESCENDING
+GET {{baseUrl}}/api/finance/customer/?ordering=-customer_name
+Authorization: Bearer {{token}}
+
+
+### 13. GET CUSTOMER DETAIL
+GET {{baseUrl}}/api/finance/customer/1/
+Authorization: Bearer {{token}}
+
+
+### 14. UPDATE CUSTOMER - PUT
+PUT {{baseUrl}}/api/finance/customer/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "customer_name": "ABC Trading Updated",
+    "company_name": "ABC Trading Company Updated",
+    "industry": "manufacturing",
+    "website": "https://www.abctrading.com",
+    "cr_number": "CR123456",
+    "currency": "AED",
+    "vat_number": "VAT123456789",
+    "payment_term": "60_days",
+    "cr_expiry_date": "2028-12-31",
+    "billing_address": "Updated Business Address",
+    "city": "Dubai",
+    "state": "Dubai",
+    "country": "UAE",
+    "postal": "00000",
+    "phno": "+971501234567",
+    "admin_email": "admin@abctrading.com",
+    "financial_email": "finance@abctrading.com",
+    "technical_email": "technical@abctrading.com",
+    "client_status": "active",
+    "credit_limit": "75000.00",
+    "opening_balance": "15000.00",
+    "notes": "Updated customer information"
+}
+
+
+### 15. PARTIAL UPDATE CUSTOMER - PATCH
+PATCH {{baseUrl}}/api/finance/customer/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "customer_name": "ABC Trading Updated",
+    "credit_limit": "100000.00"
+}
+
+
+### 16. CHANGE CUSTOMER STATUS
+PATCH {{baseUrl}}/api/finance/customer/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "client_status": "inactive"
+}
+
+
+### 17. DELETE CUSTOMER
+DELETE {{baseUrl}}/api/finance/customer/1/
+Authorization: Bearer {{token}}
+
+
+### 18. CUSTOMER SUMMARY
+GET {{baseUrl}}/api/finance/customer/summary/
+Authorization: Bearer {{token}}
+
+
+### 19. SUMMARY - WITH ACTIVE FILTER
+GET {{baseUrl}}/api/finance/customer/summary/?client_status=active
+Authorization: Bearer {{token}}
