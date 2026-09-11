@@ -286,6 +286,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     )
     def summary(self, request):
 
+        # ---------------------------------------------
+        # CATEGORY COUNTS
+        # ---------------------------------------------
+
         queryset = self.get_queryset()
 
         total_categories = queryset.count()
@@ -294,17 +298,60 @@ class CategoryViewSet(viewsets.ModelViewSet):
             status="active"
         ).count()
 
-        inactive_categories = queryset.filter(
-            status="inactive"
+        # ---------------------------------------------
+        # PRODUCT COUNTS
+        # ---------------------------------------------
+
+        from finance.product.models import Product
+
+        product_queryset = Product.objects.filter(
+            company=request.user.company
+        )
+
+        assigned_product_count = product_queryset.filter(
+            category__isnull=False
         ).count()
 
-        parent_categories = queryset.filter(
-            parent_category__isnull=True
+        empty_category_product_count = product_queryset.filter(
+            category__isnull=True
         ).count()
 
-        sub_categories = queryset.filter(
-            parent_category__isnull=False
-        ).count()
+        # ---------------------------------------------
+        # MOST ASSIGNED CATEGORY
+        # ---------------------------------------------
+
+        most_assigned_category = (
+            queryset
+            .annotate(
+                product_count=Count(
+                    "products",
+                    distinct=True
+                )
+            )
+            .filter(
+                product_count__gt=0
+            )
+            .order_by(
+                "-product_count",
+                "category_name"
+            )
+            .first()
+        )
+
+        most_assigned_category_data = None
+
+        if most_assigned_category:
+
+            most_assigned_category_data = {
+                "id": most_assigned_category.id,
+                "code": most_assigned_category.code,
+                "category_name": most_assigned_category.category_name,
+                "product_count": most_assigned_category.product_count,
+            }
+
+        # ---------------------------------------------
+        # RESPONSE
+        # ---------------------------------------------
 
         return Response(
             {
@@ -312,9 +359,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
                 "data": {
                     "total_categories": total_categories,
                     "active_categories": active_categories,
-                    "inactive_categories": inactive_categories,
-                    "parent_categories": parent_categories,
-                    "sub_categories": sub_categories,
+                    "assigned_product_count": assigned_product_count,
+                    "empty_category_product_count": empty_category_product_count,
+                    "most_assigned_category": most_assigned_category_data,
                 }
             },
             status=status.HTTP_200_OK
