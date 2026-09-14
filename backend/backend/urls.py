@@ -44,6 +44,8 @@ urlpatterns = [
     path('api/finance/product/', include('finance.product.urls')),
     path('api/finance/inventory/', include('finance.inventory.urls')),
     path('api/finance/customer/', include('finance.customer.urls')),
+    path('api/finance/quotation/', include('finance.quotation.urls')),
+    path('api/finance/quotations/', include('finance.quotation.urls')),
 
 
     path(
