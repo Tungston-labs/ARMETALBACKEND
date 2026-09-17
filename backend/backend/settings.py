@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'finance.delivery_note',
     'finance.credit_note',
     'finance.invoice',
+    'finance.sales_order',
 ]
 
 MIDDLEWARE = [

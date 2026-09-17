@@ -1,0 +1,605 @@
+@baseUrl = http://127.0.0.1:8000/api/finance/sales-order
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5NjUzMTAyLCJpYXQiOjE3ODk2MjQzMDIsImp0aSI6Ijk5MWJlMWU3NTRjMDRlNjBiZDQxMTM0MmRhNjVkYTc5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.15WOH1L4SBcB_DMaUIxrqVFHM3lrWpTc1vmFhIcGCIc
+
+
+###########################################################
+# SALES ORDER API
+###########################################################
+
+
+###########################################################
+# 1. LIST SALES ORDERS
+###########################################################
+
+GET {{baseUrl}}/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 2. LIST SALES ORDERS - SEARCH
+###########################################################
+
+GET {{baseUrl}}/?search=SO-0001
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 3. LIST SALES ORDERS - SEARCH CUSTOMER
+###########################################################
+
+GET {{baseUrl}}/?search=John
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 4. FILTER BY CUSTOMER
+###########################################################
+
+GET {{baseUrl}}/?customer=12
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 5. FILTER BY QUOTATION
+###########################################################
+
+GET {{baseUrl}}/?quotation=5
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 6. FILTER BY WAREHOUSE
+###########################################################
+
+GET {{baseUrl}}/?warehouse=3
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 7. FILTER BY ORDER STATUS
+#
+# pending
+# confirmed
+# rejected
+# processing
+###########################################################
+
+GET {{baseUrl}}/?order_status=pending
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 8. FILTER BY DELIVERY STATUS
+#
+# pending
+# partially_delivered
+# completed
+# cancelled
+###########################################################
+
+GET {{baseUrl}}/?delivery_status=partially_delivered
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 9. FILTER BY PAYMENT TERMS
+#
+# due_on_receipt
+# net_7
+# net_15
+# net_30
+# net_45
+# net_60
+###########################################################
+
+GET {{baseUrl}}/?payment_terms=net_15
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 10. FILTER BY ORDER DATE
+###########################################################
+
+GET {{baseUrl}}/?order_date=2026-09-07
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 11. ORDER DATE RANGE
+###########################################################
+
+GET {{baseUrl}}/?order_date_after=2026-09-01&order_date_before=2026-09-30
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 12. DELIVERY DATE
+###########################################################
+
+GET {{baseUrl}}/?delivery_date=2026-09-15
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 13. DELIVERY DATE RANGE
+###########################################################
+
+GET {{baseUrl}}/?delivery_date_after=2026-09-01&delivery_date_before=2026-09-30
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 14. DUE DATE
+###########################################################
+
+GET {{baseUrl}}/?due_date=2026-09-22
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 15. DUE DATE RANGE
+###########################################################
+
+GET {{baseUrl}}/?due_date_after=2026-09-01&due_date_before=2026-09-30
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 16. SORT BY NEWEST
+###########################################################
+
+GET {{baseUrl}}/?ordering=-created_at
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 17. SORT BY ORDER VALUE - HIGH TO LOW
+###########################################################
+
+GET {{baseUrl}}/?ordering=-order_value
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 18. SORT BY ORDER DATE - OLD TO NEW
+###########################################################
+
+GET {{baseUrl}}/?ordering=order_date
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 19. COMBINED SEARCH + FILTER
+###########################################################
+
+GET {{baseUrl}}/?search=John&order_status=pending&customer=12
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 20. COMPANY-SPECIFIC LIST
+#
+# Useful for SUPER ADMIN
+###########################################################
+
+GET {{baseUrl}}/?company=1
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 21. COMPANY-SPECIFIC SEARCH
+###########################################################
+
+GET {{baseUrl}}/?company=1&search=SO-0001
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 22. SALES ORDER SUMMARY / KPI
+###########################################################
+
+GET {{baseUrl}}/summary/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 23. COMPANY-SPECIFIC SUMMARY
+###########################################################
+
+GET {{baseUrl}}/summary/?company=1
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 24. GET COMPANIES
+###########################################################
+
+GET {{baseUrl}}/companies/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 25. GET CUSTOMERS
+###########################################################
+
+GET {{baseUrl}}/customers/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 26. GET CUSTOMERS FOR COMPANY
+###########################################################
+
+GET {{baseUrl}}/customers/?company=1
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 27. SEARCH CUSTOMERS
+###########################################################
+
+GET {{baseUrl}}/customers/?company=1&search=John
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 28. GET ACTIVE WAREHOUSES
+###########################################################
+
+GET {{baseUrl}}/warehouses/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 29. GET WAREHOUSES FOR COMPANY
+###########################################################
+
+GET {{baseUrl}}/warehouses/?company=1
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 30. GET AVAILABLE QUOTATIONS
+#
+# Quotations which can be converted to Sales Orders
+###########################################################
+
+GET {{baseUrl}}/quotations/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 31. SEARCH AVAILABLE QUOTATIONS
+###########################################################
+
+GET {{baseUrl}}/quotations/?search=QT-0005
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 32. GET QUOTATION DETAILS
+#
+# Used by frontend to auto-populate Sales Order form
+###########################################################
+
+GET {{baseUrl}}/quotations/5/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 33. GET QUOTATION DETAILS FOR ANOTHER QUOTATION
+###########################################################
+
+GET {{baseUrl}}/quotations/6/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 34. CREATE SALES ORDER FROM QUOTATION
+###########################################################
+
+POST {{baseUrl}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quotation": 2,
+    "company": 1,
+    "customer": 1,
+    "warehouse": 2,
+    "order_date": "2026-09-07",
+    "delivery_date": "2026-09-15",
+    "due_date": "2026-09-22",
+    "payment_terms": "net_15",
+    "order_status": "pending",
+    "discount": "50.00",
+    "round_off": "0.00",
+    "notes": "Sales order created from quotation"
+}
+
+
+###########################################################
+# 35. CREATE SALES ORDER WITHOUT MANUALLY SENDING ITEMS
+#
+# Items will automatically be copied from quotation.
+###########################################################
+
+POST {{baseUrl}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quotation": 5,
+    "warehouse": 3,
+    "order_date": "2026-09-07",
+    "delivery_date": "2026-09-15",
+    "due_date": "2026-09-22",
+    "payment_terms": "net_15",
+    "order_status": "pending",
+    "discount": "0.00",
+    "round_off": "0.00",
+    "notes": "Created directly from quotation"
+}
+
+
+###########################################################
+# 36. CREATE SALES ORDER WITH ITEMS
+#
+# Optional.
+# Use this when you want to modify quotation quantities/rates.
+###########################################################
+
+POST {{baseUrl}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quotation": 5,
+    "company": 1,
+    "customer": 12,
+    "warehouse": 3,
+    "order_date": "2026-09-07",
+    "delivery_date": "2026-09-15",
+    "due_date": "2026-09-22",
+    "payment_terms": "net_15",
+    "order_status": "pending",
+    "discount": "50.00",
+    "round_off": "0.00",
+    "notes": "Sales order with modified items",
+
+    "items": [
+        {
+            "quotation_item": 10,
+            "product": 4,
+            "service_name": "Product A",
+            "description": "Product description",
+            "quantity": "5.00",
+            "delivered_quantity": "0.00",
+            "hs_code": "1234",
+            "rate": "500.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+###########################################################
+# 37. GET SALES ORDER DETAIL
+###########################################################
+
+GET {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# 38. UPDATE ORDER STATUS
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "order_status": "confirmed"
+}
+
+
+###########################################################
+# 39. UPDATE TO PROCESSING
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "order_status": "processing"
+}
+
+
+###########################################################
+# 40. UPDATE DELIVERY DATE
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "delivery_date": "2026-09-20"
+}
+
+
+###########################################################
+# 41. UPDATE DUE DATE
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "due_date": "2026-09-25"
+}
+
+
+###########################################################
+# 42. UPDATE PAYMENT TERMS
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "payment_terms": "net_30"
+}
+
+
+###########################################################
+# 43. UPDATE WAREHOUSE
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "warehouse": 4
+}
+
+
+###########################################################
+# 44. UPDATE DISCOUNT
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "discount": "100.00"
+}
+
+
+###########################################################
+# 45. UPDATE ROUND OFF
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "round_off": "-0.50"
+}
+
+
+###########################################################
+# 46. UPDATE NOTES
+###########################################################
+
+PATCH {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "notes": "Customer requested delivery before 20 September"
+}
+
+
+###########################################################
+# 47. UPDATE COMPLETE SALES ORDER
+###########################################################
+
+PUT {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quotation": 5,
+    "company": 1,
+    "customer": 12,
+    "warehouse": 3,
+    "order_date": "2026-09-07",
+    "delivery_date": "2026-09-20",
+    "due_date": "2026-09-25",
+    "payment_terms": "net_15",
+    "order_status": "confirmed",
+    "discount": "50.00",
+    "round_off": "0.00",
+    "notes": "Updated complete Sales Order"
+}
+
+
+###########################################################
+# 48. UPDATE ITEMS
+#
+# Sending items replaces the existing Sales Order items.
+###########################################################
+
+PUT {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "quotation": 5,
+    "company": 1,
+    "customer": 12,
+    "warehouse": 3,
+    "order_date": "2026-09-07",
+    "delivery_date": "2026-09-20",
+    "due_date": "2026-09-25",
+    "payment_terms": "net_15",
+    "order_status": "confirmed",
+    "discount": "50.00",
+    "round_off": "0.00",
+    "notes": "Updated items",
+
+    "items": [
+        {
+            "quotation_item": 10,
+            "product": 4,
+            "service_name": "Product A",
+            "description": "Updated Product A",
+            "quantity": "10.00",
+            "delivered_quantity": "0.00",
+            "hs_code": "1234",
+            "rate": "500.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+###########################################################
+# 49. DELETE SALES ORDER
+###########################################################
+
+DELETE {{baseUrl}}/1/
+Authorization: Bearer {{token}}
+
+
+###########################################################
+# DELIVERY TEST DATA
+###########################################################
+
+# NOTE:
+# Currently delivered_quantity is part of SalesOrderItem.
+#
+# When you implement the delivery API, you can use:
+#
+# PATCH /api/finance/sales-order/1/items/1/delivery/
+#
+# with:
+#
+# {
+#     "delivered_quantity": "5.00"
+# }
+#
+# Then:
+#
+# 0 / 10  -> pending
+# 5 / 10  -> partially_delivered
+# 10 / 10 -> completed
+###########################################################
