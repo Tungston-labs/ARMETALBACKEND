@@ -4,7 +4,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import F, Q, Sum, ExpressionWrapper, DecimalField
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiTypes
 
 from finance.product.models import Product
 from shared.pagination import CustomPagination
@@ -97,14 +97,14 @@ class InventoryListView(generics.ListAPIView):
 
         stock_status = self.request.query_params.get("stock_status")
         if stock_status:
-            stock_status = stock_status.lower().strip()
-            if stock_status == "out_of_stock":
+            val = stock_status.lower().strip()
+            if val in ["out_of_stock", "out", "out of stock"]:
                 qs = qs.filter(current_stock__lte=0)
-            elif stock_status == "low_stock":
+            elif val in ["low_stock", "low", "low stock"]:
                 qs = qs.filter(current_stock__gt=0).filter(
                     Q(current_stock__lt=10) | Q(current_stock__lt=F("reorder_level"))
                 )
-            elif stock_status == "in_stock":
+            elif val in ["in_stock", "in", "in stock", "active_stock", "active stock", "active"]:
                 qs = qs.filter(current_stock__gt=0)
 
         start_date = self.request.query_params.get("start_date")
@@ -119,6 +119,15 @@ class InventoryListView(generics.ListAPIView):
     @extend_schema(
         summary="List Inventory Items",
         description="Retrieves a paginated list of inventory stock items with search, warehouse, category, and stock status filters.",
+        parameters=[
+            OpenApiParameter(
+                name="stock_status",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Filter inventory items by stock status: 'in_stock', 'low_stock', 'out_of_stock'.",
+                enum=["in_stock", "low_stock", "out_of_stock"]
+            ),
+        ],
         responses={200: InventoryListSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):

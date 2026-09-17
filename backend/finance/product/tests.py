@@ -341,5 +341,57 @@ class ProductAPITestCase(APITestCase):
         self.assertEqual(len(res_search.data["results"]), 1)
         self.assertEqual(res_search.data["results"][0]["code"], "PRD-FLT-1")
 
+    def test_filter_products_by_stock_status(self):
+        # Product 1: In Stock (stock = 50)
+        p_in = Product.objects.create(
+            company=self.company,
+            code="PRD-STK-IN",
+            product_name="In Stock Item",
+            product_type="product",
+            current_stock=50,
+            reorder_level=10
+        )
+        # Product 2: Low Stock (stock = 5)
+        p_low = Product.objects.create(
+            company=self.company,
+            code="PRD-STK-LOW",
+            product_name="Low Stock Item",
+            product_type="product",
+            current_stock=5,
+            reorder_level=10
+        )
+        # Product 3: Out of Stock (stock = 0)
+        p_out = Product.objects.create(
+            company=self.company,
+            code="PRD-STK-OUT",
+            product_name="Out of Stock Item",
+            product_type="product",
+            current_stock=0,
+            reorder_level=10
+        )
+
+        # 1. Filter by low_stock
+        res_low = self.client.get("/api/finance/product/?stock_status=low_stock")
+        self.assertEqual(res_low.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_low.data["results"]), 1)
+        self.assertEqual(res_low.data["results"][0]["code"], "PRD-STK-LOW")
+
+        # 2. Filter by out_of_stock
+        res_out = self.client.get("/api/finance/product/?stock_status=out_of_stock")
+        self.assertEqual(res_out.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_out.data["results"]), 1)
+        self.assertEqual(res_out.data["results"][0]["code"], "PRD-STK-OUT")
+
+        # 3. Filter by in_stock / active_stock
+        res_in = self.client.get("/api/finance/product/?stock_status=in_stock")
+        self.assertEqual(res_in.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_in.data["results"]), 1)
+        self.assertEqual(res_in.data["results"][0]["code"], "PRD-STK-IN")
+
+        res_active = self.client.get("/api/finance/product/?stock_status=active_stock")
+        self.assertEqual(res_active.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_active.data["results"]), 1)
+        self.assertEqual(res_active.data["results"][0]["code"], "PRD-STK-IN")
+
 
 
