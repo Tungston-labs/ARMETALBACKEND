@@ -6,9 +6,13 @@ from shared.models import TimeStampedModel
 class Quotation(TimeStampedModel):
 
     STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("sent", "Sent"),
         ("pending", "Pending"),
+        ("accepted", "Accepted"),
         ("approved", "Approved"),
         ("rejected", "Rejected"),
+        ("expired", "Expired"),
         ("converted", "Converted"),
     )
 

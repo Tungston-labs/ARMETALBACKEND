@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal
@@ -48,9 +48,9 @@ class QuotationKPICardView(APIView):
             total_negotiation=Coalesce(Sum("negotiation_amount"), Decimal("0.00"))
         )
 
-        approved_quotes = base_qs.filter(status="approved").count()
+        approved_quotes = base_qs.filter(Q(status="approved") | Q(status="accepted") | Q(status="converted")).count()
         rejected_quotes = base_qs.filter(status="rejected").count()
-        pending_quotes = base_qs.filter(status="pending").count()
+        pending_quotes = base_qs.filter(Q(status="pending") | Q(status="sent") | Q(status="draft")).count()
 
         return Response({
             "total_quotation_value": stats["total_value"],
@@ -137,9 +137,9 @@ class QuotationListCreateView(generics.ListCreateAPIView):
             total_value=Coalesce(Sum("quote_amount"), Decimal("0.00")),
             total_negotiation=Coalesce(Sum("negotiation_amount"), Decimal("0.00"))
         )
-        approved_quotes = base_qs.filter(status="approved").count()
+        approved_quotes = base_qs.filter(Q(status="approved") | Q(status="accepted") | Q(status="converted")).count()
         rejected_quotes = base_qs.filter(status="rejected").count()
-        pending_quotes = base_qs.filter(status="pending").count()
+        pending_quotes = base_qs.filter(Q(status="pending") | Q(status="sent") | Q(status="draft")).count()
 
         page = self.paginate_queryset(queryset)
         if page is not None:
