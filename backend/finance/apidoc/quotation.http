@@ -1,0 +1,691 @@
+```http
+@base_url = http://127.0.0.1:8000
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5NjUzMTAyLCJpYXQiOjE3ODk2MjQzMDIsImp0aSI6Ijk5MWJlMWU3NTRjMDRlNjBiZDQxMTM0MmRhNjVkYTc5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.15WOH1L4SBcB_DMaUIxrqVFHM3lrWpTc1vmFhIcGCIc
+
+@quotation_id = 1
+@customer_id = 1
+@product_id_1 = 1
+@product_id_2 = 2
+
+############################################################
+# QUOTATION API - REST CLIENT TEST FILE
+############################################################
+
+
+############################################################
+# 1. LIST QUOTATIONS
+############################################################
+
+GET {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 2. CREATE QUOTATION
+############################################################
+
+POST {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": {{customer_id}},
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-10-17",
+    "status": "pending",
+
+    "from_company_name": "ABC Technologies",
+    "from_address": "123 Business Street, Dubai",
+    "from_phone_number": "+971501234567",
+    "from_email": "info@abctech.com",
+
+    "bill_to_name": "ABC Customer",
+    "bill_to_address": "Customer Address, Dubai",
+    "bill_to_phone": "+971509876543",
+    "finance_contact_email": "finance@customer.com",
+
+    "discount": "100.00",
+    "round_off": "0.00",
+
+    "negotiation_amount": "50.00",
+
+    "notes": "Quotation valid for 30 days.",
+
+    "items": [
+        {
+            "product": {{product_id_1}},
+            "service_name": "Website Development",
+            "description": "Corporate website development",
+            "quantity": "2",
+            "hs_code": "998314",
+            "rate": "500.00",
+            "vat_percentage": "15.00"
+        },
+        {
+            "product": {{product_id_2}},
+            "service_name": "Hosting Service",
+            "description": "One year hosting service",
+            "quantity": "1",
+            "hs_code": "998315",
+            "rate": "200.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+############################################################
+# 3. CREATE QUOTATION - MINIMUM DATA
+############################################################
+
+POST {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": {{customer_id}},
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-10-17",
+
+    "items": [
+        {
+            "product": {{product_id_1}},
+            "service_name": "Consulting Service",
+            "description": "Technical consulting",
+            "quantity": "1",
+            "rate": "1000.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+############################################################
+# 4. LIST QUOTATIONS WITH PAGINATION
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?page=1
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?page=2
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 5. SEARCH BY QUOTATION NUMBER
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=QUT-001
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 6. SEARCH BY CUSTOMER NAME
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=ABC
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 7. SEARCH BY BILL TO NAME
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=Customer
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 8. SEARCH BY NOTES
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=30%20days
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 9. FILTER BY STATUS
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?status=pending
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?status=approved
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?status=rejected
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?status=converted
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 10. FILTER BY CUSTOMER
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?customer={{customer_id}}
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 11. FILTER BY ISSUE DATE
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?issue_date=2026-09-17
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 12. FILTER BY VALID TILL
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?valid_till=2026-10-17
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 13. COMBINED FILTERS
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?status=pending&customer={{customer_id}}
+Authorization: Bearer {{access_token}}
+
+
+GET {{base_url}}/api/finance/quotation/?status=approved&customer={{customer_id}}
+Authorization: Bearer {{access_token}}
+
+
+GET {{base_url}}/api/finance/quotation/?status=pending&issue_date=2026-09-17
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 14. SEARCH + FILTER
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=ABC&status=pending
+Authorization: Bearer {{access_token}}
+
+
+GET {{base_url}}/api/finance/quotation/?search=ABC&status=approved&customer={{customer_id}}
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 15. SORT BY QUOTATION NUMBER
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=quote_number
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-quote_number
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 16. SORT BY ISSUE DATE
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=issue_date
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-issue_date
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 17. SORT BY VALID TILL
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=valid_till
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-valid_till
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 18. SORT BY QUOTATION AMOUNT
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=quote_amount
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-quote_amount
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 19. SORT BY NEGOTIATION AMOUNT
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=negotiation_amount
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-negotiation_amount
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 20. SORT BY CREATED DATE
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=created_at
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-created_at
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 21. SORT BY STATUS
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?ordering=status
+Authorization: Bearer {{access_token}}
+
+GET {{base_url}}/api/finance/quotation/?ordering=-status
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 22. COMBINED SEARCH + FILTER + SORT
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=ABC&status=pending&ordering=-created_at
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 23. GET QUOTATION DETAIL
+############################################################
+
+GET {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 24. FULL UPDATE - PUT
+############################################################
+
+PUT {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": {{customer_id}},
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-11-17",
+    "status": "approved",
+
+    "from_company_name": "ABC Technologies Updated",
+    "from_address": "Updated Business Address",
+    "from_phone_number": "+971501111111",
+    "from_email": "sales@abctech.com",
+
+    "bill_to_name": "Updated Customer",
+    "bill_to_address": "Updated Customer Address",
+    "bill_to_phone": "+971502222222",
+    "finance_contact_email": "finance@customer.com",
+
+    "discount": "150.00",
+    "round_off": "0.00",
+
+    "negotiation_amount": "100.00",
+
+    "notes": "Updated quotation details.",
+
+    "items": [
+        {
+            "product": {{product_id_1}},
+            "service_name": "Updated Website Development",
+            "description": "Updated website development package",
+            "quantity": "3",
+            "hs_code": "998314",
+            "rate": "600.00",
+            "vat_percentage": "15.00"
+        },
+        {
+            "product": {{product_id_2}},
+            "service_name": "Updated Hosting",
+            "description": "Updated hosting package",
+            "quantity": "1",
+            "hs_code": "998315",
+            "rate": "300.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+############################################################
+# 25. PATCH - CHANGE STATUS
+############################################################
+
+PATCH {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "status": "approved"
+}
+
+
+############################################################
+# 26. PATCH - CHANGE TO REJECTED
+############################################################
+
+PATCH {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "status": "rejected"
+}
+
+
+############################################################
+# 27. PATCH - CHANGE VALID TILL
+############################################################
+
+PATCH {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "valid_till": "2026-12-31"
+}
+
+
+############################################################
+# 28. PATCH - UPDATE DISCOUNT
+############################################################
+
+PATCH {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "discount": "250.00"
+}
+
+
+############################################################
+# 29. PATCH - UPDATE NEGOTIATION AMOUNT
+############################################################
+
+PATCH {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "negotiation_amount": "500.00"
+}
+
+
+############################################################
+# 30. DELETE QUOTATION
+############################################################
+
+DELETE {{base_url}}/api/finance/quotation/{{quotation_id}}/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 31. KPI
+############################################################
+
+GET {{base_url}}/api/finance/quotation/kpi/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 32. SUMMARY
+############################################################
+
+GET {{base_url}}/api/finance/quotation/summary/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 33. KPI FOR SUPERADMIN - ALL COMPANIES
+############################################################
+
+GET {{base_url}}/api/finance/quotation/kpi/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 34. KPI FOR SUPERADMIN - SPECIFIC COMPANY
+############################################################
+
+GET {{base_url}}/api/finance/quotation/kpi/?company=1
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 35. SUMMARY FOR SPECIFIC COMPANY
+############################################################
+
+GET {{base_url}}/api/finance/quotation/summary/?company=1
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 36. CONVERT QUOTATION TO SALES ORDER
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert_so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "invoice_no": "INV001",
+    "invoice_amount": "1150.00",
+    "outstanding_amount": "0.00",
+    "payment_date": "2026-09-17",
+    "payment_type": "full_payment",
+    "payment_method": "bank_transfer",
+    "amount_received": "1150.00",
+    "reference_number": "TRX-10001",
+    "notes": "Full payment received."
+}
+
+
+############################################################
+# 37. CONVERT USING ALTERNATE URL
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert-so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "invoice_no": "INV002",
+    "invoice_amount": "1150.00",
+    "outstanding_amount": "0.00",
+    "payment_date": "2026-09-17",
+    "payment_type": "full_payment",
+    "payment_method": "cash",
+    "amount_received": "1150.00",
+    "reference_number": "CASH-10001",
+    "notes": "Cash payment received."
+}
+
+
+############################################################
+# 38. CONVERT - PARTIAL PAYMENT
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert_so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "invoice_no": "INV003",
+    "invoice_amount": "1150.00",
+    "outstanding_amount": "500.00",
+    "payment_date": "2026-09-17",
+    "payment_type": "partial_payment",
+    "payment_method": "bank_transfer",
+    "amount_received": "650.00",
+    "reference_number": "TRX-10002",
+    "notes": "Partial payment received."
+}
+
+
+############################################################
+# 39. CONVERT - CREDIT CARD
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert_so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "invoice_no": "INV004",
+    "invoice_amount": "1150.00",
+    "outstanding_amount": "0.00",
+    "payment_date": "2026-09-17",
+    "payment_type": "full_payment",
+    "payment_method": "credit_card",
+    "amount_received": "1150.00",
+    "reference_number": "CC-10001",
+    "notes": "Credit card payment."
+}
+
+
+############################################################
+# 40. CONVERT - CHECK
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert_so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "invoice_no": "INV005",
+    "invoice_amount": "1150.00",
+    "outstanding_amount": "0.00",
+    "payment_date": "2026-09-17",
+    "payment_type": "full_payment",
+    "payment_method": "check",
+    "amount_received": "1150.00",
+    "reference_number": "CHK-10001",
+    "notes": "Payment received by cheque."
+}
+
+
+############################################################
+# 41. CONVERT - MINIMUM DATA
+#
+# Your view automatically supplies:
+# invoice_no
+# invoice_amount
+# amount_received
+# payment_date
+############################################################
+
+POST {{base_url}}/api/finance/quotation/{{quotation_id}}/convert_so/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "payment_type": "full_payment",
+    "payment_method": "bank_transfer",
+    "reference_number": "TRX-10003",
+    "notes": "Converted from quotation."
+}
+
+
+############################################################
+# 42. INVALID CUSTOMER TEST
+############################################################
+
+POST {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 999999,
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-10-17",
+    "items": [
+        {
+            "product": {{product_id_1}},
+            "service_name": "Test Service",
+            "quantity": "1",
+            "rate": "100.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+############################################################
+# 43. CREATE WITHOUT ITEMS
+############################################################
+
+POST {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": {{customer_id}},
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-10-17",
+    "notes": "Quotation without items."
+}
+
+
+############################################################
+# 44. INVALID DATE TEST
+#
+# valid_till before issue_date
+############################################################
+
+POST {{base_url}}/api/finance/quotation/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": {{customer_id}},
+    "issue_date": "2026-09-17",
+    "valid_till": "2026-09-01",
+
+    "items": [
+        {
+            "product": {{product_id_1}},
+            "service_name": "Test Service",
+            "quantity": "1",
+            "rate": "100.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+############################################################
+# 45. GET NON-EXISTING QUOTATION
+############################################################
+
+GET {{base_url}}/api/finance/quotation/999999/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 46. DELETE NON-EXISTING QUOTATION
+############################################################
+
+DELETE {{base_url}}/api/finance/quotation/999999/
+Authorization: Bearer {{access_token}}
+
+
+############################################################
+# 47. COMBINED DASHBOARD QUERY
+############################################################
+
+GET {{base_url}}/api/finance/quotation/?search=ABC&status=approved&customer={{customer_id}}&ordering=-quote_amount&page=1
+Authorization: Bearer {{access_token}}
+```
