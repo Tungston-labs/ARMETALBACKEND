@@ -1,0 +1,422 @@
+
+@base_url = http://127.0.0.1:8000
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5NjQ4MjYxLCJpYXQiOjE3ODk2MTk0NjEsImp0aSI6IjViNDdlMjBkZGI4YzQzMTZhYzA3MzY2MGNiYzZmODM3IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.k5LE5SnqkMOEN8ofNI5RIT6ls8JASjzPaD-CPT241SA
+@invoice_id = 1
+@customer_id = 1
+@product_id_1 = 1
+@product_id_2 = 2
+
+
+
+########################################################
+# 1. CREATE UNPAID INVOICE
+########################################################
+
+### Create Invoice
+POST {{base_url}}/api/finance/invoice/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-10-17",
+    "discount": "100.00",
+    "round_off": "0.00",
+    "account_holder": "ABC Bank",
+    "account_number": "1234567890",
+    "iban": "AE123456789012345678901",
+    "items": [
+        {
+            "product": 1,
+            "particular": "Website Development",
+            "quantity": "2",
+            "hs_code": "998314",
+            "rate": "500.00",
+            "vat_percentage": "5.00"
+        },
+        {
+            "product": 2,
+            "particular": "Hosting Service",
+            "quantity": "1",
+            "hs_code": "998315",
+            "rate": "200.00",
+            "vat_percentage": "5.00"
+        }
+    ]
+}
+
+
+########################################################
+# 2. CREATE PAID INVOICE
+########################################################
+
+### Create Paid Invoice
+POST {{base_url}}/api/finance/invoice/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-09-17",
+    "discount": "0.00",
+    "round_off": "0.00",
+    "amount_paid": "575.00",
+    "account_holder": "ABC Bank",
+    "account_number": "1234567890",
+    "iban": "AE123456789012345678901",
+    "items": [
+        {
+            "product": 1,
+            "particular": "Product Purchase",
+            "quantity": "5",
+            "hs_code": "123456",
+            "rate": "100.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+########################################################
+# 3. CREATE PARTIALLY PAID INVOICE
+########################################################
+
+### Create Partially Paid Invoice
+POST {{base_url}}/api/finance/invoice/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-10-17",
+    "discount": "50.00",
+    "round_off": "0.00",
+    "amount_paid": "500.00",
+    "items": [
+        {
+            "product": 1,
+            "particular": "Consulting Service",
+            "quantity": "1",
+            "hs_code": "998300",
+            "rate": "1000.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+########################################################
+# 4. CREATE INVOICE WITH NO PAYMENT
+########################################################
+
+### Explicitly create unpaid invoice
+POST {{base_url}}/api/finance/invoice/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-10-17",
+    "amount_paid": "0.00",
+    "discount": "0.00",
+    "round_off": "0.00",
+    "items": [
+        {
+            "product": 1,
+            "particular": "Software Service",
+            "quantity": "1",
+            "hs_code": "998314",
+            "rate": "1000.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+########################################################
+# 5. LIST INVOICES
+########################################################
+
+### List Invoices
+GET {{base_url}}/api/finance/invoice/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 6. SEARCH
+########################################################
+
+### Search by Invoice Number
+GET {{base_url}}/api/finance/invoice/?search=INV002
+Authorization: Bearer {{access_token}}
+
+
+### Search by Customer Name
+GET {{base_url}}/api/finance/invoice/?search=ABC
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 7. FILTER BY PAYMENT STATUS
+########################################################
+
+### Paid Invoices
+GET {{base_url}}/api/finance/invoice/?payment_status=paid
+Authorization: Bearer {{access_token}}
+
+
+### Unpaid Invoices
+GET {{base_url}}/api/finance/invoice/?payment_status=unpaid
+Authorization: Bearer {{access_token}}
+
+
+### Partially Paid Invoices
+GET {{base_url}}/api/finance/invoice/?payment_status=partially_paid
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 8. FILTER BY CUSTOMER
+########################################################
+
+### Customer Invoices
+GET {{base_url}}/api/finance/invoice/?customer={{customer_id}}
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 9. FILTER BY DUE DATE
+########################################################
+
+### Exact Due Date
+GET {{base_url}}/api/finance/invoice/?due_date=2026-09-30
+Authorization: Bearer {{access_token}}
+
+
+### Due Date From
+GET {{base_url}}/api/finance/invoice/?due_date_after=2026-09-01
+Authorization: Bearer {{access_token}}
+
+
+### Due Date Until
+GET {{base_url}}/api/finance/invoice/?due_date_before=2026-09-30
+Authorization: Bearer {{access_token}}
+
+
+### Due Date Range
+GET {{base_url}}/api/finance/invoice/?due_date_after=2026-09-01&due_date_before=2026-09-30
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 10. COMBINED FILTERS
+########################################################
+
+### Search + Status
+GET {{base_url}}/api/finance/invoice/?search=ABC&payment_status=unpaid
+Authorization: Bearer {{access_token}}
+
+
+### Customer + Status
+GET {{base_url}}/api/finance/invoice/?customer={{customer_id}}&payment_status=paid
+Authorization: Bearer {{access_token}}
+
+
+### Status + Due Date
+GET {{base_url}}/api/finance/invoice/?payment_status=unpaid&due_date_before=2026-09-30
+Authorization: Bearer {{access_token}}
+
+
+### Search + Customer + Status + Due Date
+GET {{base_url}}/api/finance/invoice/?search=ABC&customer={{customer_id}}&payment_status=unpaid&due_date_before=2026-09-30
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 11. SORTING
+########################################################
+
+### Latest Created
+GET {{base_url}}/api/finance/invoice/?ordering=-created_at
+Authorization: Bearer {{access_token}}
+
+
+### Oldest Created
+GET {{base_url}}/api/finance/invoice/?ordering=created_at
+Authorization: Bearer {{access_token}}
+
+
+### Latest Invoice Date
+GET {{base_url}}/api/finance/invoice/?ordering=-invoice_date
+Authorization: Bearer {{access_token}}
+
+
+### Oldest Invoice Date
+GET {{base_url}}/api/finance/invoice/?ordering=invoice_date
+Authorization: Bearer {{access_token}}
+
+
+### Lowest Total Amount
+GET {{base_url}}/api/finance/invoice/?ordering=total_amount
+Authorization: Bearer {{access_token}}
+
+
+### Highest Total Amount
+GET {{base_url}}/api/finance/invoice/?ordering=-total_amount
+Authorization: Bearer {{access_token}}
+
+
+### Lowest Paid Amount
+GET {{base_url}}/api/finance/invoice/?ordering=amount_paid
+Authorization: Bearer {{access_token}}
+
+
+### Highest Paid Amount
+GET {{base_url}}/api/finance/invoice/?ordering=-amount_paid
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 12. RETRIEVE INVOICE
+########################################################
+
+### Invoice Detail
+GET {{base_url}}/api/finance/invoice/{{invoice_id}}/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 13. UPDATE INVOICE
+########################################################
+
+### Update Invoice
+PUT {{base_url}}/api/finance/invoice/{{invoice_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "invoice_date": "2026-09-17",
+    "due_date": "2026-11-17",
+    "discount": "150.00",
+    "round_off": "0.00",
+    "amount_paid": "1000.00",
+    "account_holder": "Updated Bank",
+    "account_number": "9876543210",
+    "iban": "AE987654321098765432109",
+    "items": [
+        {
+            "product": 1,
+            "particular": "Updated Website Development",
+            "quantity": "3",
+            "hs_code": "998314",
+            "rate": "600.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+########################################################
+# 14. PARTIAL UPDATE - UPDATE PAYMENT AMOUNT
+########################################################
+
+### Update Amount Paid
+PATCH {{base_url}}/api/finance/invoice/{{invoice_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "amount_paid": "5000.00"
+}
+
+
+########################################################
+# 15. PARTIAL UPDATE - SET UNPAID
+########################################################
+
+### Set Payment Amount to Zero
+PATCH {{base_url}}/api/finance/invoice/{{invoice_id}}/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+{
+    "amount_paid": "0.00"
+}
+
+
+########################################################
+# 16. DELETE INVOICE
+########################################################
+
+### Delete Invoice
+DELETE {{base_url}}/api/finance/invoice/{{invoice_id}}/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 17. DOWNLOAD PDF
+########################################################
+
+### Download Invoice PDF
+GET {{base_url}}/api/finance/invoice/{{invoice_id}}/download/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 18. SEND INVOICE EMAIL
+########################################################
+
+### Send Invoice Email
+POST {{base_url}}/api/finance/invoice/{{invoice_id}}/send/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 19. COMPANY DETAILS
+########################################################
+
+### Get Company Details
+GET {{base_url}}/api/finance/invoice/company-details/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 20. PRODUCT DROPDOWN
+########################################################
+
+### Get Active Products
+GET {{base_url}}/api/finance/invoice/products/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 21. CUSTOMER DROPDOWN
+########################################################
+
+### Get Active Customers
+GET {{base_url}}/api/finance/invoice/customers/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 22. INVOICE SUMMARY
+########################################################
+
+### Invoice Dashboard Summary
+GET {{base_url}}/api/finance/invoice/summary/
+Authorization: Bearer {{access_token}}
+
+
+########################################################
+# 23. SUMMARY + FILTER EXAMPLES
+########################################################
+
+### Summary
+GET {{base_url}}/api/finance/invoice/summary/
+Authorization: Bearer {{access_token}}
+

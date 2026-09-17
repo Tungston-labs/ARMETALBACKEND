@@ -45,11 +45,10 @@ urlpatterns = [
     path('api/finance/inventory/', include('finance.inventory.urls')),
     path('api/finance/customer/', include('finance.customer.urls')),
     path('api/finance/quotation/', include('finance.quotation.urls')),
-    path('api/finance/quotations/', include('finance.quotation.urls')),
-    path('api/finance/delivery-note/', include('finance.delivery_note.urls')),
     path('api/finance/delivery-notes/', include('finance.delivery_note.urls')),
-    path('api/finance/credit-note/', include('finance.credit_note.urls')),
     path('api/finance/credit-notes/', include('finance.credit_note.urls')),
+    path('api/finance/invoice/', include('finance.invoice.urls')),
+
 
 
     path(
