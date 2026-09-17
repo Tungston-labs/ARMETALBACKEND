@@ -56,9 +56,7 @@ Content-Type: application/json
 }
 
 
-# common change password for all users
 
-### Change Password (Employee, HR, Superadmin)
 POST http://localhost:8000/api/change-password/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5ODE4MDk0LCJpYXQiOjE3NDk4MTQ0OTQsImp0aSI6IjI0YjM4MDYzYTJlNzQ2MTI5ODg3MzM5OTBjYmU3MTRkIiwidXNlcl9pZCI6MTUsImlzX3N1cGVyYWRtaW4iOmZhbHNlLCJpc19ocl9hZG1pbiI6dHJ1ZSwiaXNfZW1wbG95ZWUiOmZhbHNlfQ.pjUe3KfOPzqvPH5m3LCnAOX040fuTA8kikqU3m5gFS8
 Content-Type: application/json
