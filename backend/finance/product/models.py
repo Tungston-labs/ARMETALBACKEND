@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 from shared.models import TimeStampedModel
-
+from decimal import Decimal
 
 class Product(TimeStampedModel):
 
@@ -99,10 +99,29 @@ class Product(TimeStampedModel):
         default=0.00
     )
 
-    opening_stock_qty = models.IntegerField(default=0)
-    quantity = models.IntegerField(default=0)
-    current_stock = models.IntegerField(default=0)
-    reserved_qty = models.IntegerField(default=0)
+    opening_stock_qty = models.DecimalField(
+    max_digits=12,
+    decimal_places=2,
+    default=Decimal("0.00")
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    current_stock = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
+
+    reserved_qty = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00")
+    )
     reorder_level = models.IntegerField(default=10)
 
     tax_type = models.CharField(
