@@ -139,19 +139,19 @@ def overdue_invoice(company, customer, user):
 
 
 def payment_list_url():
-    return "/api/finance/payment/"
+    return "/api/finance/payments/"
 
 
 def payment_detail_url(payment_id):
-    return f"/api/finance/payment/{payment_id}/"
+    return f"/api/finance/payments/{payment_id}/"
 
 
 def payment_kpi_url():
-    return "/api/finance/payment/kpi/"
+    return "/api/finance/payments/kpi/"
 
 
 def payment_export_url():
-    return "/api/finance/payment/export/"
+    return "/api/finance/payments/export/"
 
 
 # ============================================================

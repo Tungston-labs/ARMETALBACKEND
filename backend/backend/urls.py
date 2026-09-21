@@ -47,10 +47,8 @@ urlpatterns = [
     path('api/finance/quotation/', include('finance.quotation.urls')),
     path('api/finance/delivery-notes/', include('finance.delivery_note.urls')),
     path('api/finance/credit-notes/', include('finance.credit_note.urls')),
-    path('api/finance/credit-note/', include('finance.credit_note.urls')),
     path('api/finance/invoice/', include('finance.invoice.urls')),
     path('api/finance/sales-order/', include('finance.sales_order.urls')),
-    path('api/finance/payment/', include('finance.payment.urls')),
     path('api/finance/payments/', include('finance.payment.urls')),
 
 
