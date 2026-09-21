@@ -49,6 +49,7 @@ urlpatterns = [
     path('api/finance/credit-notes/', include('finance.credit_note.urls')),
     path('api/finance/invoice/', include('finance.invoice.urls')),
     path('api/finance/sales-order/', include('finance.sales_order.urls')),
+    path('api/finance/payments/', include('finance.payment.urls')),
 
 
 

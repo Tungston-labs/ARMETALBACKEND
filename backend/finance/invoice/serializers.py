@@ -82,6 +82,11 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
 
 class InvoiceSerializer(serializers.ModelSerializer):
 
+    qr_code = serializers.ImageField(
+        required=False,
+        allow_null=True
+    )
+
     items = InvoiceItemSerializer(
         many=True,
         required=False
@@ -331,12 +336,16 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
         request = self.context["request"]
 
+        # Pop items so it is not passed to Invoice.objects.create()
+        items_data = validated_data.pop("items", None)
+
         # -------------------------------------------------
         # Get Sales Order
         # -------------------------------------------------
 
         sales_order = validated_data.pop(
-            "sales_order"
+            "sales_order",
+            None
         )
 
         # -------------------------------------------------
@@ -345,20 +354,20 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
         company = request.user.company
 
-        if sales_order.company_id != company.id:
-
-            raise serializers.ValidationError({
-
-                "sales_order":
-                    "Sales order does not belong to your company."
-
-            })
-
-        # -------------------------------------------------
-        # Customer from Sales Order
-        # -------------------------------------------------
-
-        customer = sales_order.customer
+        if sales_order:
+            if sales_order.company_id != company.id:
+                raise serializers.ValidationError({
+                    "sales_order":
+                        "Sales order does not belong to your company."
+                })
+            customer = sales_order.customer
+        else:
+            customer = validated_data.get("customer")
+            if not customer:
+                raise serializers.ValidationError({
+                    "customer":
+                        "Customer is required when sales_order is not provided."
+                })
 
         # -------------------------------------------------
         # Remove customer/company from request data
@@ -389,79 +398,86 @@ class InvoiceSerializer(serializers.ModelSerializer):
             created_by=request.user,
 
             # Company snapshot
-            company_name=company.name,
+            company_name=getattr(company, "name", "") or "",
 
-            company_email=company.email,
+            company_email=getattr(company, "email", "") or "",
 
-            company_phone=company.contact_number,
+            company_phone=getattr(company, "contact_number", "") or "",
 
-            company_address=company.address,
+            company_address=getattr(company, "address", "") or "",
 
             # Customer snapshot
-            customer_name=customer.customer_name,
+            customer_name=getattr(customer, "customer_name", "") or "",
 
-            customer_email=customer.admin_email,
+            customer_email=getattr(customer, "admin_email", "") or "",
 
-            customer_phone=customer.phno,
+            customer_phone=getattr(customer, "phno", "") or getattr(customer, "phone", "") or "",
 
-            customer_address=customer.billing_address,
+            customer_address=getattr(customer, "billing_address", "") or "",
 
             **validated_data
 
         )
 
         # -------------------------------------------------
-        # Copy Sales Order Items
+        # Items handling
         # -------------------------------------------------
 
-        sales_order_items = (
-            sales_order.items
-            .select_related("product")
-            .all()
-        )
+        if items_data:
+            for item_data in items_data:
+                so_item = item_data.get("sales_order_item")
+                product = item_data.get("product")
+                
+                particular = item_data.get("particular") or (
+                    product.product_name if product else "Item"
+                )
+                quantity = item_data.get("quantity", Decimal("1.00"))
+                hs_code = item_data.get("hs_code", "")
+                rate = item_data.get("rate", Decimal("0.00"))
+                vat_percentage = item_data.get("vat_percentage", Decimal("0.00"))
 
-        for so_item in sales_order_items:
-
-            # ---------------------------------------------
-            # Product is required for InvoiceItem
-            # ---------------------------------------------
-
-            if not so_item.product:
-
-                raise serializers.ValidationError({
-
-                    "sales_order":
-                        f"Sales order item {so_item.id} "
-                        "does not have a product."
-
-                })
-
-            InvoiceItem.objects.create(
-
-                invoice=invoice,
-
-                sales_order_item=so_item,
-
-                product=so_item.product,
-
-                particular=(
-                    so_item.service_name
-                    or (
-                        so_item.product.product_name
-                        if so_item.product
-                        else so_item.description
-                    )
-                ),
-
-                quantity=so_item.quantity,
-
-                hs_code=so_item.hs_code,
-
-                rate=so_item.rate,
-
-                vat_percentage=so_item.vat_percentage,
-
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    sales_order_item=so_item,
+                    product=product,
+                    particular=particular,
+                    quantity=quantity,
+                    hs_code=hs_code,
+                    rate=rate,
+                    vat_percentage=vat_percentage,
+                )
+        elif sales_order:
+            sales_order_items = (
+                sales_order.items
+                .select_related("product")
+                .all()
             )
+
+            for so_item in sales_order_items:
+                if not so_item.product:
+                    raise serializers.ValidationError({
+                        "sales_order":
+                            f"Sales order item {so_item.id} "
+                            "does not have a product."
+                    })
+
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    sales_order_item=so_item,
+                    product=so_item.product,
+                    particular=(
+                        so_item.service_name
+                        or (
+                            so_item.product.product_name
+                            if so_item.product
+                            else so_item.description
+                        )
+                    ),
+                    quantity=so_item.quantity,
+                    hs_code=so_item.hs_code,
+                    rate=so_item.rate,
+                    vat_percentage=so_item.vat_percentage,
+                )
 
         # -------------------------------------------------
         # Calculate totals

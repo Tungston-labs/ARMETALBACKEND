@@ -4,8 +4,8 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "dummycompany",
-  "password": "Password@123"
+  "username": "dummy",
+  "password": "password123"
 }
 ###local sqlite super admin
 POST http://127.0.0.1:8000/api/token/

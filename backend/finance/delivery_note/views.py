@@ -1,6 +1,8 @@
+from django.db import models, transaction
 from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
 from decimal import Decimal
+from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, filters, status
 from rest_framework.views import APIView
@@ -9,9 +11,14 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from .models import DeliveryNote
-from .serializers import DeliveryNoteSerializer
+from .models import DeliveryNote, DeliveryNoteItem
+from .serializers import (
+    DeliveryNoteSerializer,
+    update_product_inventory_on_delivery,
+    update_so_item_delivered_qty,
+)
 from shared.pagination import CustomPagination
+from finance.sales_order.models import SalesOrder, SalesOrderItem
 
 
 class DeliveryNoteKPICardView(APIView):
@@ -68,7 +75,7 @@ class DeliveryNoteListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["delivery_status", "invoice_status", "customer", "warehouse", "delivery_date"]
+    filterset_fields = ["delivery_status", "invoice_status", "customer", "warehouse", "delivery_date", "sales_order"]
     search_fields = [
         "dn_number",
         "so_ref",
@@ -100,7 +107,7 @@ class DeliveryNoteListCreateView(generics.ListCreateAPIView):
         else:
             qs = DeliveryNote.objects.none()
 
-        return qs.select_related("company", "customer", "warehouse", "created_by").prefetch_related("items")
+        return qs.select_related("company", "customer", "warehouse", "sales_order", "created_by").prefetch_related("items")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -179,7 +186,22 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         else:
             qs = DeliveryNote.objects.none()
 
-        return qs.select_related("company", "customer", "warehouse", "created_by").prefetch_related("items")
+        return qs.select_related("company", "customer", "warehouse", "sales_order", "created_by").prefetch_related("items")
+
+    @transaction.atomic
+    def perform_destroy(self, instance):
+        items = list(instance.items.all())
+        sales_order = instance.sales_order
+        for item in items:
+            update_product_inventory_on_delivery(item.product, -item.quantity)
+            so_item = item.sales_order_item
+            item.delete()
+            if so_item:
+                update_so_item_delivered_qty(so_item)
+
+        instance.delete()
+        if sales_order:
+            sales_order.update_delivery_status()
 
     @extend_schema(
         summary="Get Delivery Note Details",
@@ -214,3 +236,81 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+
+class DeliveryNoteSalesOrderPrefillView(APIView):
+    """
+    API View to prefill Delivery Note details and line items directly from a Sales Order.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Prefill Delivery Note from Sales Order",
+        description="Returns prefilled details and item lines for creating a Delivery Note from a specific Sales Order.",
+        responses={200: OpenApiResponse(description="Prefilled Delivery Note Data")}
+    )
+    def get(self, request, so_id, *args, **kwargs):
+        user = request.user
+        if getattr(user, "is_superadmin", False):
+            so = get_object_or_404(SalesOrder, id=so_id)
+        elif hasattr(user, "company") and user.company:
+            so = get_object_or_404(SalesOrder, id=so_id, company=user.company)
+        else:
+            return Response({"detail": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
+        already_delivered_value = DeliveryNote.objects.filter(
+            sales_order=so
+        ).exclude(
+            delivery_status="cancelled"
+        ).aggregate(total=Sum("delivery_value"))["total"] or Decimal("0.00")
+
+        balance_to_deliver_value = max(Decimal("0.00"), so.order_value - already_delivered_value)
+
+        items_data = []
+        for item in so.items.select_related("product").all():
+            deliv_qty = item.delivered_quantity or Decimal("0.00")
+            delivering_now = max(Decimal("0.00"), item.quantity - deliv_qty)
+            
+            line_base = delivering_now * item.rate
+            line_vat = line_base * (item.vat_percentage / Decimal("100"))
+            line_amount = line_base + line_vat
+
+            status_str = "Pending"
+            if deliv_qty >= item.quantity and item.quantity > 0:
+                status_str = "Fully Delivered"
+            elif deliv_qty > 0:
+                status_str = "Partial"
+
+            items_data.append({
+                "sales_order_item": item.id,
+                "product": item.product.id if item.product else None,
+                "product_name": item.product.product_name if item.product else (item.service_name or "Item"),
+                "item_name": item.product.product_name if item.product else "",
+                "service_name": item.service_name,
+                "description": item.description,
+                "ordered_qty": item.quantity,
+                "already_delivered": deliv_qty,
+                "delivering_now": delivering_now,
+                "quantity": delivering_now,
+                "balance": max(Decimal("0.00"), item.quantity - deliv_qty - delivering_now),
+                "hs_code": item.hs_code,
+                "rate": item.rate,
+                "vat_percentage": item.vat_percentage,
+                "vat_amount": line_vat,
+                "amount": line_amount,
+                "status": status_str,
+            })
+
+        data = {
+            "sales_order": so.id,
+            "so_ref": so.so_number,
+            "customer": so.customer_id,
+            "customer_name": so.customer_name,
+            "warehouse": so.warehouse_id,
+            "shipping_address": so.customer_address,
+            "so_order_value": so.order_value,
+            "so_already_delivered_value": already_delivered_value,
+            "so_balance_to_deliver_value": balance_to_deliver_value,
+            "items": items_data,
+        }
+        return Response(data)
