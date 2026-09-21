@@ -10,7 +10,7 @@ from finance.quotation.models import Quotation, QuotationItem
 
 from .models import SalesOrder, SalesOrderItem
 from finance.warehouse.models import Warehouse
-
+from finance.product.models import Product
 
 # =========================================================
 # HELPERS
@@ -548,6 +548,49 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         )
 
         return item
+    
+    def reserve_product_stock(self, sales_order):
+        """
+        Deduct ordered quantity from current_stock
+        and add the same quantity to reserved_qty.
+        """
+
+        for item in sales_order.items.select_related("product").all():
+
+            product = item.product
+
+            # Services do not require stock reservation
+            if not product or product.product_type == "service":
+                continue
+
+            quantity = int(item.quantity)
+
+            # Lock product row to prevent simultaneous stock updates
+            locked_product = (
+                Product.objects
+                .select_for_update()
+                .get(pk=product.pk)
+            )
+
+            if locked_product.current_stock < quantity:
+                raise serializers.ValidationError({
+                    "stock": (
+                        f"Insufficient stock for "
+                        f"{locked_product.product_name}. "
+                        f"Available: {locked_product.current_stock}, "
+                        f"Required: {quantity}"
+                    )
+                })
+
+            locked_product.current_stock -= quantity
+            locked_product.reserved_qty += quantity
+
+            locked_product.save(
+                update_fields=[
+                    "current_stock",
+                    "reserved_qty",
+                ]
+            )
 
     # ---------------------------------------------------------
     # CREATE
@@ -675,6 +718,9 @@ class SalesOrderSerializer(serializers.ModelSerializer):
         sales_order.calculate_totals()
 
         sales_order.update_delivery_status()
+
+        # Reserve product stock
+        self.reserve_product_stock(sales_order)
 
         # -----------------------------------------------------
         # MARK QUOTATION AS CONVERTED

@@ -38,7 +38,6 @@ Authorization: Bearer {{access_token}}
 ### Get Sales Order Details For Invoice
 
 GET {{base_url}}/api/finance/invoice/sales-orders/{{sales_order_id}}/
-
 Authorization: Bearer {{access_token}}
 
 ########################################################
