@@ -1,0 +1,147 @@
+# Customer Ledger APIs
+
+### Base URL
+
+```http
+@baseUrl = http://127.0.0.1:8000
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMDIwNTIyLCJpYXQiOjE3ODk5OTE3MjIsImp0aSI6IjgyMGQ1MGQ3MGI5NjRlMjQ4ZDc4MTRkZWE5MDU4NjQ2IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZQNQzbK-cP4CHcaIHtLZD4h9HlybYI9jCCq2dvsdp5I
+@customer_id = CUSTOMER_ID
+```
+
+---
+
+### 1. List All Ledger Entries
+
+GET {{baseUrl}}/api/finance/ledger/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+
+---
+
+### 2. Get Customer Ledger
+
+GET http://127.0.0.1:8000/api/ledger/customer/1/
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+
+
+---
+
+## 3. Get Customer Ledger with Date Filter
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?from_date=2026-09-01&to_date=2026-09-30
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 4. Filter by Transaction Type — Invoice
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?transaction_type=invoice
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 5. Filter by Transaction Type — Payment
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?transaction_type=payment
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 6. Filter by Transaction Type — Opening Balance
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?transaction_type=opening_balance
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 7. Search Ledger
+
+```http
+GET {{baseUrl}}/api/ledger/?search=SEARCH_VALUE
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 8. Order Ledger — Oldest First
+
+```http
+GET {{baseUrl}}/api/ledger/?ordering=transaction_date
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 9. Order Ledger — Newest First
+
+```http
+GET {{baseUrl}}/api/ledger/?ordering=-transaction_date
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 10. Customer Ledger Summary
+
+```http
+GET {{baseUrl}}/api/ledger/summary/?customer_id={{customer_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 11. Customer Ledger Summary with Date Filter
+
+```http
+GET {{baseUrl}}/api/ledger/summary/?customer_id={{customer_id}}&from_date=2026-09-01&to_date=2026-09-30
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 12. Customer Ledger — Date + Transaction Type
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?from_date=2026-09-01&to_date=2026-09-30&transaction_type=invoice
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 13. Customer Ledger — Date + Search
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?from_date=2026-09-01&to_date=2026-09-30&search=INV001
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```
+
+---
+
+## 14. Customer Ledger — Pagination
+
+```http
+GET {{baseUrl}}/api/ledger/customer/{{customer_id}}/?page=1&page_size=20
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+```

@@ -194,10 +194,14 @@ class SalesOrderListCreateView(
 # SALES ORDER DETAIL
 # =========================================================
 
+from django.db.models import ProtectedError
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
 class SalesOrderDetailView(
     generics.RetrieveUpdateDestroyAPIView
 ):
-
     permission_classes = [
         IsAuthenticated
     ]
@@ -205,7 +209,6 @@ class SalesOrderDetailView(
     serializer_class = SalesOrderSerializer
 
     def get_queryset(self):
-
         queryset = (
             SalesOrder.objects
             .select_related(
@@ -225,12 +228,43 @@ class SalesOrderDetailView(
         )
 
         if company:
-
             queryset = queryset.filter(
                 company=company
             )
 
         return queryset
+
+    # ---------------------------------------------------------
+    # DELETE
+    # ---------------------------------------------------------
+
+    def destroy(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+
+        # Check connected invoices
+        if Invoice.objects.filter(
+            sales_order=instance
+        ).exists():
+
+            return Response(
+                {
+                    "detail": (
+                        "This Sales Order cannot be deleted "
+                        "because it is referenced by an Invoice."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        self.perform_destroy(instance)
+
+        return Response(
+            {
+                "detail": "Sales Order deleted successfully."
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 # =========================================================

@@ -33,6 +33,14 @@ class DeliveryNote(TimeStampedModel):
         blank=True
     )
 
+    sales_order = models.ForeignKey(
+        "sales_order.SalesOrder",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delivery_notes"
+    )
+
     so_ref = models.CharField(
         max_length=50,
         blank=True,
@@ -152,6 +160,8 @@ class DeliveryNote(TimeStampedModel):
     )
 
     def save(self, *args, **kwargs):
+        if self.sales_order and not self.so_ref:
+            self.so_ref = self.sales_order.so_number
         if not self.dn_number or not str(self.dn_number).strip():
             from .utils import generate_next_dn_number
             self.dn_number = generate_next_dn_number(self.company)
@@ -180,6 +190,14 @@ class DeliveryNoteItem(TimeStampedModel):
         DeliveryNote,
         on_delete=models.CASCADE,
         related_name="items"
+    )
+
+    sales_order_item = models.ForeignKey(
+        "sales_order.SalesOrderItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delivery_note_items"
     )
 
     product = models.ForeignKey(

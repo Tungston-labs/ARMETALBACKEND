@@ -46,7 +46,7 @@ class CreditNoteAPITestCase(APITestCase):
         )
 
     def test_create_credit_note_auto_increment(self):
-        res1 = self.client.post("/api/finance/credit-note/", {
+        res1 = self.client.post("/api/finance/credit-notes/", {
             "customer": self.customer.id,
             "invoice_ref": "INV-0123",
             "issue_date": "2026-04-28",
@@ -62,7 +62,7 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(res1.data["status"], "closed")
         self.assertEqual(Decimal(str(res1.data["balance"])), Decimal("0.00"))
 
-        res2 = self.client.post("/api/finance/credit-note/", {
+        res2 = self.client.post("/api/finance/credit-notes/", {
             "customer": self.customer.id,
             "invoice_ref": "INV-0124",
             "issue_date": "2026-04-28",
@@ -120,7 +120,7 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(cn.balance, Decimal("30000.00"))
 
         # Partially apply credit
-        res_patch1 = self.client.patch(f"/api/finance/credit-note/{cn.id}/", {
+        res_patch1 = self.client.patch(f"/api/finance/credit-notes/{cn.id}/", {
             "applied_amount": "10000.00"
         }, format="json")
         self.assertEqual(res_patch1.status_code, status.HTTP_200_OK)
@@ -128,7 +128,7 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(Decimal(str(res_patch1.data["balance"])), Decimal("20000.00"))
 
         # Fully apply credit
-        res_patch2 = self.client.patch(f"/api/finance/credit-note/{cn.id}/", {
+        res_patch2 = self.client.patch(f"/api/finance/credit-notes/{cn.id}/", {
             "applied_amount": "30000.00"
         }, format="json")
         self.assertEqual(res_patch2.status_code, status.HTTP_200_OK)
@@ -178,7 +178,7 @@ class CreditNoteAPITestCase(APITestCase):
             status="cancelled"
         )
 
-        res = self.client.get("/api/finance/credit-note/")
+        res = self.client.get("/api/finance/credit-notes/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data["results"]), 4)
         self.assertEqual(res.data["total_credit_notes"], 4)
@@ -188,18 +188,18 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(res.data["cancelled_credits"], 1)
 
         # Test filter by status
-        res_filter_status = self.client.get("/api/finance/credit-note/?status=open")
+        res_filter_status = self.client.get("/api/finance/credit-notes/?status=open")
         self.assertEqual(res_filter_status.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_filter_status.data["results"]), 1)
         self.assertEqual(res_filter_status.data["results"][0]["reason"], "damaged_goods")
 
         # Test filter by reason
-        res_filter_reason = self.client.get("/api/finance/credit-note/?reason=price_adjustment")
+        res_filter_reason = self.client.get("/api/finance/credit-notes/?reason=price_adjustment")
         self.assertEqual(res_filter_reason.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_filter_reason.data["results"]), 1)
 
         # Test search
-        res_search = self.client.get("/api/finance/credit-note/?search=INV-0125")
+        res_search = self.client.get("/api/finance/credit-notes/?search=INV-0125")
         self.assertEqual(res_search.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_search.data["results"]), 1)
 
@@ -223,7 +223,7 @@ class CreditNoteAPITestCase(APITestCase):
             applied_amount=Decimal("0.00")
         )
 
-        res = self.client.get("/api/finance/credit-note/kpi/")
+        res = self.client.get("/api/finance/credit-notes/kpi/")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["total_credit_notes"], 2)
         self.assertEqual(Decimal(str(res.data["total_credit_value"])), Decimal("55000.00"))
@@ -243,12 +243,12 @@ class CreditNoteAPITestCase(APITestCase):
         )
 
         # GET detail
-        res_get = self.client.get(f"/api/finance/credit-note/{cn.id}/")
+        res_get = self.client.get(f"/api/finance/credit-notes/{cn.id}/")
         self.assertEqual(res_get.status_code, status.HTTP_200_OK)
         self.assertEqual(res_get.data["cn_number"], cn.cn_number)
 
         # PUT update
-        res_put = self.client.put(f"/api/finance/credit-note/{cn.id}/", {
+        res_put = self.client.put(f"/api/finance/credit-notes/{cn.id}/", {
             "customer": self.customer.id,
             "invoice_ref": "INV-0127-REV",
             "issue_date": "2026-04-29",
@@ -262,7 +262,7 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(res_put.data["status"], "partially_applied")
 
         # DELETE
-        res_del = self.client.delete(f"/api/finance/credit-note/{cn.id}/")
+        res_del = self.client.delete(f"/api/finance/credit-notes/{cn.id}/")
         self.assertEqual(res_del.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(CreditNote.objects.filter(id=cn.id).exists())
 
@@ -292,10 +292,10 @@ class CreditNoteAPITestCase(APITestCase):
         self.client.force_authenticate(user=other_user)
 
         # List should return empty
-        res_list = self.client.get("/api/finance/credit-note/")
+        res_list = self.client.get("/api/finance/credit-notes/")
         self.assertEqual(res_list.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_list.data["results"]), 0)
 
         # Detail should return 404
-        res_get = self.client.get(f"/api/finance/credit-note/{cn.id}/")
+        res_get = self.client.get(f"/api/finance/credit-notes/{cn.id}/")
         self.assertEqual(res_get.status_code, status.HTTP_404_NOT_FOUND)

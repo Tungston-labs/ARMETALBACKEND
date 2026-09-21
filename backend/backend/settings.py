@@ -74,7 +74,8 @@ INSTALLED_APPS = [
     'finance.credit_note',
     'finance.invoice',
     'finance.sales_order',
-    'finance.ledger',
+    'finance.ledger.apps.LedgerConfig',
+    'finance.payment',
 ]
 
 MIDDLEWARE = [
