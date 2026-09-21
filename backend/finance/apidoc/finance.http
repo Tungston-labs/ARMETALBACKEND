@@ -1,0 +1,18 @@
+# Warehouse API Documentation
+# Refer to apidocs/warehouse.http for full details.
+
+### List Warehouses
+GET http://127.0.0.1:8000/api/finance/warehouse/
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+
+### Create Warehouse
+POST http://127.0.0.1:8000/api/finance/warehouse/
+Authorization: Bearer YOUR_ACCESS_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "code": "WH-001",
+  "warehouse_name": "Riyadh Central Warehouse",
+  "warehouse_type": "main",
+  "status": "active"
+}

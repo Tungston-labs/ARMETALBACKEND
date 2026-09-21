@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from employee.models import Employee_db
+from hr.employee.models import Employee_db
 
 from user.permissions import IsSuperAdmin
 

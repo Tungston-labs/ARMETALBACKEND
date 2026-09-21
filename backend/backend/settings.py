@@ -44,25 +44,36 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'attendance',
+    'hr.attendance',
     'backend',
-    'departments',
-    'leave',
+    'hr.departments',
+    'hr.leave',
     'shared',
     'superadmin',
-    'task',
+    'hr.task',
     'user',
-    'employee.apps.EmployeeConfig',
-    'holidays',
-    'payroll',
-    'reimbursement',
-    'finance',
+    'hr.employee.apps.EmployeeConfig',
+    'hr.holidays',
+    'hr.payroll',
+    'hr.reimbursement',
+    'hr.finance',
     'rest_framework',
-    'project',
-    'dashboard',
+    'hr.project',
+    'hr.dashboard',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'channels',
+    'finance.category',
+    "drf_spectacular",
+    'finance.warehouse',
+    'finance.product',
+    'finance.inventory',
+    'finance.customer',
+    'finance.quotation',
+    'finance.delivery_note',
+    'finance.credit_note',
+    'finance.invoice',
+    'finance.sales_order',
 ]
 
 MIDDLEWARE = [
@@ -181,6 +192,21 @@ REST_FRAMEWORK = {
 
     'EXCEPTION_HANDLER': 'shared.utils.exception_handler.custom_exception_handler',
 
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
+}
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header using the Bearer scheme. Format: "Bearer <your_token>"'
+        }
+    },
+    'USE_SESSION_AUTH': False,
+    'JSON_EDITOR': True,
 }
 
 
@@ -268,5 +294,27 @@ CELERY_BEAT_SCHEDULE = {
 SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Rekory Finance API",
+    "DESCRIPTION": "API documentation for Rekory Finance",
+    "VERSION": "1.0.0",
 
+    "SERVE_INCLUDE_SCHEMA": False,
+
+    "COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+            }
+        }
+    },
+
+    "SECURITY": [
+        {
+            "BearerAuth": []
+        }
+    ],
+}
 

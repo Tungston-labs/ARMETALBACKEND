@@ -15,33 +15,63 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
-
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/',include('user.urls')),
-    path('api/',include('superadmin.urls')),
-    path('api/',include('departments.urls')),
-    path('api/', include('employee.urls')),
-    path('api/',include('leave.urls')),
-    path('api/',include('task.urls')),
-    path('api/',include('attendance.urls')),
-    path('api/',include('holidays.urls')),
-    path('api/',include('payroll.urls')),
-    path('api/reimbursements/',include('reimbursement.urls')),
-    path('api/project/',include('project.urls')),
-    path('api/admindashboard/',include('dashboard.urls')),
-    path('api/finance/',include('finance.urls')),
+    path('api/', include('user.urls')),
+    path('api/', include('superadmin.urls')),
+    path('api/', include('hr.departments.urls')),
+    path('api/', include('hr.employee.urls')),
+    path('api/', include('hr.leave.urls')),
+    path('api/', include('hr.task.urls')),
+    path('api/', include('hr.attendance.urls')),
+    path('api/', include('hr.holidays.urls')),
+    path('api/', include('hr.payroll.urls')),
+    path('api/reimbursements/', include('hr.reimbursement.urls')),
+    path('api/project/', include('hr.project.urls')),
+    path('api/admindashboard/', include('hr.dashboard.urls')),
+    path('api/finance/', include('hr.finance.urls')),
+    path('api/finance/category/', include('finance.category.urls')),
+    path('api/finance/warehouse/', include('finance.warehouse.urls')),
+    path('api/finance/product/', include('finance.product.urls')),
+    path('api/finance/inventory/', include('finance.inventory.urls')),
+    path('api/finance/customer/', include('finance.customer.urls')),
+    path('api/finance/quotation/', include('finance.quotation.urls')),
+    path('api/finance/delivery-notes/', include('finance.delivery_note.urls')),
+    path('api/finance/credit-notes/', include('finance.credit_note.urls')),
+    path('api/finance/invoice/', include('finance.invoice.urls')),
+    path('api/finance/sales-order/', include('finance.sales_order.urls')),
 
 
 
+
+
+    path(
+        "api/schema/",
+        SpectacularAPIView.as_view(),
+        name="schema"
+    ),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(
+            url_name="schema"
+        ),
+        name="swagger-ui"
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(
+            url_name="schema"
+        ),
+        name="redoc"
+    ),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     
-
-
-
-
-
-]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

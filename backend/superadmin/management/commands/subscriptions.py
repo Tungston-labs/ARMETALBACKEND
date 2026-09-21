@@ -2,7 +2,7 @@ from calendar import monthrange
 from datetime import date
 from django.db.models import Q
 
-from employee.models import Employee_db
+from hr.employee.models import Employee_db
 
 
 def get_billable_employee_count(company, month, year):

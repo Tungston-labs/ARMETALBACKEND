@@ -1,0 +1,131 @@
+# ==============================================================================
+# DELIVERY NOTE API DOCUMENTATION & HTTP TEST SUITE
+# ==============================================================================
+
+### 1. Authenticate to get JWT token
+POST http://127.0.0.1:8000/api/token/
+Content-Type: application/json
+
+{
+  "username": "dummy",
+  "password": "password123"
+}
+
+###
+
+# Set variable for JWT access token
+@authToken = Bearer YOUR_JWT_ACCESS_TOKEN_HERE
+
+
+# ------------------------------------------------------------------------------
+# 2. CREATE DELIVERY NOTE (Add New Delivery Note)
+# ------------------------------------------------------------------------------
+### Add a New Delivery Note
+POST http://127.0.0.1:8000/api/finance/delivery-notes/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "so_ref": "SO 0123",
+  "customer": 1,
+  "delivery_date": "2026-04-28",
+  "warehouse": 1,
+  "delivery_value": "22852.00",
+  "delivery_status": "delivered",
+  "invoice_status": "fully_invoiced",
+  "from_company_name": "Tungston Labs",
+  "shipping_address": "Riyadh Industrial Zone, Warehouse 4",
+  "contact_person": "Arun S",
+  "contact_phone": "+966500000000",
+  "notes": "Delivered in good condition.",
+  "items": [
+    {
+      "product": 1,
+      "item_name": "App Design & Metal Framework",
+      "description": "Custom sheet metal setup",
+      "quantity": "2.00",
+      "hs_code": "56322",
+      "rate": "9935.65",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+
+# ------------------------------------------------------------------------------
+# 3. GET DELIVERY NOTE KPI CARDS
+# ------------------------------------------------------------------------------
+### Get KPI summary metrics
+GET http://127.0.0.1:8000/api/finance/delivery-notes/kpi/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 4. LIST DELIVERY NOTES (With Pagination, KPI Cards, & Filters)
+# ------------------------------------------------------------------------------
+### List all delivery notes for user's company
+GET http://127.0.0.1:8000/api/finance/delivery-notes/
+Authorization: {{authToken}}
+
+### Search delivery notes by keyword
+GET http://127.0.0.1:8000/api/finance/delivery-notes/?search=Mediora
+Authorization: {{authToken}}
+
+### Filter delivery notes by delivery_status, warehouse, or customer
+GET http://127.0.0.1:8000/api/finance/delivery-notes/?delivery_status=delivered&warehouse=1
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 5. GET DELIVERY NOTE DETAILS
+# ------------------------------------------------------------------------------
+### Get delivery note by ID
+GET http://127.0.0.1:8000/api/finance/delivery-notes/1/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 6. EDIT / UPDATE DELIVERY NOTE
+# ------------------------------------------------------------------------------
+### Partial update delivery note (PATCH)
+PATCH http://127.0.0.1:8000/api/finance/delivery-notes/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "delivery_status": "delivered",
+  "invoice_status": "fully_invoiced"
+}
+
+### Full update delivery note (PUT)
+PUT http://127.0.0.1:8000/api/finance/delivery-notes/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+  "so_ref": "SO 0123",
+  "customer": 1,
+  "delivery_date": "2026-04-28",
+  "warehouse": 1,
+  "delivery_value": "22852.00",
+  "delivery_status": "delivered",
+  "invoice_status": "fully_invoiced",
+  "notes": "Updated delivery details",
+  "items": [
+    {
+      "product": 1,
+      "item_name": "App Design & Metal Framework",
+      "quantity": "2.00",
+      "rate": "9935.65",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+
+# ------------------------------------------------------------------------------
+# 7. DELETE DELIVERY NOTE
+# ------------------------------------------------------------------------------
+### Delete a delivery note by ID
+DELETE http://127.0.0.1:8000/api/finance/delivery-notes/1/
+Authorization: {{authToken}}
