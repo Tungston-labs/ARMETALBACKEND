@@ -14,7 +14,7 @@ Content-Type: application/json
 ###
 
 # Set variable for JWT access token
-@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5MTM4MzE0LCJpYXQiOjE3ODkxMDk1MTQsImp0aSI6ImE3NjE3MzMyNzM5ODRmM2Q4NmY3MWEwNDQ2MTdjODBhIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.mnM8vB3LkAgXRYJqhjkryiIQehalizwilu0PU70INPk
+@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5NjU4MjIzLCJpYXQiOjE3ODk2Mjk0MjMsImp0aSI6IjI0MWQ3NTIxYjNiMjQ1Y2I5OTIwYTU4Zjk1MWNkOWJjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.c4r9_6RMExRHdRvheTchcOUqd2AnFbgQuvdF5x0dPRE
 
 
 # ------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ Authorization: {{authToken}}
 Content-Type: application/json
 
 {
-  "code": "WH-001",
+  "code": "WH-002",
   "warehouse_name": "Riyadh Central Warehouse",
   "warehouse_type": "main",
   "status": "active",
