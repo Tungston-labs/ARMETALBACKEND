@@ -4,7 +4,7 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "dummy",
+  "username": "company",
   "password": "password123"
 }
 ###local sqlite super admin
@@ -22,7 +22,7 @@ POST https://api.rekory.com/api/token/
 Content-Type: application/json
 
 {
-  "username": "Tungstonlabs",
+  "username": "company",
   "password": "password123"
 }
 

@@ -282,7 +282,7 @@ Authorization: Bearer {{token}}
 # Used by frontend to auto-populate Sales Order form
 ###########################################################
 
-GET {{baseUrl}}/quotations/5/
+GET {{baseUrl}}/quotations/8/
 Authorization: Bearer {{token}}
 
 
@@ -290,7 +290,7 @@ Authorization: Bearer {{token}}
 # 33. GET QUOTATION DETAILS FOR ANOTHER QUOTATION
 ###########################################################
 
-GET {{baseUrl}}/quotations/6/
+GET {{baseUrl}}/quotations/8/
 Authorization: Bearer {{token}}
 
 
@@ -303,10 +303,14 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
+<<<<<<< Updated upstream
     "quotation": 4,
+=======
+    "quotation": 8,
+>>>>>>> Stashed changes
     "company": 1,
-    "customer": 1,
-    "warehouse": 2,
+    "customer":1,
+    "warehouse": 1,
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",
@@ -329,8 +333,13 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
+<<<<<<< Updated upstream
     "quotation": 4,
     "warehouse": 3,
+=======
+    "quotation": 8,
+    "warehouse": 1,
+>>>>>>> Stashed changes
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",
@@ -354,10 +363,10 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "quotation": 5,
+    "quotation": 8,
     "company": 1,
-    "customer": 12,
-    "warehouse": 3,
+    "customer": 1,
+    "warehouse": 1,
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",
@@ -369,8 +378,13 @@ Content-Type: application/json
 
     "items": [
         {
+<<<<<<< Updated upstream
             "quotation_item": 10,
             "product": 1,
+=======
+            "quotation_item": 2,
+            "product": 4,
+>>>>>>> Stashed changes
             "service_name": "Product A",
             "description": "Product description",
             "quantity": "5.00",
