@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework.test import APITestCase
 from rest_framework import status
 from superadmin.models import Company
@@ -245,10 +246,10 @@ class ProductAPITestCase(APITestCase):
             "selling_price": "2000.00"
         }, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(res.data["quantity"], 25)
-        self.assertEqual(res.data["opening_stock_qty"], 10)
+        self.assertEqual(Decimal(str(res.data["quantity"])), Decimal("25.00"))
+        self.assertEqual(Decimal(str(res.data["opening_stock_qty"])), Decimal("10.00"))
         # current_stock should equal opening_stock_qty (10) + quantity (25) = 35
-        self.assertEqual(res.data["current_stock"], 35)
+        self.assertEqual(Decimal(str(res.data["current_stock"])), Decimal("35.00"))
 
     def test_put_full_update_product(self):
         prd = Product.objects.create(

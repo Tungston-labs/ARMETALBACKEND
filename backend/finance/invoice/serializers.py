@@ -252,14 +252,14 @@ class InvoiceSerializer(serializers.ModelSerializer):
                 "Cannot create invoice from a rejected sales order."
             )
 
-        # -------------------------------------------------
-        # SO must have items
-        # -------------------------------------------------
-
         if not sales_order.items.exists():
-
             raise serializers.ValidationError(
                 "Selected sales order does not contain any items."
+            )
+
+        if not self.instance and Invoice.objects.filter(sales_order=sales_order).exists():
+            raise serializers.ValidationError(
+                "An invoice already exists for this sales order."
             )
 
         return sales_order
