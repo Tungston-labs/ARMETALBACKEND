@@ -22,7 +22,7 @@ POST https://api.rekory.com/api/token/
 Content-Type: application/json
 
 {
-  "username": "Tungstonlabs",
+  "username": "company",
   "password": "password123"
 }
 

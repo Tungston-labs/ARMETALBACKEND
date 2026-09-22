@@ -71,14 +71,13 @@ Content-Type: application/json
 ### Create Paid Invoice
 
 POST {{base_url}}/api/finance/invoice/
-
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
 "sales_order": 2,
-"invoice_date": "2026-09-17",
-"due_date": "2026-09-17",
+"invoice_date": "2026-09-21",
+"due_date": "2026-09-21",
 "account_holder": "ABC Bank",
 "account_number": "1234567890",
 "iban": "AE123456789012345678901",
@@ -94,7 +93,6 @@ Content-Type: application/json
 ### Create Partially Paid Invoice
 
 POST {{base_url}}/api/finance/invoice/
-
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
@@ -117,7 +115,6 @@ Content-Type: application/json
 ### Explicitly Create Unpaid Invoice
 
 POST {{base_url}}/api/finance/invoice/
-
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
@@ -429,7 +426,6 @@ Authorization: Bearer {{access_token}}
 ### Update Invoice
 
 PUT {{base_url}}/api/finance/invoice/{{invoice_id}}/
-
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
