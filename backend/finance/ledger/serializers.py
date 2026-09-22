@@ -1,4 +1,8 @@
+from decimal import Decimal
+
 from rest_framework import serializers
+
+from finance.customer.models import Customer
 
 from .models import CustomerLedger
 
@@ -37,7 +41,6 @@ class CustomerLedgerSerializer(
     )
 
     class Meta:
-
         model = CustomerLedger
 
         fields = [
@@ -64,6 +67,140 @@ class CustomerLedgerSerializer(
         ]
 
         read_only_fields = fields
+
+
+class CustomerLedgerCreateSerializer(
+    serializers.ModelSerializer
+):
+
+    mode = serializers.ChoiceField(
+        choices=[
+            ("debit", "Debit"),
+            ("credit", "Credit"),
+        ]
+    )
+
+    amount = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+
+    class Meta:
+        model = CustomerLedger
+
+        fields = [
+            "customer",
+            "transaction_date",
+            "reference_number",
+            "description",
+            "mode",
+            "amount",
+        ]
+
+    def validate_customer(self, customer):
+
+        request = self.context.get("request")
+
+        if request and request.user.company != customer.company:
+            raise serializers.ValidationError(
+                "Customer does not belong to your company."
+            )
+
+        return customer
+
+    def create(self, validated_data):
+
+        mode = validated_data.pop("mode")
+        amount = validated_data.pop("amount")
+
+        request = self.context["request"]
+        user = request.user
+
+        customer = validated_data["customer"]
+
+        # ------------------------------------------------
+        # Determine debit / credit
+        # ------------------------------------------------
+
+        if mode == "debit":
+
+            debit = amount
+            credit = Decimal("0.00")
+
+        else:
+
+            debit = Decimal("0.00")
+            credit = amount
+
+        # ------------------------------------------------
+        # Get previous ledger entry
+        # ------------------------------------------------
+
+        previous_entry = (
+            CustomerLedger.objects
+            .filter(
+                company=user.company,
+                customer=customer,
+            )
+            .order_by(
+                "-transaction_date",
+                "-id",
+            )
+            .first()
+        )
+
+        # ------------------------------------------------
+        # Determine previous balance
+        # ------------------------------------------------
+
+        if previous_entry:
+
+            previous_balance = previous_entry.balance
+
+        else:
+
+            previous_balance = (
+                customer.opening_balance
+                or Decimal("0.00")
+            )
+
+        # ------------------------------------------------
+        # Calculate new balance
+        # ------------------------------------------------
+
+        balance = (
+            previous_balance
+            + debit
+            - credit
+        )
+
+        # ------------------------------------------------
+        # Create ledger
+        # ------------------------------------------------
+
+        ledger = CustomerLedger.objects.create(
+            company=user.company,
+            customer=customer,
+            transaction_date=validated_data[
+                "transaction_date"
+            ],
+            transaction_type="adjustment",
+            reference_number=validated_data.get(
+                "reference_number",
+                "",
+            ),
+            description=validated_data.get(
+                "description",
+                "",
+            ),
+            debit=debit,
+            credit=credit,
+            balance=balance,
+            created_by=user,
+        )
+
+        return ledger
 
 
 class CustomerLedgerSummarySerializer(
