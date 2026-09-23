@@ -4,7 +4,7 @@
 
 ```http
 @baseUrl = http://127.0.0.1:8000
-@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMDgxNjAyLCJpYXQiOjE3OTAwNTI4MDIsImp0aSI6ImY1ZmMwOGE4M2QyZjQ2ZTBhMWNkZTZmYjRkNTYzN2NlIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.9tMBZRZLK0oUg9y41C8BCQYFBO7ufUlqhPK3TXogH2U
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTY3NDMwLCJpYXQiOjE3OTAxMzg2MzAsImp0aSI6IjFmZGUwYzdiNjU5ODQ0MDk5MDU5ODUzMzc5NTY5OWFiIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.t6dPKBli7lKI_hS2Hv5F6ETYLpn-h7263sAblW_41vk
 @customer_id = CUSTOMER_ID
 ```
 
@@ -96,13 +96,12 @@ Content-Type: application/json
 
 ---
 
-## 10. Customer Ledger Summary
+### 10. Customer Ledger Summary
 
-```http
 GET {{baseUrl}}/api/finance/ledger/summary/?customer_id={{customer_id}}
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
-```
+
 
 ---
 
@@ -143,3 +142,31 @@ GET {{baseUrl}}/api/finance/ledger/customer/{{customer_id}}/?page=1&page_size=20
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 ```
+### Create Customer Ledger - Debit
+POST http://localhost:8000/api/finance/ledger/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTA0OTI1LCJpYXQiOjE3OTAwNzYxMjUsImp0aSI6IjY2MmE5YTVkYzljYjQ3ZDI5YzIzMTUxYjgyMWU3YzA0IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.UnXNGQhhhJLyWC7Xo7yUFXWSWVAp2zJAVlAsK5iqlhQ
+Content-Type: application/json
+
+{
+    "customer": 1,
+    "transaction_date": "2026-09-22",
+    "reference_number": "REF-10025",
+    "description": "Manual debit adjustment",
+    "mode": "debit",
+    "amount": "500.00"
+}
+
+
+### Customer Financial Dashboard Summary for cards
+
+GET http://localhost:8000/api/finance/ledger/dashboard-summary/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTY1NDE0LCJpYXQiOjE3OTAxMzY2MTQsImp0aSI6IjJkNjZlZmIwZWYzMzRjM2U5N2I1NDYyMjNjNzYxZWI1IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.NNeoV7-P1C7jzUoYLrq6NHIPAdmcTfmBnTxfuLgw9yw
+Content-Type: application/json
+
+
+
+### Customer wise summary api
+
+GET http://localhost:8000/api/finance/ledger/customer-summary/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTY1NDE0LCJpYXQiOjE3OTAxMzY2MTQsImp0aSI6IjJkNjZlZmIwZWYzMzRjM2U5N2I1NDYyMjNjNzYxZWI1IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.NNeoV7-P1C7jzUoYLrq6NHIPAdmcTfmBnTxfuLgw9yw
+Content-Type: application/json
