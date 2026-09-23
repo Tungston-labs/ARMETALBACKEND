@@ -234,32 +234,38 @@ class CustomerLedgerSummarySerializer(
     )
 
 
-
-
-
-
-class CustomerFinancialSummarySerializer(serializers.Serializer):
-    total_receivable = serializers.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-    )
+class CustomerLedgerCustomerSummarySerializer(
+    serializers.Serializer
+):
+    customer_code = serializers.CharField()
+    customer_name = serializers.CharField()
 
     total_invoice = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
     )
 
-    total_collection = serializers.DecimalField(
+    total_payment = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
     )
 
-    total_credit = serializers.DecimalField(
+    credit_note = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
     )
 
-    overdue_amount = serializers.DecimalField(
+    overdue = serializers.DecimalField(
         max_digits=15,
         decimal_places=2,
     )
+
+    outstanding = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+
+
+
+

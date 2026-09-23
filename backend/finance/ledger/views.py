@@ -1,7 +1,20 @@
 from decimal import Decimal
 
+
+from django.db.models import (
+    Sum,
+    Q,
+    F,
+    DecimalField,
+    Value,
+)
+from django.db.models.functions import Coalesce
+
+from rest_framework.response import Response
+from rest_framework import status
+
+
 from django.db.models import Sum
-from django.utils import timezone
 
 from django_filters.rest_framework import (
     DjangoFilterBackend,
@@ -35,17 +48,10 @@ from .models import CustomerLedger
 from .serializers import (
     CustomerLedgerSerializer,
     CustomerLedgerCreateSerializer,
-    CustomerLedgerSummarySerializer,CustomerFinancialSummarySerializer
+    CustomerLedgerSummarySerializer,CustomerLedgerCustomerSummarySerializer
 )
 
 
-from finance.invoice.models import Invoice
-from finance.payment.models import Payment
-
-from .models import CustomerLedger
-from .serializers import (
-    CustomerFinancialSummarySerializer,
-)
 
 
 class CustomerLedgerViewSet(
@@ -523,173 +529,174 @@ class CustomerLedgerViewSet(
             },
             status=status.HTTP_200_OK,
         )
+    
     @action(
         detail=False,
         methods=["get"],
-        url_path="dashboard-summary",
+        url_path="customer-summary",
     )
-    def dashboard_summary(self, request):
+    def customer_summary(self, request):
 
         user = request.user
-        company = user.company
 
-        customer_id = request.query_params.get(
-            "customer_id"
+        # ==================================================
+        # BASE CUSTOMER QUERYSET
+        # ==================================================
+
+        customers = Customer.objects.filter(
+            company=user.company
         )
 
-        today = timezone.localdate()
+        # ==================================================
+        # SEARCH CUSTOMER NAME
+        # ==================================================
 
-        # -------------------------------------------------
-        # Base invoice queryset
-        # -------------------------------------------------
-
-        invoice_queryset = Invoice.objects.filter(
-            company=company
+        search = request.query_params.get(
+            "search"
         )
 
-        if customer_id:
-            invoice_queryset = invoice_queryset.filter(
-                customer_id=customer_id
+        if search:
+            customers = customers.filter(
+                customer_name__icontains=search
             )
 
-        # -------------------------------------------------
-        # Total Invoice
-        # -------------------------------------------------
+        # ==================================================
+        # LEDGER AGGREGATION
+        # ==================================================
 
-        total_invoice = (
-            invoice_queryset.aggregate(
-                total=Sum("total_amount")
-            )["total"]
-            or Decimal("0.00")
+        customers = customers.annotate(
+
+            total_invoice=Coalesce(
+                Sum(
+                    "ledger_entries__debit",
+                    filter=Q(
+                        ledger_entries__transaction_type="invoice"
+                    ),
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(
+                    max_digits=15,
+                    decimal_places=2,
+                ),
+            ),
+
+            total_payment=Coalesce(
+                Sum(
+                    "ledger_entries__credit",
+                    filter=Q(
+                        ledger_entries__transaction_type="payment"
+                    ),
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(
+                    max_digits=15,
+                    decimal_places=2,
+                ),
+            ),
+
+            credit_note=Coalesce(
+                Sum(
+                    "ledger_entries__credit",
+                    filter=Q(
+                        ledger_entries__transaction_type="credit_note"
+                    ),
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(
+                    max_digits=15,
+                    decimal_places=2,
+                ),
+            ),
         )
 
-        # -------------------------------------------------
-        # Total Collection
-        # -------------------------------------------------
+        # ==================================================
+        # OUTSTANDING
+        # ==================================================
 
-        payment_queryset = Payment.objects.filter(
-            company=company,
-            status="completed",
-        )
-
-        if customer_id:
-            payment_queryset = payment_queryset.filter(
-                customer_id=customer_id
+        customers = customers.annotate(
+            outstanding=(
+                F("total_invoice")
+                - F("total_payment")
+                - F("credit_note")
             )
-
-        total_collection = (
-            payment_queryset.aggregate(
-                total=Sum("amount_received")
-            )["total"]
-            or Decimal("0.00")
         )
 
-        # -------------------------------------------------
-        # Total Credit
-        # -------------------------------------------------
+        # ==================================================
+        # ORDERING
+        # ==================================================
 
-        credit_queryset = CustomerLedger.objects.filter(
-            company=company,
-            transaction_type="credit_note",
+        customers = customers.order_by(
+            "customer_name"
         )
 
-        if customer_id:
-            credit_queryset = credit_queryset.filter(
-                customer_id=customer_id
-            )
+        # ==================================================
+        # PAGINATION
+        # ==================================================
 
-        total_credit = (
-            credit_queryset.aggregate(
-                total=Sum("credit")
-            )["total"]
-            or Decimal("0.00")
+        page = self.paginate_queryset(
+            customers
         )
 
-        # -------------------------------------------------
-        # Total Receivable
-        # -------------------------------------------------
-        #
-        # Receivable = Invoice - Collection - Credit
-        #
-        # Credit notes reduce the receivable amount.
-        # -------------------------------------------------
+        # ==================================================
+        # SERIALIZE
+        # ==================================================
 
-        total_receivable = (
-            total_invoice
-            - total_collection
-            - total_credit
-        )
+        if page is not None:
 
-        if total_receivable < Decimal("0.00"):
-            total_receivable = Decimal("0.00")
+            data = []
 
-        # -------------------------------------------------
-        # Overdue Amount
-        # -------------------------------------------------
-        #
-        # Unpaid or partially paid invoices whose
-        # due date has passed.
-        #
-        # Outstanding = total_amount - amount_paid
-        # -------------------------------------------------
+            for customer in page:
 
-        overdue_queryset = invoice_queryset.filter(
-            due_date__lt=today,
-            payment_status__in=[
-                "unpaid",
-                "partially_paid",
-            ],
-        )
+                data.append({
+                    "customer_code": customer.customer_id,
+                    "customer_name": customer.customer_name,
+                    "total_invoice": customer.total_invoice,
+                    "total_payment": customer.total_payment,
+                    "credit_note": customer.credit_note,
+                    "overdue": Decimal("0.00"),
+                    "outstanding": customer.outstanding,
+                })
 
-        overdue_amount = Decimal("0.00")
-
-        overdue_invoices = overdue_queryset.values(
-            "total_amount",
-            "amount_paid",
-        )
-
-        for invoice in overdue_invoices:
-
-            invoice_total = (
-                invoice["total_amount"]
-                or Decimal("0.00")
-            )
-
-            invoice_paid = (
-                invoice["amount_paid"]
-                or Decimal("0.00")
-            )
-
-            outstanding_amount = (
-                invoice_total - invoice_paid
-            )
-
-            if outstanding_amount > Decimal("0.00"):
-
-                overdue_amount += (
-                    outstanding_amount
+            serializer = (
+                CustomerLedgerCustomerSummarySerializer(
+                    data,
+                    many=True,
                 )
+            )
 
-        # -------------------------------------------------
-        # Prepare response
-        # -------------------------------------------------
+            return self.get_paginated_response(
+                serializer.data
+            )
 
-        data = {
-            "total_receivable": total_receivable,
-            "total_invoice": total_invoice,
-            "total_collection": total_collection,
-            "total_credit": total_credit,
-            "overdue_amount": overdue_amount,
-        }
+        # ==================================================
+        # WITHOUT PAGINATION
+        # ==================================================
 
-        serializer = CustomerFinancialSummarySerializer(
-            data
+        data = []
+
+        for customer in customers:
+
+            data.append({
+                "customer_code": customer.customer_id,
+                "customer_name": customer.customer_name,
+                "total_invoice": customer.total_invoice,
+                "total_payment": customer.total_payment,
+                "credit_note": customer.credit_note,
+                "overdue": Decimal("0.00"),
+                "outstanding": customer.outstanding,
+            })
+
+        serializer = (
+            CustomerLedgerCustomerSummarySerializer(
+                data,
+                many=True,
+            )
         )
 
         return Response(
             {
                 "message": (
-                    "Customer financial summary "
+                    "Customer ledger summary "
                     "retrieved successfully."
                 ),
                 "data": serializer.data,
