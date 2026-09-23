@@ -181,10 +181,18 @@ class PaymentViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
         start_of_month = today.replace(day=1)
 
+        customer_id = request.query_params.get("customer")
+
+        payment_qs = Payment.objects.filter(company=company)
+        invoice_qs = Invoice.objects.filter(company=company)
+
+        if customer_id:
+            payment_qs = payment_qs.filter(customer_id=customer_id)
+            invoice_qs = invoice_qs.filter(customer_id=customer_id)
+
         # 1. Total collections
         total_collections = (
-            Payment.objects.filter(
-                company=company,
+            payment_qs.filter(
                 status="completed",
             ).aggregate(
                 total=models.Sum("amount_received")
@@ -194,8 +202,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         # 2. This month collections
         this_month_collections = (
-            Payment.objects.filter(
-                company=company,
+            payment_qs.filter(
                 status="completed",
                 payment_date__gte=start_of_month,
             ).aggregate(
@@ -205,7 +212,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         )
 
         # 3. Outstanding receivables (total unpaid on non-paid invoices)
-        invoices = Invoice.objects.filter(company=company)
+        invoices = invoice_qs
         outstanding_receivables = Decimal("0.00")
         overdue_receivables = Decimal("0.00")
 

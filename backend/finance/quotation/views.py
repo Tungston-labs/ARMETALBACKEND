@@ -131,8 +131,14 @@ class QuotationListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        base_qs = self.get_queryset()
+        
+        customer_param = request.query_params.get("customer")
+        if customer_param:
+            base_qs = self.get_queryset().filter(customer_id=customer_param)
+        else:
+            base_qs = self.get_queryset()
 
+        total_quotations = base_qs.count()
         stats = base_qs.aggregate(
             total_value=Coalesce(Sum("quote_amount"), Decimal("0.00")),
             total_negotiation=Coalesce(Sum("negotiation_amount"), Decimal("0.00"))
@@ -145,6 +151,7 @@ class QuotationListCreateView(generics.ListCreateAPIView):
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
+            response.data["total_quotations"] = total_quotations
             response.data["total_quotation_value"] = stats["total_value"]
             response.data["negotiation_amount"] = stats["total_negotiation"]
             response.data["approved_quotes"] = approved_quotes
@@ -155,6 +162,7 @@ class QuotationListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "results": serializer.data,
+            "total_quotations": total_quotations,
             "total_quotation_value": stats["total_value"],
             "negotiation_amount": stats["total_negotiation"],
             "approved_quotes": approved_quotes,

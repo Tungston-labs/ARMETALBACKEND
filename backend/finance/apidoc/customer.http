@@ -239,3 +239,55 @@ Authorization: Bearer {{token}}
 ### 19. SUMMARY - WITH ACTIVE FILTER
 GET {{baseUrl}}/api/finance/customer/summary/?client_status=active
 Authorization: Bearer {{token}}
+
+
+### 20. INDIVIDUAL CUSTOMER OVERVIEW
+GET {{baseUrl}}/api/finance/customer/1/overview/
+Authorization: Bearer {{token}}
+
+
+### 21. UPLOAD DOCUMENT TO INDIVIDUAL CUSTOMER
+POST {{baseUrl}}/api/finance/customer/1/upload_document/
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----DocBoundary
+
+------DocBoundary
+Content-Disposition: form-data; name="document_name"
+
+Trade License PDF
+------DocBoundary
+Content-Disposition: form-data; name="document"; filename="trade_license.pdf"
+Content-Type: application/pdf
+
+< ./trade_license.pdf
+------DocBoundary--
+
+
+### 22. INDIVIDUAL CUSTOMER QUOTATIONS
+GET {{baseUrl}}/api/finance/customer/1/quotations/
+Authorization: Bearer {{token}}
+
+
+### 23. INDIVIDUAL CUSTOMER QUOTATIONS - SEARCH & FILTER
+GET {{baseUrl}}/api/finance/customer/1/quotations/?search=Project&status=pending
+Authorization: Bearer {{token}}
+
+
+### 24. INDIVIDUAL CUSTOMER PAYMENTS
+GET {{baseUrl}}/api/finance/customer/1/payments/
+Authorization: Bearer {{token}}
+
+
+### 25. INDIVIDUAL CUSTOMER PAYMENTS - SEARCH & FILTER
+GET {{baseUrl}}/api/finance/customer/1/payments/?search=REC&payment_method=bank_transfer&status=completed
+Authorization: Bearer {{token}}
+
+
+### 26. INDIVIDUAL CUSTOMER CREDIT NOTES
+GET {{baseUrl}}/api/finance/customer/1/credit_notes/
+Authorization: Bearer {{token}}
+
+
+### 27. INDIVIDUAL CUSTOMER CREDIT NOTES - SEARCH & FILTER
+GET {{baseUrl}}/api/finance/customer/1/credit_notes/?search=CN&reason=sales_return&status=open
+Authorization: Bearer {{token}}
