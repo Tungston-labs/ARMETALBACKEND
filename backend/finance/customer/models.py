@@ -96,6 +96,12 @@ class Customer(TimeStampedModel):
         default=""
     )
 
+    trade_license_number = models.CharField(
+        max_length=100,
+        blank=True,
+        default=""
+    )
+
     payment_term = models.CharField(
         max_length=20,
         choices=PAYMENT_TERM_CHOICES,

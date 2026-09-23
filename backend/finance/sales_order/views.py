@@ -13,6 +13,7 @@ from superadmin.models import Company
 from finance.customer.models import Customer
 from finance.warehouse.models import Warehouse
 from finance.quotation.models import Quotation
+from finance.invoice.models import Invoice
 
 from .models import SalesOrder
 

@@ -1,5 +1,6 @@
 from django.db.models import Sum, Q
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from decimal import Decimal
 
 from rest_framework import generics, filters, status
@@ -39,19 +40,30 @@ class CreditNoteKPICardView(APIView):
         else:
             base_qs = CreditNote.objects.none()
 
+        customer_param = request.query_params.get("customer")
+        if customer_param:
+            base_qs = base_qs.filter(customer_id=customer_param)
+
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+
         stats = base_qs.aggregate(
             total_value=Coalesce(Sum("credit_amount"), Decimal("0.00")),
             open_value=Coalesce(Sum("credit_amount", filter=Q(status="open")), Decimal("0.00")),
             applied_value=Coalesce(Sum("applied_amount"), Decimal("0.00")),
+            this_month=Coalesce(Sum("credit_amount", filter=Q(issue_date__gte=start_of_month)), Decimal("0.00")),
         )
 
         total_credit_notes = base_qs.count()
+        open_credit_notes = base_qs.filter(status="open").count()
         cancelled_credits = base_qs.filter(status="cancelled").count()
 
         return Response({
             "total_credit_notes": total_credit_notes,
             "total_credit_value": stats["total_value"],
+            "this_month": stats["this_month"],
             "open_credits": stats["open_value"],
+            "open_credit_notes": open_credit_notes,
             "applied_credits": stats["applied_value"],
             "cancelled_credits": cancelled_credits,
         })
@@ -128,14 +140,25 @@ class CreditNoteListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        base_qs = self.get_queryset()
+        
+        customer_param = request.query_params.get("customer")
+        if customer_param:
+            base_qs = self.get_queryset().filter(customer_id=customer_param)
+        else:
+            base_qs = self.get_queryset()
+
+        from django.utils import timezone
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
 
         stats = base_qs.aggregate(
             total_value=Coalesce(Sum("credit_amount"), Decimal("0.00")),
             open_value=Coalesce(Sum("credit_amount", filter=Q(status="open")), Decimal("0.00")),
             applied_value=Coalesce(Sum("applied_amount"), Decimal("0.00")),
+            this_month=Coalesce(Sum("credit_amount", filter=Q(issue_date__gte=start_of_month)), Decimal("0.00")),
         )
         total_credit_notes = base_qs.count()
+        open_credit_notes = base_qs.filter(status="open").count()
         cancelled_credits = base_qs.filter(status="cancelled").count()
 
         page = self.paginate_queryset(queryset)
@@ -144,7 +167,9 @@ class CreditNoteListCreateView(generics.ListCreateAPIView):
             response = self.get_paginated_response(serializer.data)
             response.data["total_credit_notes"] = total_credit_notes
             response.data["total_credit_value"] = stats["total_value"]
+            response.data["this_month"] = stats["this_month"]
             response.data["open_credits"] = stats["open_value"]
+            response.data["open_credit_notes"] = open_credit_notes
             response.data["applied_credits"] = stats["applied_value"]
             response.data["cancelled_credits"] = cancelled_credits
             return response
@@ -154,7 +179,9 @@ class CreditNoteListCreateView(generics.ListCreateAPIView):
             "results": serializer.data,
             "total_credit_notes": total_credit_notes,
             "total_credit_value": stats["total_value"],
+            "this_month": stats["this_month"],
             "open_credits": stats["open_value"],
+            "open_credit_notes": open_credit_notes,
             "applied_credits": stats["applied_value"],
             "cancelled_credits": cancelled_credits,
         })

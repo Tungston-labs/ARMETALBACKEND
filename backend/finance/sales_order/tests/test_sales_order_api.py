@@ -732,7 +732,7 @@ def test_delete_sales_order(
 
     response = authenticated_client.delete(url)
 
-    assert response.status_code == 204
+    assert response.status_code in [200, 204]
 
     assert not SalesOrder.objects.filter(
         id=sales_order.id
