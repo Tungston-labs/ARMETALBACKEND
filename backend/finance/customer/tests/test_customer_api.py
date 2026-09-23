@@ -1634,3 +1634,470 @@ def test_summary_company_isolation(
     assert data["active_customers"] == 1
 
     assert data["inactive_customers"] == 0
+
+
+# ============================================================
+# 16. INDIVIDUAL CUSTOMER OVERVIEW API
+# ============================================================
+
+@pytest.mark.django_db
+def test_individual_customer_overview(
+    authenticated_client,
+    customer,
+):
+    customer.trade_license_number = "TL-998877"
+    customer.save()
+
+    doc = CustomerDocument.objects.create(
+        customer=customer,
+        document=SimpleUploadedFile("trade_license.pdf", b"file content", content_type="application/pdf"),
+        document_name="Trade License PDF"
+    )
+
+    url = f"/api/finance/customer/{customer.id}/overview/"
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Customer overview retrieved successfully."
+
+    data = response.data["data"]
+
+    # 1. Header
+    assert data["header"]["id"] == customer.id
+    assert data["header"]["customer_id"] == customer.customer_id
+    assert data["header"]["customer_name"] == "ABC Trading LLC"
+    assert data["header"]["client_status"] == "active"
+
+    # 2. Company Info
+    assert data["company_info"]["customer_name"] == "ABC Trading LLC"
+    assert data["company_info"]["company_name"] == "ABC Trading Company"
+    assert "123 Business Street" in data["company_info"]["full_address"]
+    assert data["company_info"]["website"] == "https://www.abctrading.com"
+
+    # 3. Contact Info
+    assert data["contact_info"]["phno"] == "+971501234567"
+    assert data["contact_info"]["admin_email"] == "admin@abctrading.com"
+    assert data["contact_info"]["financial_email"] == "finance@abctrading.com"
+    assert data["contact_info"]["technical_email"] == "technical@abctrading.com"
+
+    # 4. Financial Info
+    assert data["financial_info"]["cr_number"] == "CR123456"
+    assert data["financial_info"]["vat_number"] == "VAT123456789"
+    assert data["financial_info"]["trade_license_number"] == "TL-998877"
+    assert data["financial_info"]["currency"] == "AED"
+    assert data["financial_info"]["payment_term"] == "30_days"
+    assert Decimal(str(data["financial_info"]["credit_limit"])) == Decimal("50000.00")
+
+    # 5. Documents
+    assert len(data["documents"]) == 1
+    assert data["documents"][0]["document_name"] == "Trade License PDF"
+
+
+@pytest.mark.django_db
+def test_individual_customer_overview_company_isolation(
+    another_user,
+    customer,
+):
+    client = APIClient()
+    client.force_authenticate(user=another_user)
+    url = f"/api/finance/customer/{customer.id}/overview/"
+    response = client.get(url)
+
+    assert response.status_code == 404
+
+
+# ============================================================
+# 17. UPLOAD DOCUMENT TO INDIVIDUAL CUSTOMER
+# ============================================================
+
+@pytest.mark.django_db
+def test_upload_document_to_customer(
+    authenticated_client,
+    customer,
+):
+    url = f"/api/finance/customer/{customer.id}/upload_document/"
+
+    test_file = SimpleUploadedFile(
+        "company_profile.pdf",
+        b"Company profile content",
+        content_type="application/pdf"
+    )
+
+    response = authenticated_client.post(
+        url,
+        {
+            "document": test_file,
+            "document_name": "Company Profile"
+        },
+        format="multipart"
+    )
+
+    assert response.status_code == 201
+    assert response.data["message"] == "Document(s) uploaded successfully."
+    assert len(response.data["documents"]) == 1
+    assert response.data["documents"][0]["document_name"] == "Company Profile"
+    assert CustomerDocument.objects.filter(customer=customer, document_name="Company Profile").exists()
+
+
+# ============================================================
+# 18. INDIVIDUAL CUSTOMER QUOTATIONS API
+# ============================================================
+
+@pytest.mark.django_db
+def test_individual_customer_quotations(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.quotation.models import Quotation
+
+    q1 = Quotation.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-28",
+        valid_till="2026-05-28",
+        quote_amount=Decimal("22852.00"),
+        negotiation_amount=Decimal("10852.00"),
+        status="approved",
+        created_by=user
+    )
+
+    q2 = Quotation.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-28",
+        valid_till="2026-05-28",
+        quote_amount=Decimal("15000.00"),
+        negotiation_amount=Decimal("5000.00"),
+        status="rejected",
+        created_by=user
+    )
+
+    q3 = Quotation.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-28",
+        valid_till="2026-05-28",
+        quote_amount=Decimal("5000.00"),
+        negotiation_amount=Decimal("0.00"),
+        status="pending",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/quotations/"
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Customer quotations retrieved successfully."
+
+    # Header check
+    assert response.data["customer_header"]["id"] == customer.id
+    assert response.data["customer_header"]["customer_id"] == customer.customer_id
+    assert response.data["customer_header"]["customer_name"] == customer.customer_name
+
+    # KPI Cards check
+    kpi = response.data["kpi_cards"]
+    assert kpi["total_quotations"] == 3
+    assert Decimal(str(kpi["total_amount"])) == Decimal("42852.00")
+    assert Decimal(str(kpi["negotiation_amount"])) == Decimal("15852.00")
+    assert kpi["approved_quotations"] == 1
+    assert kpi["rejected_quotations"] == 1
+    assert kpi["pending_quotations"] == 1
+
+    # Results list check
+    results = response.data["results"]
+    assert len(results) == 3
+
+
+@pytest.mark.django_db
+def test_individual_customer_quotations_search_and_filter(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.quotation.models import Quotation
+
+    q1 = Quotation.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-28",
+        quote_amount=Decimal("10000.00"),
+        status="approved",
+        notes="Urgent Quote for Project Alpha",
+        created_by=user
+    )
+
+    q2 = Quotation.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-28",
+        quote_amount=Decimal("20000.00"),
+        status="pending",
+        notes="Standard Quote",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/quotations/"
+
+    # Test search by notes
+    res_search = authenticated_client.get(url, {"search": "Project Alpha"})
+    assert res_search.status_code == 200
+    assert len(res_search.data["results"]) == 1
+    assert res_search.data["results"][0]["id"] == q1.id
+
+    # Test status filter
+    res_status = authenticated_client.get(url, {"status": "pending"})
+    assert res_status.status_code == 200
+    assert len(res_status.data["results"]) == 1
+    assert res_status.data["results"][0]["id"] == q2.id
+
+
+@pytest.mark.django_db
+def test_individual_customer_quotations_company_isolation(
+    another_user,
+    customer,
+):
+    client = APIClient()
+    client.force_authenticate(user=another_user)
+    url = f"/api/finance/customer/{customer.id}/quotations/"
+    response = client.get(url)
+
+    assert response.status_code == 404
+
+
+# ============================================================
+# 19. INDIVIDUAL CUSTOMER PAYMENTS API
+# ============================================================
+
+@pytest.mark.django_db
+def test_individual_customer_payments(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.invoice.models import Invoice
+    from finance.payment.models import Payment
+
+    inv = Invoice.objects.create(
+        company=company,
+        customer=customer,
+        invoice_date="2026-04-01",
+        due_date="2026-04-15",
+        subtotal=Decimal("5000.00"),
+        total_amount=Decimal("5000.00"),
+        amount_paid=Decimal("2000.00"),
+        payment_status="partially_paid",
+        created_by=user
+    )
+
+    p1 = Payment.objects.create(
+        company=company,
+        customer=customer,
+        invoice=inv,
+        payment_date="2026-04-10",
+        payment_type="partial_payment",
+        payment_method="bank_transfer",
+        amount_received=Decimal("2000.00"),
+        status="completed",
+        reference_number="REF-1001",
+        notes="Partial bank transfer",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/payments/"
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Customer payments retrieved successfully."
+
+    assert response.data["customer_header"]["id"] == customer.id
+    assert response.data["customer_header"]["customer_name"] == customer.customer_name
+
+    kpi = response.data["kpi_cards"]
+    assert Decimal(str(kpi["total_payments_received"])) == Decimal("2000.00")
+    assert Decimal(str(kpi["pending_payments"])) == Decimal("3000.00")
+    assert Decimal(str(kpi["overdue_amount"])) == Decimal("3000.00")
+
+    results = response.data["results"]
+    assert len(results) == 1
+    assert results[0]["id"] == p1.id
+
+
+@pytest.mark.django_db
+def test_individual_customer_payments_filtering_and_search(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.payment.models import Payment
+
+    p1 = Payment.objects.create(
+        company=company,
+        customer=customer,
+        payment_date="2026-04-10",
+        payment_method="cheque",
+        amount_received=Decimal("1500.00"),
+        status="completed",
+        reference_number="CHK-8899",
+        notes="Cheque Payment Alpha",
+        created_by=user
+    )
+
+    p2 = Payment.objects.create(
+        company=company,
+        customer=customer,
+        payment_date="2026-04-10",
+        payment_method="cash",
+        amount_received=Decimal("500.00"),
+        status="pending",
+        reference_number="CASH-001",
+        notes="Cash Deposit",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/payments/"
+
+    # Test search
+    res_search = authenticated_client.get(url, {"search": "Cheque Payment Alpha"})
+    assert res_search.status_code == 200
+    assert len(res_search.data["results"]) == 1
+    assert res_search.data["results"][0]["id"] == p1.id
+
+    # Test method filter
+    res_method = authenticated_client.get(url, {"payment_method": "cash"})
+    assert res_method.status_code == 200
+    assert len(res_method.data["results"]) == 1
+    assert res_method.data["results"][0]["id"] == p2.id
+
+
+@pytest.mark.django_db
+def test_individual_customer_payments_company_isolation(
+    another_user,
+    customer,
+):
+    client = APIClient()
+    client.force_authenticate(user=another_user)
+    url = f"/api/finance/customer/{customer.id}/payments/"
+    response = client.get(url)
+
+    assert response.status_code == 404
+
+
+# ============================================================
+# 20. INDIVIDUAL CUSTOMER CREDIT NOTES API
+# ============================================================
+
+@pytest.mark.django_db
+def test_individual_customer_credit_notes(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.credit_note.models import CreditNote
+
+    cn1 = CreditNote.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-15",
+        reason="sales_return",
+        credit_amount=Decimal("5000.00"),
+        applied_amount=Decimal("0.00"),
+        status="open",
+        created_by=user
+    )
+
+    cn2 = CreditNote.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-16",
+        reason="damaged_goods",
+        credit_amount=Decimal("1500.00"),
+        applied_amount=Decimal("1500.00"),
+        status="closed",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/credit_notes/"
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Customer credit notes retrieved successfully."
+    assert response.data["customer_header"]["id"] == customer.id
+
+    kpi = response.data["kpi_cards"]
+    assert kpi["total_credit_notes"] == 2
+    assert Decimal(str(kpi["total_credit_value"])) == Decimal("6500.00")
+    assert kpi["open_credit_notes"] == 1
+
+    results = response.data["results"]
+    assert len(results) == 2
+
+    # Test hyphenated url path alias /credit-notes/
+    url_alt = f"/api/finance/customer/{customer.id}/credit-notes/"
+    res_alt = authenticated_client.get(url_alt)
+    assert res_alt.status_code == 200
+    assert len(res_alt.data["results"]) == 2
+
+
+@pytest.mark.django_db
+def test_individual_customer_credit_notes_filtering_and_search(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.credit_note.models import CreditNote
+
+    cn1 = CreditNote.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-15",
+        reason="sales_return",
+        credit_amount=Decimal("3000.00"),
+        status="open",
+        notes="Return of damaged item X",
+        created_by=user
+    )
+
+    cn2 = CreditNote.objects.create(
+        company=company,
+        customer=customer,
+        issue_date="2026-04-15",
+        reason="pricing_error",
+        credit_amount=Decimal("500.00"),
+        status="closed",
+        notes="Price adjustment refund",
+        created_by=user
+    )
+
+    url = f"/api/finance/customer/{customer.id}/credit_notes/"
+
+    # Test search by notes
+    res_search = authenticated_client.get(url, {"search": "damaged item X"})
+    assert res_search.status_code == 200
+    assert len(res_search.data["results"]) == 1
+    assert res_search.data["results"][0]["id"] == cn1.id
+
+    # Test reason filter
+    res_reason = authenticated_client.get(url, {"reason": "pricing_error"})
+    assert res_reason.status_code == 200
+    assert len(res_reason.data["results"]) == 1
+    assert res_reason.data["results"][0]["id"] == cn2.id
+
+
+@pytest.mark.django_db
+def test_individual_customer_credit_notes_company_isolation(
+    another_user,
+    customer,
+):
+    client = APIClient()
+    client.force_authenticate(user=another_user)
+    url = f"/api/finance/customer/{customer.id}/credit_notes/"
+    response = client.get(url)
+
+    assert response.status_code == 404
