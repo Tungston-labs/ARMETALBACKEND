@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'finance.ledger.apps.LedgerConfig',
     'finance.payment',
     'finance.sales_return',
+    'finance.recurring',
 ]
 
 MIDDLEWARE = [

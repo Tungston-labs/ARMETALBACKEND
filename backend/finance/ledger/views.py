@@ -48,8 +48,11 @@ from .models import CustomerLedger
 from .serializers import (
     CustomerLedgerSerializer,
     CustomerLedgerCreateSerializer,
-    CustomerLedgerSummarySerializer,CustomerLedgerCustomerSummarySerializer
+    CustomerLedgerSummarySerializer,CustomerLedgerCustomerSummarySerializer,CustomerFinancialSummarySerializer
 )
+from django.utils import timezone
+from finance.payment.models import Payment
+from finance.invoice.models import Invoice
 
 
 
@@ -697,6 +700,180 @@ class CustomerLedgerViewSet(
             {
                 "message": (
                     "Customer ledger summary "
+                    "retrieved successfully."
+                ),
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+    
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="dashboard-summary",
+    )
+    def dashboard_summary(self, request):
+
+        user = request.user
+        company = user.company
+
+        customer_id = request.query_params.get(
+            "customer_id"
+        )
+
+        today = timezone.localdate()
+
+        # -------------------------------------------------
+        # Base invoice queryset
+        # -------------------------------------------------
+
+        invoice_queryset = Invoice.objects.filter(
+            company=company
+        )
+
+        if customer_id:
+            invoice_queryset = invoice_queryset.filter(
+                customer_id=customer_id
+            )
+
+        # -------------------------------------------------
+        # Total Invoice
+        # -------------------------------------------------
+
+        total_invoice = (
+            invoice_queryset.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # -------------------------------------------------
+        # Total Collection
+        # -------------------------------------------------
+
+        payment_queryset = Payment.objects.filter(
+            company=company,
+            status="completed",
+        )
+
+        if customer_id:
+            payment_queryset = payment_queryset.filter(
+                customer_id=customer_id
+            )
+
+        total_collection = (
+            payment_queryset.aggregate(
+                total=Sum("amount_received")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # -------------------------------------------------
+        # Total Credit
+        # -------------------------------------------------
+
+        credit_queryset = CustomerLedger.objects.filter(
+            company=company,
+            transaction_type="credit_note",
+        )
+
+        if customer_id:
+            credit_queryset = credit_queryset.filter(
+                customer_id=customer_id
+            )
+
+        total_credit = (
+            credit_queryset.aggregate(
+                total=Sum("credit")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # -------------------------------------------------
+        # Total Receivable
+        # -------------------------------------------------
+        #
+        # Receivable = Invoice - Collection - Credit
+        #
+        # Credit notes reduce the receivable amount.
+        # -------------------------------------------------
+
+        total_receivable = (
+            total_invoice
+            - total_collection
+            - total_credit
+        )
+
+        if total_receivable < Decimal("0.00"):
+            total_receivable = Decimal("0.00")
+
+        # -------------------------------------------------
+        # Overdue Amount
+        # -------------------------------------------------
+        #
+        # Unpaid or partially paid invoices whose
+        # due date has passed.
+        #
+        # Outstanding = total_amount - amount_paid
+        # -------------------------------------------------
+
+        overdue_queryset = invoice_queryset.filter(
+            due_date__lt=today,
+            payment_status__in=[
+                "unpaid",
+                "partially_paid",
+            ],
+        )
+
+        overdue_amount = Decimal("0.00")
+
+        overdue_invoices = overdue_queryset.values(
+            "total_amount",
+            "amount_paid",
+        )
+
+        for invoice in overdue_invoices:
+
+            invoice_total = (
+                invoice["total_amount"]
+                or Decimal("0.00")
+            )
+
+            invoice_paid = (
+                invoice["amount_paid"]
+                or Decimal("0.00")
+            )
+
+            outstanding_amount = (
+                invoice_total - invoice_paid
+            )
+
+            if outstanding_amount > Decimal("0.00"):
+
+                overdue_amount += (
+                    outstanding_amount
+                )
+
+        # -------------------------------------------------
+        # Prepare response
+        # -------------------------------------------------
+
+        data = {
+            "total_receivable": total_receivable,
+            "total_invoice": total_invoice,
+            "total_collection": total_collection,
+            "total_credit": total_credit,
+            "overdue_amount": overdue_amount,
+        }
+
+        serializer = CustomerFinancialSummarySerializer(
+            data
+        )
+
+        return Response(
+            {
+                "message": (
+                    "Customer financial summary "
                     "retrieved successfully."
                 ),
                 "data": serializer.data,
