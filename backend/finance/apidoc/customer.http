@@ -300,6 +300,11 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/finance/customer/1/ledger/?search=INV&transaction_type=invoice&from_date=2026-01-01&to_date=2026-12-31&ordering=-transaction_date
 Authorization: Bearer {{token}}
 
+
+### 30. GET INVOICE DETAILS & ITEMS FOR CREDIT NOTE CREATION
+GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice=1
+Authorization: Bearer {{token}}
+
 ### 20. INDIVIDUAL CUSTOMER OVERVIEW
 GET {{baseUrl}}/api/finance/customer/1/overview/
 Authorization: Bearer {{token}}

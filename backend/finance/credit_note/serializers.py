@@ -13,6 +13,7 @@ class CreditNoteItemSerializer(serializers.ModelSerializer):
         model = CreditNoteItem
         fields = [
             "id",
+            "invoice_item",
             "product",
             "product_name",
             "item_name",
@@ -31,6 +32,7 @@ class CreditNoteSerializer(serializers.ModelSerializer):
     cn_number = serializers.CharField(required=False, allow_blank=True)
     customer_name = serializers.ReadOnlyField(source="customer.customer_name")
     customer_company = serializers.ReadOnlyField(source="customer.company_name")
+    invoice_number = serializers.ReadOnlyField(source="invoice.invoice_number")
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     items = CreditNoteItemSerializer(many=True, required=False)
 
@@ -43,6 +45,8 @@ class CreditNoteSerializer(serializers.ModelSerializer):
             "customer",
             "customer_name",
             "customer_company",
+            "invoice",
+            "invoice_number",
             "invoice_ref",
             "issue_date",
             "reason",
@@ -74,12 +78,27 @@ class CreditNoteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop("items", [])
+
+        if validated_data.get("invoice") and not validated_data.get("invoice_ref"):
+            validated_data["invoice_ref"] = validated_data["invoice"].invoice_number
+
         credit_note = CreditNote.objects.create(**validated_data)
 
         calculated_subtotal = Decimal("0.00")
         calculated_vat = Decimal("0.00")
 
         for item_data in items_data:
+            inv_item = item_data.get("invoice_item")
+            if inv_item:
+                if not item_data.get("item_name"):
+                    item_data["item_name"] = inv_item.particular
+                if not item_data.get("product") and inv_item.product:
+                    item_data["product"] = inv_item.product
+                if "rate" not in item_data or item_data["rate"] == Decimal("0.00"):
+                    item_data["rate"] = inv_item.rate
+                if "vat_percentage" not in item_data or item_data["vat_percentage"] == Decimal("0.00"):
+                    item_data["vat_percentage"] = inv_item.vat_percentage
+
             qty = Decimal(str(item_data.get("quantity", 1)))
             rate = Decimal(str(item_data.get("rate", 0)))
             vat_pct = Decimal(str(item_data.get("vat_percentage", 15)))
