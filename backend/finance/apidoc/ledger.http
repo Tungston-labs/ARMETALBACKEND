@@ -54,49 +54,48 @@ Content-Type: application/json
 
 ---
 
-## 6. Filter by Transaction Type — Opening Balance
+### 6. Filter by Transaction Type — Opening Balance
 
-```http
+
 GET {{baseUrl}}/api/finance/ledger/customer/{{customer_id}}/?transaction_type=opening_balance
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
-```
+
 
 ---
 
-## 7. Search Ledger
+### 7. Search Ledger
 
-```http
+
 GET {{baseUrl}}/api/finance/ledger/?search=SEARCH_VALUE
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
-```
+
 
 ---
 
-## 8. Order Ledger — Oldest First
+### 8. Order Ledger — Oldest First
 
-```http
+
 GET {{baseUrl}}/api/finance/ledger/?ordering=transaction_date
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
-```
 
 ---
 
-## 9. Order Ledger — Newest First
+### 9. Order Ledger — Newest First
 
-```http
+
 GET {{baseUrl}}/api/finance/ledger/?ordering=-transaction_date
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
-```
+
 
 ---
 
 ### 10. Customer Ledger Summary
 
-GET {{baseUrl}}/api/finance/ledger/summary/?customer_id={{customer_id}}
+GET {{baseUrl}}/api/finance/ledger/summary/?customer_id=4
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
@@ -158,7 +157,7 @@ Content-Type: application/json
 ### Customer Financial Dashboard Summary for cards
 
 GET http://localhost:8000/api/finance/ledger/dashboard-summary/
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTY1NDE0LCJpYXQiOjE3OTAxMzY2MTQsImp0aSI6IjJkNjZlZmIwZWYzMzRjM2U5N2I1NDYyMjNjNzYxZWI1IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.NNeoV7-P1C7jzUoYLrq6NHIPAdmcTfmBnTxfuLgw9yw
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTc0NTk1LCJpYXQiOjE3OTAxNDU3OTUsImp0aSI6IjViNDUzOTE4YzgxZTQ2NDJhYjZhNTI0OTdjNGVmZDQ4IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.fDk02KdGUu6b1gfiM7bj6t6PlDvewf_Z2ucKxeR2bpA
 Content-Type: application/json
 
 
