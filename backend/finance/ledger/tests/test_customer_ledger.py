@@ -1045,3 +1045,66 @@ def test_create_ledger_requires_authentication(
         status.HTTP_401_UNAUTHORIZED,
         status.HTTP_403_FORBIDDEN,
     ]
+
+# ============================================================
+# DASHBOARD SUMMARY
+# ============================================================
+
+
+@pytest.fixture
+def dashboard_summary_url():
+    return reverse("ledger-dashboard-summary")
+
+
+def test_customer_financial_dashboard_summary(
+    user,
+    dashboard_summary_url,
+):
+    client = get_client(user)
+
+    response = client.get(
+        dashboard_summary_url
+    )
+
+    assert response.status_code == (
+        status.HTTP_200_OK
+    )
+
+    assert response.data["message"] == (
+        "Customer financial summary retrieved successfully."
+    )
+
+    data = response.data["data"]
+
+    assert "total_receivable" in data
+    assert "total_invoice" in data
+    assert "total_collection" in data
+    assert "total_credit" in data
+    assert "overdue_amount" in data
+
+
+def test_customer_financial_dashboard_summary_by_customer(
+    user,
+    customer,
+    dashboard_summary_url,
+):
+    client = get_client(user)
+
+    response = client.get(
+        dashboard_summary_url,
+        {
+            "customer_id": customer.id
+        },
+    )
+
+    assert response.status_code == (
+        status.HTTP_200_OK
+    )
+
+    data = response.data["data"]
+
+    assert "total_receivable" in data
+    assert "total_invoice" in data
+    assert "total_collection" in data
+    assert "total_credit" in data
+    assert "overdue_amount" in data
