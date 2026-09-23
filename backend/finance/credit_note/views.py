@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 
 from .models import CreditNote
 from .serializers import CreditNoteSerializer
@@ -238,3 +238,113 @@ class CreditNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+
+class InvoiceCreditNoteDetailsView(APIView):
+    """
+    API view to retrieve an invoice's items and already credited quantity breakdown
+    for constructing a Credit Note.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get Invoice Credit Note Details",
+        description="Retrieves invoice header metadata, invoice value, cumulative already credited amount, remaining credit balance, and the list of invoice items with already credited quantities.",
+        parameters=[
+            OpenApiParameter("invoice", int, description="Invoice ID"),
+            OpenApiParameter("invoice_id", int, description="Alias for Invoice ID"),
+            OpenApiParameter("invoice_number", str, description="Invoice Number (e.g. INV0123)"),
+        ],
+        responses={
+            200: OpenApiResponse(description="Invoice items and already credited details"),
+            400: OpenApiResponse(description="Missing parameter"),
+            404: OpenApiResponse(description="Invoice not found")
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        company = getattr(user, "company", None)
+
+        invoice_id = request.query_params.get("invoice") or request.query_params.get("invoice_id")
+        invoice_number = request.query_params.get("invoice_number")
+
+        from finance.invoice.models import Invoice, InvoiceItem
+        from .models import CreditNoteItem
+
+        invoice_qs = Invoice.objects.all()
+        if hasattr(user, "company") and user.company:
+            invoice_qs = invoice_qs.filter(company=company)
+
+        invoice = None
+        if invoice_id:
+            invoice = invoice_qs.filter(id=invoice_id).first()
+        elif invoice_number:
+            invoice = invoice_qs.filter(invoice_number__iexact=invoice_number.strip()).first()
+
+        if not invoice:
+            return Response(
+                {"message": "Invoice not found or does not belong to your company."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Total invoice value
+        invoice_value = invoice.total_amount or Decimal("0.00")
+
+        # Calculate already credited amount for this invoice (from non-cancelled credit notes)
+        already_credited_amount = CreditNote.objects.filter(
+            Q(invoice=invoice) | Q(invoice_ref__iexact=invoice.invoice_number),
+            company=company
+        ).exclude(status="cancelled").aggregate(
+            total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
+        )["total"]
+
+        remaining_balance = invoice_value - already_credited_amount
+        if remaining_balance < Decimal("0.00"):
+            remaining_balance = Decimal("0.00")
+
+        # Fetch invoice items & calculate already credited quantity per item
+        items_data = []
+        invoice_items = InvoiceItem.objects.filter(invoice=invoice).select_related("product")
+
+        for inv_item in invoice_items:
+            # Already credited quantity for this specific invoice_item
+            already_credited_qty = CreditNoteItem.objects.filter(
+                Q(invoice_item=inv_item) | Q(credit_note__invoice=invoice, product=inv_item.product),
+                credit_note__company=company
+            ).exclude(credit_note__status="cancelled").aggregate(
+                total=Coalesce(Sum("quantity"), Decimal("0.00"))
+            )["total"]
+
+            invoiced_qty = inv_item.quantity or Decimal("0.00")
+            max_creditable_qty = invoiced_qty - already_credited_qty
+            if max_creditable_qty < Decimal("0.00"):
+                max_creditable_qty = Decimal("0.00")
+
+            items_data.append({
+                "invoice_item_id": inv_item.id,
+                "product_id": inv_item.product_id,
+                "product_name": inv_item.product.product_name if inv_item.product else inv_item.particular,
+                "product_code": inv_item.product.code if inv_item.product else "",
+                "particular": inv_item.particular,
+                "invoiced_qty": invoiced_qty,
+                "already_credited_qty": already_credited_qty,
+                "max_creditable_qty": max_creditable_qty,
+                "unit_price": inv_item.rate or Decimal("0.00"),
+                "vat_percentage": inv_item.vat_percentage or Decimal("0.00"),
+            })
+
+        return Response({
+            "message": "Invoice details for credit note retrieved successfully.",
+            "data": {
+                "invoice_id": invoice.id,
+                "invoice_number": invoice.invoice_number,
+                "customer": invoice.customer_id,
+                "customer_name": invoice.customer_name or (invoice.customer.customer_name if invoice.customer else ""),
+                "customer_company": invoice.customer.company_name if invoice.customer else "",
+                "invoice_date": invoice.invoice_date,
+                "invoice_value": invoice_value,
+                "already_credited_amount": already_credited_amount,
+                "remaining_balance": remaining_balance,
+                "items": items_data,
+            }
+        }, status=status.HTTP_200_OK)

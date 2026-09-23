@@ -36,6 +36,9 @@ from finance.payment.serializers import PaymentListSerializer
 from finance.credit_note.models import CreditNote
 from finance.credit_note.serializers import CreditNoteSerializer
 from finance.invoice.models import Invoice
+from finance.ledger.models import CustomerLedger
+from finance.ledger.serializers import CustomerLedgerSerializer
+from finance.ledger.services import recalculate_customer_ledger
 
 from .models import (
     Customer,
@@ -50,6 +53,7 @@ from .serializers import (
     CustomerQuotationsKPISerializer,
     CustomerPaymentsKPISerializer,
     CustomerCreditNotesKPISerializer,
+    CustomerLedgerKPISerializer,
 )
 
 
@@ -118,7 +122,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
 
     def get_object(self):
-        if self.action in ["overview", "upload_document", "quotations", "payments", "credit_notes", "credit_notes_alt"]:
+        if self.action in ["overview", "upload_document", "quotations", "payments", "credit_notes", "credit_notes_alt", "ledger"]:
             queryset = self.get_queryset()
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
@@ -898,6 +902,148 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "message": "Customer credit notes retrieved successfully.",
+                "customer_header": header_data,
+                "kpi_cards": kpi_cards,
+                "results": serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
+    # INDIVIDUAL CUSTOMER LEDGER REPORT
+    # ---------------------------------------------------------
+
+    @extend_schema(
+        summary="Get Individual Customer Ledger Report",
+        description="Retrieves customer header info, KPI cards (opening_balance, total_invoices, total_payments, credit_notes, closing_balance, outstanding), and paginated customer ledger transaction entries with search and date range filters.",
+        parameters=[
+            OpenApiParameter("search", str, description="Search term across reference_number and description"),
+            OpenApiParameter("transaction_type", str, description="Filter by transaction type (invoice, payment, credit_note, debit_note, opening_balance, adjustment)"),
+            OpenApiParameter("type", str, description="Alias for transaction_type"),
+            OpenApiParameter("from_date", str, description="Filter transactions on or after date (YYYY-MM-DD)"),
+            OpenApiParameter("to_date", str, description="Filter transactions on or before date (YYYY-MM-DD)"),
+            OpenApiParameter("ordering", str, description="Field to order by (e.g. -transaction_date, balance)"),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Customer Ledger Report and KPI metrics"
+            )
+        }
+    )
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="ledger"
+    )
+    def ledger(
+        self,
+        request,
+        pk=None
+    ):
+        customer = self.get_object()
+        header_data = CustomerHeaderSerializer(customer).data
+        company = request.user.company
+
+        # Recalculate customer ledger running balances to ensure data accuracy
+        recalculate_customer_ledger(
+            customer_id=customer.id,
+            company_id=company.id
+        )
+
+        ledger_qs = CustomerLedger.objects.filter(
+            customer=customer,
+            company=company
+        ).select_related("company", "customer", "invoice", "payment", "created_by")
+
+        # KPI Metrics for this customer
+        opening_balance = customer.opening_balance or Decimal("0.00")
+
+        total_invoices = ledger_qs.filter(
+            transaction_type="invoice"
+        ).aggregate(
+            total=Coalesce(Sum("debit"), Decimal("0.00"))
+        )["total"]
+
+        total_payments = ledger_qs.filter(
+            transaction_type="payment"
+        ).aggregate(
+            total=Coalesce(Sum("credit"), Decimal("0.00"))
+        )["total"]
+
+        credit_notes = ledger_qs.filter(
+            transaction_type="credit_note"
+        ).aggregate(
+            total=Coalesce(Sum("credit"), Decimal("0.00"))
+        )["total"]
+
+        has_ob_entry = ledger_qs.filter(transaction_type="opening_balance").exists()
+        total_debit_all = ledger_qs.aggregate(total=Coalesce(Sum("debit"), Decimal("0.00")))["total"]
+        total_credit_all = ledger_qs.aggregate(total=Coalesce(Sum("credit"), Decimal("0.00")))["total"]
+
+        if has_ob_entry:
+            closing_balance = total_debit_all - total_credit_all
+        else:
+            closing_balance = opening_balance + total_debit_all - total_credit_all
+
+        kpi_cards = {
+            "opening_balance": opening_balance,
+            "total_invoices": total_invoices,
+            "total_payments": total_payments,
+            "credit_notes": credit_notes,
+            "closing_balance": closing_balance,
+            "outstanding": closing_balance,
+        }
+
+        # Search filter
+        search_query = request.query_params.get("search", "").strip()
+        if search_query:
+            ledger_qs = ledger_qs.filter(
+                Q(reference_number__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+
+        # Transaction type filter
+        type_param = request.query_params.get("transaction_type") or request.query_params.get("type")
+        if type_param:
+            ledger_qs = ledger_qs.filter(transaction_type=type_param)
+
+        # Date range filters
+        from_date = request.query_params.get("from_date")
+        if from_date:
+            ledger_qs = ledger_qs.filter(transaction_date__gte=from_date)
+
+        to_date = request.query_params.get("to_date")
+        if to_date:
+            ledger_qs = ledger_qs.filter(transaction_date__lte=to_date)
+
+        # Ordering
+        ordering_param = request.query_params.get("ordering", "-transaction_date")
+        allowed_ordering = [
+            "transaction_date", "-transaction_date",
+            "created_at", "-created_at",
+            "reference_number", "-reference_number",
+            "debit", "-debit",
+            "credit", "-credit",
+            "balance", "-balance",
+        ]
+        if ordering_param in allowed_ordering:
+            ledger_qs = ledger_qs.order_by(ordering_param, "-id")
+        else:
+            ledger_qs = ledger_qs.order_by("-transaction_date", "-id")
+
+        page = self.paginate_queryset(ledger_qs)
+        if page is not None:
+            serializer = CustomerLedgerSerializer(page, many=True, context={"request": request})
+            response = self.get_paginated_response(serializer.data)
+            response.data["message"] = "Customer ledger retrieved successfully."
+            response.data["customer_header"] = header_data
+            response.data["kpi_cards"] = kpi_cards
+            return response
+
+        serializer = CustomerLedgerSerializer(ledger_qs, many=True, context={"request": request})
+        return Response(
+            {
+                "message": "Customer ledger retrieved successfully.",
                 "customer_header": header_data,
                 "kpi_cards": kpi_cards,
                 "results": serializer.data,

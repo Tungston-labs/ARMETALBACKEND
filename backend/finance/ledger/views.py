@@ -706,7 +706,6 @@ class CustomerLedgerViewSet(
             },
             status=status.HTTP_200_OK,
         )
-    
     @action(
         detail=False,
         methods=["get"],

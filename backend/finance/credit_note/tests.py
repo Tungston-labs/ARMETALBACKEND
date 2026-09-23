@@ -299,3 +299,94 @@ class CreditNoteAPITestCase(APITestCase):
         # Detail should return 404
         res_get = self.client.get(f"/api/finance/credit-notes/{cn.id}/")
         self.assertEqual(res_get.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_get_invoice_credit_note_details(self):
+        from finance.invoice.models import Invoice, InvoiceItem
+
+        invoice = Invoice.objects.create(
+            company=self.company,
+            customer=self.customer,
+            invoice_date="2026-04-01",
+            due_date="2026-05-01",
+            subtotal=Decimal("15000.00"),
+            total_vat=Decimal("2250.00"),
+            total_amount=Decimal("17250.00"),
+            created_by=self.user
+        )
+
+        inv_item1 = InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            particular="Metal Panel 20mm",
+            quantity=Decimal("120.00"),
+            rate=Decimal("100.00"),
+            vat_percentage=Decimal("15.00"),
+            vat_sar=Decimal("1800.00"),
+            amount=Decimal("12000.00")
+        )
+
+        res = self.client.get(f"/api/finance/credit-notes/invoice-details/?invoice={invoice.id}")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.data["data"]
+        self.assertEqual(data["invoice_id"], invoice.id)
+        self.assertEqual(Decimal(str(data["invoice_value"])), Decimal("17250.00"))
+        self.assertEqual(Decimal(str(data["already_credited_amount"])), Decimal("0.00"))
+        self.assertEqual(Decimal(str(data["remaining_balance"])), Decimal("17250.00"))
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(Decimal(str(data["items"][0]["invoiced_qty"])), Decimal("120.00"))
+        self.assertEqual(Decimal(str(data["items"][0]["already_credited_qty"])), Decimal("0.00"))
+        self.assertEqual(Decimal(str(data["items"][0]["max_creditable_qty"])), Decimal("120.00"))
+
+    def test_create_credit_note_linked_to_invoice(self):
+        from finance.invoice.models import Invoice, InvoiceItem
+
+        invoice = Invoice.objects.create(
+            company=self.company,
+            customer=self.customer,
+            invoice_date="2026-04-01",
+            due_date="2026-05-01",
+            subtotal=Decimal("10000.00"),
+            total_vat=Decimal("1500.00"),
+            total_amount=Decimal("11500.00"),
+            created_by=self.user
+        )
+
+        inv_item = InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            particular="Metal Panel",
+            quantity=Decimal("10.00"),
+            rate=Decimal("1000.00"),
+            vat_percentage=Decimal("15.00")
+        )
+
+        # Create Credit Note for 3 units
+        payload = {
+            "customer": self.customer.id,
+            "invoice": invoice.id,
+            "issue_date": "2026-04-28",
+            "reason": "sales_return",
+            "items": [
+                {
+                    "invoice_item": inv_item.id,
+                    "product": self.product.id,
+                    "quantity": "3.00",
+                    "rate": "1000.00",
+                    "vat_percentage": "15.00"
+                }
+            ]
+        }
+
+        res = self.client.post("/api/finance/credit-notes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["invoice"], invoice.id)
+        self.assertEqual(res.data["invoice_ref"], invoice.invoice_number)
+        self.assertEqual(Decimal(str(res.data["credit_amount"])), Decimal("3450.00"))  # 3000 + 15% VAT = 3450
+
+        # Now query invoice-details again to check updated already_credited_qty
+        res_details = self.client.get(f"/api/finance/credit-notes/invoice-details/?invoice={invoice.id}")
+        self.assertEqual(res_details.status_code, status.HTTP_200_OK)
+        data = res_details.data["data"]
+        self.assertEqual(Decimal(str(data["already_credited_amount"])), Decimal("3450.00"))
+        self.assertEqual(Decimal(str(data["items"][0]["already_credited_qty"])), Decimal("3.00"))
+        self.assertEqual(Decimal(str(data["items"][0]["max_creditable_qty"])), Decimal("7.00"))
