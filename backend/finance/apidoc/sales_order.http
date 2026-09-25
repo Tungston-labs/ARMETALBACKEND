@@ -1,5 +1,5 @@
 @baseUrl = http://127.0.0.1:8000/api/finance/sales-order
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg5OTk2OTM1LCJpYXQiOjE3ODk5NjgxMzUsImp0aSI6IjQxYjcwYTM1ZDRlMTQ1ZTI4Y2ZiNGRjMzBjOTc1YWMzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.BR7TjBSrDO0gC1Q3FJTWTufPCr8yH6947NpcGJjtdls
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMjc2MjI1LCJpYXQiOjE3OTAyNDc0MjUsImp0aSI6IjFmZDg2OWIwMDdlNjQxZWRhZWI2ZTdkMzRmYWIzMjZiIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.kBnFr5-UMYp1qDqn1Pz37r_8FyQgVArEV9XSA92UOlA
 
 
 ###########################################################
@@ -303,11 +303,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-<<<<<<< Updated upstream
     "quotation": 4,
-=======
-    "quotation": 8,
->>>>>>> Stashed changes
     "company": 1,
     "customer":1,
     "warehouse": 1,
@@ -333,13 +329,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-<<<<<<< Updated upstream
     "quotation": 4,
     "warehouse": 3,
-=======
-    "quotation": 8,
-    "warehouse": 1,
->>>>>>> Stashed changes
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",
@@ -378,13 +369,8 @@ Content-Type: application/json
 
     "items": [
         {
-<<<<<<< Updated upstream
             "quotation_item": 10,
             "product": 1,
-=======
-            "quotation_item": 2,
-            "product": 4,
->>>>>>> Stashed changes
             "service_name": "Product A",
             "description": "Product description",
             "quantity": "5.00",
@@ -617,3 +603,14 @@ Authorization: Bearer {{token}}
 # 5 / 10  -> partially_delivered
 # 10 / 10 -> completed
 ###########################################################
+
+###customer detail sales order
+GET {{baseUrl}}/customer/1/orders/
+Authorization: Bearer {{token}}
+
+###customer details order -summary card
+
+GET {{baseUrl}}/customer/5/orders/summary/
+Authorization: Bearer {{token}}
+
+
