@@ -1,41 +1,16 @@
 from calendar import monthrange
 from datetime import timedelta
-
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
-
 from django_filters.rest_framework import DjangoFilterBackend
-
-from rest_framework import (
-    generics,
-    status,
-    viewsets,
-)
-
+from rest_framework import (generics,status,viewsets,)
 from rest_framework.decorators import action
-
-from rest_framework.filters import (
-    SearchFilter,
-    OrderingFilter,
-)
-
+from rest_framework.filters import (SearchFilter,OrderingFilter,)
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework.response import Response
-
-from user.permissions import (
-    IsCompanyActive,
-    IsHRAdmin,
-)
-
-from .models import (
-    RecurringService,
-    RecurringPricingPlan,
-    RecurringBilling,
-    RecurringBillingOccurrence,
-)
-
+from user.permissions import (IsCompanyActive,IsHRAdmin,)
+from .models import (RecurringService,RecurringPricingPlan,RecurringBilling,RecurringBillingOccurrence,)
 from .serializers import (
     RecurringServiceSerializer,
     RecurringBillingSerializer,
@@ -43,8 +18,8 @@ from .serializers import (
     RecurringPricingPlanSerializer,
     RecurringCreateSerializer,
 )
-
-
+from rest_framework.exceptions import ValidationError
+from datetime import timedelta
 # ==========================================================
 # HELPER FUNCTION
 # ==========================================================
@@ -142,7 +117,7 @@ def calculate_next_invoice_date(
 # ==========================================================
 # RECURRING SERVICE VIEWSET
 # ==========================================================
-from rest_framework.exceptions import ValidationError
+
 class RecurringServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [
         IsAuthenticated,
@@ -864,21 +839,6 @@ class RecurringCreateView(
         )
     
 
-from datetime import timedelta
-
-from django.db.models import Q, Sum
-from django.utils import timezone
-
-from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from user.permissions import IsCompanyActive, IsHRAdmin
-
-from .models import (
-    RecurringBilling,
-    RecurringBillingOccurrence,
-)
 
 class RecurringSummaryView(generics.GenericAPIView):
 
