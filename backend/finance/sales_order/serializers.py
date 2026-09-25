@@ -1050,10 +1050,9 @@ class SalesOrderQuotationSerializer(
             for item in items
         ]
     
-
 class CustomerSalesOrderSerializer(serializers.ModelSerializer):
     quotation_ref = serializers.CharField(
-        source="quotation.quotation_number",
+        source="quotation.quote_number",
         read_only=True,
     )
 
@@ -1083,23 +1082,18 @@ class CustomerSalesOrderSerializer(serializers.ModelSerializer):
             invoices.values_list("payment_status", flat=True)
         )
 
-        # All invoices paid
         if statuses and statuses.issubset({"paid"}):
             return "Paid"
 
-        # At least one overdue invoice
         if "overdue" in statuses:
             return "Overdue"
 
-        # At least one partially paid invoice
         if "partially_paid" in statuses:
             return "Partially Paid"
 
-        # Invoice exists but payment is pending
         if "pending" in statuses:
             return "Pending"
 
-        # Fallback for any other payment status
         return ", ".join(
             sorted(
                 status.replace("_", " ").title()
