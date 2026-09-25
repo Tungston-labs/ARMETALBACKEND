@@ -286,7 +286,6 @@ GET {{baseUrl}}/api/finance/customer/1/credit_notes/
 Authorization: Bearer {{token}}
 
 
-### 27. INDIVIDUAL CUSTOMER CREDIT NOTES - SEARCH & FILTER
 GET {{baseUrl}}/api/finance/customer/1/credit_notes/?search=CN&reason=sales_return&status=open
 Authorization: Bearer {{token}}
 
@@ -305,6 +304,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice=1
 Authorization: Bearer {{token}}
 
-### 20. INDIVIDUAL CUSTOMER OVERVIEW
-GET {{baseUrl}}/api/finance/customer/1/overview/
+
+### 31. DELETE CUSTOMER DOCUMENT
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/?document_id=15
+Authorization: Bearer {{token}}
+
+
+### 32. DELETE CUSTOMER DOCUMENT - PATH ALIAS
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/15/
 Authorization: Bearer {{token}}

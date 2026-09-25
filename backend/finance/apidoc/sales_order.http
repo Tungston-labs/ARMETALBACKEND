@@ -304,7 +304,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "quotation": 4,
+    "quotation": 8,
     "company": 1,
     "customer":1,
     "warehouse": 1,
@@ -330,8 +330,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "quotation": 4,
-    "warehouse": 3,
+    "quotation": 8,
+    "warehouse": 1,
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",
