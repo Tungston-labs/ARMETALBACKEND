@@ -1739,6 +1739,24 @@ def test_upload_document_to_customer(
     assert CustomerDocument.objects.filter(customer=customer, document_name="Company Profile").exists()
 
 
+@pytest.mark.django_db
+def test_delete_customer_document(
+    authenticated_client,
+    customer,
+):
+    doc = CustomerDocument.objects.create(
+        customer=customer,
+        document_name="Tax Certificate"
+    )
+
+    url_query = f"/api/finance/customer/{customer.id}/delete_document/?document_id={doc.id}"
+    response = authenticated_client.delete(url_query)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Document deleted successfully."
+    assert not CustomerDocument.objects.filter(id=doc.id).exists()
+
+
 # ============================================================
 # 18. INDIVIDUAL CUSTOMER QUOTATIONS API
 # ============================================================

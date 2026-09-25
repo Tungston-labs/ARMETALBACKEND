@@ -303,11 +303,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-<<<<<<< Updated upstream
-    "quotation": 4,
-=======
     "quotation": 8,
->>>>>>> Stashed changes
     "company": 1,
     "customer":1,
     "warehouse": 1,
@@ -333,13 +329,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-<<<<<<< Updated upstream
-    "quotation": 4,
-    "warehouse": 3,
-=======
     "quotation": 8,
     "warehouse": 1,
->>>>>>> Stashed changes
     "order_date": "2026-09-07",
     "delivery_date": "2026-09-15",
     "due_date": "2026-09-22",

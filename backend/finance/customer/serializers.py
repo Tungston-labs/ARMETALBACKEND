@@ -243,3 +243,31 @@ class CustomerCreditNotesKPISerializer(serializers.Serializer):
     total_credit_value = serializers.DecimalField(max_digits=15, decimal_places=2)
     this_month = serializers.DecimalField(max_digits=15, decimal_places=2)
     open_credit_notes = serializers.IntegerField()
+
+
+class CustomerLedgerKPISerializer(serializers.Serializer):
+    opening_balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_invoices = serializers.DecimalField(max_digits=15, decimal_places=2)
+    total_payments = serializers.DecimalField(max_digits=15, decimal_places=2)
+    credit_notes = serializers.DecimalField(max_digits=15, decimal_places=2)
+    closing_balance = serializers.DecimalField(max_digits=15, decimal_places=2)
+    outstanding = serializers.DecimalField(max_digits=15, decimal_places=2)
+
+
+class CustomerDocumentUploadSerializer(serializers.Serializer):
+    document_name = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=255,
+        help_text="Custom display name for the document"
+    )
+    document = serializers.FileField(
+        required=False,
+        help_text="Single document file to upload"
+    )
+    documents = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+        help_text="Multiple document files to upload"
+    )
+

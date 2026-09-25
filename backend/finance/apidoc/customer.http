@@ -288,6 +288,30 @@ GET {{baseUrl}}/api/finance/customer/1/credit_notes/
 Authorization: Bearer {{token}}
 
 
-### 27. INDIVIDUAL CUSTOMER CREDIT NOTES - SEARCH & FILTER
 GET {{baseUrl}}/api/finance/customer/1/credit_notes/?search=CN&reason=sales_return&status=open
+Authorization: Bearer {{token}}
+
+
+### 28. INDIVIDUAL CUSTOMER LEDGER REPORT
+GET {{baseUrl}}/api/finance/customer/1/ledger/
+Authorization: Bearer {{token}}
+
+
+### 29. INDIVIDUAL CUSTOMER LEDGER REPORT - SEARCH & FILTERS
+GET {{baseUrl}}/api/finance/customer/1/ledger/?search=INV&transaction_type=invoice&from_date=2026-01-01&to_date=2026-12-31&ordering=-transaction_date
+Authorization: Bearer {{token}}
+
+
+### 30. GET INVOICE DETAILS & ITEMS FOR CREDIT NOTE CREATION
+GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice=1
+Authorization: Bearer {{token}}
+
+
+### 31. DELETE CUSTOMER DOCUMENT
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/?document_id=15
+Authorization: Bearer {{token}}
+
+
+### 32. DELETE CUSTOMER DOCUMENT - PATH ALIAS
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/15/
 Authorization: Bearer {{token}}

@@ -158,12 +158,16 @@ class CustomerLedgerViewSet(
         from_date = (
             self.request.query_params.get(
                 "from_date"
+            ) or self.request.query_params.get(
+                "start_date"
             )
         )
 
         to_date = (
             self.request.query_params.get(
                 "to_date"
+            ) or self.request.query_params.get(
+                "end_date"
             )
         )
 
