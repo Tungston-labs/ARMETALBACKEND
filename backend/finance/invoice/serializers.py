@@ -811,3 +811,72 @@ class InvoiceSalesOrderSerializer(
             "order_value",
 
         ]
+
+
+
+
+from rest_framework import serializers
+
+from .models import Invoice
+
+
+class CustomerInvoiceSerializer(serializers.ModelSerializer):
+
+    order_ref = serializers.CharField(
+        source="sales_order.so_number",
+        read_only=True,
+        allow_null=True,
+    )
+
+    invoice_amount = serializers.DecimalField(
+        source="total_amount",
+        max_digits=15,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    paid_amount = serializers.DecimalField(
+        source="amount_paid",
+        max_digits=15,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    payment_date = serializers.SerializerMethodField()
+
+    payment_mode = serializers.SerializerMethodField()
+
+    status = serializers.CharField(
+        source="payment_status",
+        read_only=True,
+    )
+
+    status_name = serializers.CharField(
+        source="get_payment_status_display",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Invoice
+
+        fields = [
+            "id",
+            "invoice_number",
+            "order_ref",
+            "invoice_date",
+            "due_date",
+            "invoice_amount",
+            "paid_amount",
+            "payment_date",
+            "payment_mode",
+            "status",
+            "status_name",
+        ]
+
+    def get_payment_date(self, obj):
+        # Payment date is not available in the current Invoice model.
+        return None
+
+    def get_payment_mode(self, obj):
+        # Payment mode is not available in the current Invoice model.
+        return None

@@ -1049,3 +1049,60 @@ class SalesOrderQuotationSerializer(
 
             for item in items
         ]
+    
+
+class CustomerSalesOrderSerializer(serializers.ModelSerializer):
+    quotation_ref = serializers.CharField(
+        source="quotation.quotation_number",
+        read_only=True,
+    )
+
+    invoice_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SalesOrder
+        fields = [
+            "id",
+            "so_number",
+            "quotation_ref",
+            "order_date",
+            "delivery_date",
+            "order_value",
+            "order_status",
+            "delivery_status",
+            "invoice_status",
+        ]
+
+    def get_invoice_status(self, obj):
+        invoices = obj.invoices.all()
+
+        if not invoices.exists():
+            return "Not Invoiced"
+
+        statuses = set(
+            invoices.values_list("payment_status", flat=True)
+        )
+
+        # All invoices paid
+        if statuses and statuses.issubset({"paid"}):
+            return "Paid"
+
+        # At least one overdue invoice
+        if "overdue" in statuses:
+            return "Overdue"
+
+        # At least one partially paid invoice
+        if "partially_paid" in statuses:
+            return "Partially Paid"
+
+        # Invoice exists but payment is pending
+        if "pending" in statuses:
+            return "Pending"
+
+        # Fallback for any other payment status
+        return ", ".join(
+            sorted(
+                status.replace("_", " ").title()
+                for status in statuses
+            )
+        )

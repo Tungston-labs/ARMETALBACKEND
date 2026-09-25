@@ -8,7 +8,7 @@ from .views import (
     SalesOrderQuotationDetailView,
     SalesOrderCompanyListView,
     SalesOrderCustomerListView,
-    SalesOrderWarehouseListView,
+    SalesOrderWarehouseListView,CustomerSalesOrderListView,CustomerSalesOrderSummaryView
 )
 
 
@@ -85,4 +85,20 @@ urlpatterns = [
         SalesOrderWarehouseListView.as_view(),
         name="sales-order-warehouse-list"
     ),
+
+
+    #customer detail sales order
+
+    path(
+        "customer/<int:customer_id>/orders/",
+        CustomerSalesOrderListView.as_view(),
+        name="customer-sales-orders",
+    ),
+
+    path(
+        "customer/<int:customer_id>/orders/summary/",
+        CustomerSalesOrderSummaryView.as_view(),
+        name="customer-sales-orders-summary",
+    ),
+
 ]

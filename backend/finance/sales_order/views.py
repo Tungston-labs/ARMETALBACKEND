@@ -719,3 +719,226 @@ class SalesOrderWarehouseListView(
             })
 
         return Response(data)
+    
+
+
+
+from django.db.models import Q
+
+from rest_framework import generics
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+
+from user.permissions import IsCompanyActive, IsHRAdmin
+
+from finance.customer.models import Customer
+
+from .models import SalesOrder
+from .serializers import CustomerSalesOrderSerializer
+
+
+class CustomerSalesOrderListView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        IsCompanyActive,
+        IsHRAdmin,
+    ]
+
+    serializer_class = CustomerSalesOrderSerializer
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    search_fields = [
+        "so_number",
+        "quotation__quotation_number",
+    ]
+
+    ordering_fields = [
+        "so_number",
+        "order_date",
+        "delivery_date",
+        "order_value",
+        "created_at",
+    ]
+
+    ordering = [
+        "-order_date",
+        "-id",
+    ]
+
+    def get_queryset(self):
+
+        user = self.request.user
+
+        if (
+            not user.is_authenticated
+            or not getattr(user, "company", None)
+        ):
+            return SalesOrder.objects.none()
+
+        customer_id = self.kwargs.get("customer_id")
+
+        queryset = (
+            SalesOrder.objects
+            .filter(
+                company=user.company,
+                customer__id=customer_id,
+            )
+            .select_related(
+                "customer",
+                "quotation",
+                "warehouse",
+            )
+            .prefetch_related(
+                "invoices",
+            )
+        )
+
+        # ---------------------------------------
+        # DATE RANGE FILTER
+        # ---------------------------------------
+
+        date_from = self.request.query_params.get(
+            "date_from"
+        )
+
+        date_to = self.request.query_params.get(
+            "date_to"
+        )
+
+        if date_from:
+            queryset = queryset.filter(
+                order_date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                order_date__lte=date_to
+            )
+
+        # ---------------------------------------
+        # ORDER STATUS FILTER
+        # ---------------------------------------
+
+        order_status = self.request.query_params.get(
+            "order_status"
+        )
+
+        if order_status:
+            queryset = queryset.filter(
+                order_status=order_status
+            )
+
+        # ---------------------------------------
+        # DELIVERY STATUS FILTER
+        # ---------------------------------------
+
+        delivery_status = self.request.query_params.get(
+            "delivery_status"
+        )
+
+        if delivery_status:
+            queryset = queryset.filter(
+                delivery_status=delivery_status
+            )
+
+        return queryset
+    
+
+
+from django.db.models import Q, Sum
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from user.permissions import IsCompanyActive, IsHRAdmin
+
+from .models import SalesOrder
+
+
+class CustomerSalesOrderSummaryView(generics.GenericAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        IsCompanyActive,
+        IsHRAdmin,
+    ]
+
+    def get(self, request, customer_id, *args, **kwargs):
+
+        user = request.user
+
+        if not getattr(user, "company", None):
+            return Response(
+                {
+                    "message": "User is not associated with a company.",
+                    "data": {},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ---------------------------------------
+        # CUSTOMER + COMPANY FILTER
+        # ---------------------------------------
+
+        queryset = SalesOrder.objects.filter(
+            company=user.company,
+            customer_id=customer_id,
+        )
+
+        # ---------------------------------------
+        # TOTAL ORDERS
+        # ---------------------------------------
+
+        total_orders = queryset.count()
+
+        # ---------------------------------------
+        # COMPLETED ORDERS
+        # ---------------------------------------
+
+        completed_orders = queryset.filter(
+            delivery_status="completed"
+        ).count()
+
+        # ---------------------------------------
+        # OPEN ORDERS
+        # ---------------------------------------
+
+        open_orders = queryset.exclude(
+            delivery_status__in=[
+                "completed",
+                "cancelled",
+            ]
+        ).exclude(
+            order_status="rejected"
+        ).count()
+
+        # ---------------------------------------
+        # TOTAL ORDER AMOUNT
+        # ---------------------------------------
+
+        total_order_amount = (
+            queryset.aggregate(
+                total=Sum("order_value")
+            )["total"]
+            or 0
+        )
+
+        return Response(
+            {
+                "message": "Customer sales order summary retrieved successfully.",
+                "data": {
+                    "total_orders": total_orders,
+                    "open_orders": open_orders,
+                    "completed_orders": completed_orders,
+                    "total_order_amount": total_order_amount,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )

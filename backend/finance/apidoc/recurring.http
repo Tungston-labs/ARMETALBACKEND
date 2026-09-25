@@ -1,0 +1,283 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMjY0NTc2LCJpYXQiOjE3OTAyMzU3NzYsImp0aSI6IjA0ZDgwNTc5YzE5NTRlZjk4ZDE0YzY4Zjc4MjU0YWVhIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.pH0cMb05iUV_8JRMjhyOe-gVKMx0Si0_Aq_LvnyExGk
+
+
+### =========================================================
+### 1. CREATE RECURRING SERVICE + PRICING PLANS + BILLING
+### =========================================================
+
+### =========================================================
+### CREATE RECURRING SERVICE + PRICING PLANS + BILLING
+### =========================================================
+
+POST {{baseUrl}}/api/finance/recurring/create/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "service": {
+    "product": 1,
+    "product_code": "PROD001",
+    "product_service_name": "Internet Package",
+    "category": 2,
+    "hs_code": "9983",
+    "vat_rate": "18.00",
+    "base_price": "1000.00",
+    "unit_price": "1000.00",
+    "unit": "Month",
+    "billing_type": "recurring",
+    "discount": "0.00",
+    "final_price": "1000.00",
+    "technology": "Fiber",
+    "database": "MySQL",
+    "status": "active"
+  },
+
+  "pricing_plans": [
+    {
+      "plan_type": "starter",
+      "service_id": "PLAN001",
+      "users": 5,
+      "billing_cycle": "monthly",
+      "discount_percent": "0.00",
+      "price": "1000.00"
+    },
+    {
+      "plan_type": "professional",
+      "service_id": "PLAN002",
+      "users": 10,
+      "billing_cycle": "monthly",
+      "discount_percent": "5.00",
+      "price": "1900.00"
+    },
+    {
+      "plan_type": "enterprise",
+      "service_id": "PLAN003",
+      "users": 50,
+      "billing_cycle": "yearly",
+      "discount_percent": "10.00",
+      "price": "10000.00"
+    }
+  ],
+
+  "billing": {
+    "customer": 1,
+    "recurring_type": "invoice",
+    "start_date": "2026-09-23",
+    "end_date": "2027-09-22",
+    "frequency": "monthly",
+    "total_recurrence": 12,
+    "unlimited_recurrence": false,
+    "payment_term": "30_days",
+    "reminder_before_due_days": 3,
+    "reminder_before_renewal_days": 7,
+    "billing_cycle": "advance",
+    "auto_email_to": "customer@example.com",
+    "whatsapp_number": "9876543210",
+    "auto_generate_invoice": true,
+    "auto_send": false,
+    "include_tax": true,
+    "auto_renew": true,
+    "recurrence_status": "active",
+    "additional_notes": "Annual internet subscription"
+  }
+}
+
+
+### =========================================================
+### 2. LIST RECURRING SERVICES
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/services/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 3. GET RECURRING SERVICE DETAIL
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/services/4/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 4. UPDATE RECURRING SERVICE
+### =========================================================
+
+PUT {{baseUrl}}/api/finance/recurring/services/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "product": 1,
+  "product_code": "PROD001",
+  "product_service_name": "Updated Internet Package",
+  "category": 2,
+  "hs_code": "9983",
+  "vat_rate": "18.00",
+  "base_price": "1200.00",
+  "unit_price": "1200.00",
+  "unit": "month",
+  "billing_type": "subscription",
+  "discount": "0.00",
+  "final_price": "1200.00",
+  "technology": "Fiber",
+  "database": "MySQL",
+  "status": "active"
+}
+
+
+### =========================================================
+### 5. PARTIAL UPDATE RECURRING SERVICE
+### =========================================================
+
+PATCH {{baseUrl}}/api/finance/recurring/services/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "final_price": "1100.00",
+  "status": "active"
+}
+
+
+### =========================================================
+### 6. DELETE RECURRING SERVICE
+### =========================================================
+
+DELETE {{baseUrl}}/api/finance/recurring/services/1/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 7. LIST RECURRING BILLING
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 8. GET BILLING DETAIL
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/1/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 9. UPDATE BILLING
+### =========================================================
+
+PUT {{baseUrl}}/api/finance/recurring/billing/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "recurring_service": 1,
+  "customer": 10,
+  "recurring_type": "subscription",
+  "start_date": "2026-09-23",
+  "end_date": "2027-09-22",
+  "frequency": "monthly",
+  "total_recurrence": 12,
+  "unlimited_recurrence": false,
+  "payment_term": "monthly",
+  "reminder_before_due_days": 3,
+  "reminder_before_renewal_days": 7,
+  "billing_cycle": "monthly",
+  "auto_email_to": "customer@example.com",
+  "whatsapp_number": "9876543210",
+  "auto_generate_invoice": true,
+  "auto_send": false,
+  "include_tax": true,
+  "auto_renew": true,
+  "recurrence_status": "active",
+  "additional_notes": "Updated subscription"
+}
+
+
+### =========================================================
+### 10. PARTIAL UPDATE BILLING
+### =========================================================
+
+PATCH {{baseUrl}}/api/finance/recurring/billing/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "auto_renew": false,
+  "recurrence_status": "active"
+}
+
+
+### =========================================================
+### 11. DELETE BILLING
+### =========================================================
+
+DELETE {{baseUrl}}/api/finance/recurring/billing/1/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 12. BILLING DASHBOARD
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/dashboard/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 13. FILTER BILLING BY CUSTOMER
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?customer=10
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 14. FILTER BILLING BY STATUS
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?recurrence_status=active
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 15. FILTER BILLING BY FREQUENCY
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?frequency=monthly
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 16. SEARCH BILLING
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?search=REC00001
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 17. UPCOMING RENEWALS
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?renewal_date=2026-10-23
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 18. RENEWALS BETWEEN TWO DATES
+### =========================================================
+
+GET {{baseUrl}}/api/finance/recurring/billing/?renewal_from=2026-10-01&renewal_to=2026-10-31
+Authorization: Bearer {{token}}
+
+
+
+### Recurring Summary
+
+GET {{baseUrl}}/api/finance/recurring/summary/
+Authorization: Bearer {{token}}
+Content-Type: application/json

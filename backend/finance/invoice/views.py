@@ -53,6 +53,9 @@ from .filters import InvoiceFilter
 from .pdf_utils import (
     generate_invoice_pdf
 )
+from decimal import Decimal
+
+from django.db.models import F, Sum
 
 
 class InvoiceViewSet(
@@ -966,4 +969,213 @@ class InvoiceViewSet(
 
             }
 
+        )
+    
+
+from django.db.models import Q
+
+from rest_framework import generics
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+
+from user.permissions import IsCompanyActive, IsHRAdmin
+
+from .models import Invoice
+from .serializers import CustomerInvoiceSerializer
+
+
+class CustomerInvoiceListView(generics.ListAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        IsCompanyActive,
+        IsHRAdmin,
+    ]
+
+    serializer_class = CustomerInvoiceSerializer
+
+    filter_backends = [
+        DjangoFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    ]
+
+    search_fields = [
+        "invoice_number",
+        "sales_order__so_number",
+    ]
+
+    ordering_fields = [
+        "invoice_number",
+        "invoice_date",
+        "due_date",
+        "total_amount",
+        "amount_paid",
+        "created_at",
+    ]
+
+    ordering = [
+        "-invoice_date",
+        "-id",
+    ]
+
+    def get_queryset(self):
+
+        user = self.request.user
+
+        if (
+            not user.is_authenticated
+            or not getattr(user, "company", None)
+        ):
+            return Invoice.objects.none()
+
+        customer_id = self.kwargs.get("customer_id")
+
+        queryset = (
+            Invoice.objects
+            .filter(
+                company=user.company,
+                customer_id=customer_id,
+            )
+            .select_related(
+                "customer",
+                "sales_order",
+            )
+        )
+
+        # ---------------------------------------
+        # DATE RANGE FILTER
+        # ---------------------------------------
+
+        date_from = self.request.query_params.get(
+            "date_from"
+        )
+
+        date_to = self.request.query_params.get(
+            "date_to"
+        )
+
+        if date_from:
+            queryset = queryset.filter(
+                invoice_date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                invoice_date__lte=date_to
+            )
+
+        # ---------------------------------------
+        # PAYMENT STATUS FILTER
+        # ---------------------------------------
+
+        payment_status = self.request.query_params.get(
+            "payment_status"
+        )
+
+        if payment_status:
+            queryset = queryset.filter(
+                payment_status=payment_status
+            )
+
+        return queryset
+    
+
+
+
+class CustomerInvoiceSummaryView(generics.GenericAPIView):
+
+    permission_classes = [
+        IsAuthenticated,
+        IsCompanyActive,
+        IsHRAdmin,
+    ]
+
+    def get(self, request, customer_id, *args, **kwargs):
+
+        user = request.user
+
+        if not getattr(user, "company", None):
+            return Response(
+                {
+                    "message": "User is not associated with a company.",
+                    "data": {},
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ---------------------------------------
+        # CUSTOMER + COMPANY FILTER
+        # ---------------------------------------
+
+        queryset = Invoice.objects.filter(
+            company=user.company,
+            customer_id=customer_id,
+        )
+
+        # ---------------------------------------
+        # TOTAL INVOICES
+        # ---------------------------------------
+
+        total_invoice = queryset.count()
+
+        # ---------------------------------------
+        # TOTAL INVOICE VALUE
+        # ---------------------------------------
+
+        total_invoice_value = (
+            queryset.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # ---------------------------------------
+        # PAID INVOICES
+        # ---------------------------------------
+
+        paid_invoice = queryset.filter(
+            payment_status="paid"
+        ).count()
+
+        # ---------------------------------------
+        # OUTSTANDING AMOUNT
+        # ---------------------------------------
+
+        outstanding_amount = (
+            queryset.aggregate(
+                total=Sum(
+                    F("total_amount") - F("amount_paid")
+                )
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # ---------------------------------------
+        # PENDING INVOICES
+        # ---------------------------------------
+
+        pending_invoice = queryset.filter(
+            payment_status__in=[
+                "unpaid",
+                "partially_paid",
+            ]
+        ).count()
+
+        return Response(
+            {
+                "message": (
+                    "Customer invoice summary "
+                    "retrieved successfully."
+                ),
+                "data": {
+                    "total_invoice": total_invoice,
+                    "total_invoice_value": total_invoice_value,
+                    "paid_invoice": paid_invoice,
+                    "outstanding_amount": outstanding_amount,
+                    "pending_invoice": pending_invoice,
+                },
+            },
+            status=status.HTTP_200_OK,
         )
