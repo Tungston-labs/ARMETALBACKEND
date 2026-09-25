@@ -3,20 +3,29 @@ from rest_framework import serializers
 from .models import Customer, CustomerDocument
 
 
+from decimal import Decimal
+
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework import serializers
+
+from finance.invoice.models import Invoice
+from finance.payment.models import Payment
+
+from .models import Customer, CustomerDocument
+
+
 class CustomerDocumentSerializer(
     serializers.ModelSerializer
 ):
-
     class Meta:
         model = CustomerDocument
-
         fields = [
             "id",
             "document",
             "document_name",
             "created_at",
         ]
-
         read_only_fields = [
             "id",
             "created_at",
@@ -26,7 +35,6 @@ class CustomerDocumentSerializer(
 class CustomerSerializer(
     serializers.ModelSerializer
 ):
-
     created_by_name = serializers.CharField(
         source="created_by.username",
         read_only=True
@@ -56,6 +64,20 @@ class CustomerSerializer(
         source="get_client_status_display",
         read_only=True
     )
+
+    # ---------------------------------------------------------
+    # CUSTOMER FINANCIAL SUMMARY
+    # ---------------------------------------------------------
+
+    total_invoice = serializers.SerializerMethodField()
+
+    total_payments_received = serializers.SerializerMethodField()
+
+    balance_amount = serializers.SerializerMethodField()
+
+    outstanding_days = serializers.SerializerMethodField()
+
+    last_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
@@ -99,6 +121,13 @@ class CustomerSerializer(
             "opening_balance",
             "notes",
 
+            # Customer financial summary
+            "total_invoice",
+            "total_payments_received",
+            "balance_amount",
+            "outstanding_days",
+            "last_payment",
+
             # Documents
             "documents",
 
@@ -119,12 +148,151 @@ class CustomerSerializer(
             "payment_term_name",
             "client_status_name",
             "documents",
+
+            # Customer financial summary
+            "total_invoice",
+            "total_payments_received",
+            "balance_amount",
+            "outstanding_days",
+            "last_payment",
+
             "created_at",
             "updated_at",
         ]
 
-    def validate_customer_name(self, value):
+    # ---------------------------------------------------------
+    # TOTAL INVOICE
+    # ---------------------------------------------------------
 
+    def get_total_invoice(self, obj):
+        total = (
+            Invoice.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+            )
+            .aggregate(
+                total=Sum("total_amount")
+            )["total"]
+        )
+
+        return total or Decimal("0.00")
+
+    # ---------------------------------------------------------
+    # TOTAL PAYMENTS RECEIVED
+    # ---------------------------------------------------------
+
+    def get_total_payments_received(self, obj):
+        total = (
+            Payment.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+                status="completed",
+            )
+            .aggregate(
+                total=Sum("amount_received")
+            )["total"]
+        )
+
+        return total or Decimal("0.00")
+
+    # ---------------------------------------------------------
+    # BALANCE AMOUNT
+    # ---------------------------------------------------------
+
+    def get_balance_amount(self, obj):
+        invoice_total = (
+            Invoice.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+            )
+            .aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        payment_total = (
+            Payment.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+                status="completed",
+            )
+            .aggregate(
+                total=Sum("amount_received")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        balance = invoice_total - payment_total
+
+        return max(
+            balance,
+            Decimal("0.00")
+        )
+
+    # ---------------------------------------------------------
+    # OUTSTANDING DAYS
+    # ---------------------------------------------------------
+
+    def get_outstanding_days(self, obj):
+        today = timezone.localdate()
+
+        overdue_invoice = (
+            Invoice.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+            )
+            .exclude(
+                payment_status="paid"
+            )
+            .filter(
+                due_date__lt=today
+            )
+            .order_by("due_date")
+            .first()
+        )
+
+        if not overdue_invoice:
+            return 0
+
+        return (
+            today - overdue_invoice.due_date
+        ).days
+
+    # ---------------------------------------------------------
+    # LAST PAYMENT
+    # ---------------------------------------------------------
+
+    def get_last_payment(self, obj):
+        payment = (
+            Payment.objects
+            .filter(
+                customer=obj,
+                company=obj.company,
+                status="completed",
+            )
+            .order_by(
+                "-payment_date",
+                "-id"
+            )
+            .first()
+        )
+
+        if not payment:
+            return None
+
+        return payment.payment_date
+
+    # ---------------------------------------------------------
+    # VALIDATIONS
+    # ---------------------------------------------------------
+
+    def validate_customer_name(self, value):
         value = value.strip()
 
         if not value:
@@ -135,7 +303,6 @@ class CustomerSerializer(
         return value
 
     def validate_credit_limit(self, value):
-
         if value < 0:
             raise serializers.ValidationError(
                 "Credit limit cannot be negative."
@@ -144,7 +311,6 @@ class CustomerSerializer(
         return value
 
     def validate_opening_balance(self, value):
-
         if value < 0:
             raise serializers.ValidationError(
                 "Opening balance cannot be negative."
