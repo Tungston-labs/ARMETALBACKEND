@@ -129,7 +129,13 @@ def warehouse(db, company):
 
 
 @pytest.fixture
-def quotation(db, company, customer, product, hr_admin):
+def quotation(
+    db,
+    company,
+    customer,
+    product,
+    hr_admin,
+):
     quotation = Quotation.objects.create(
         company=company,
         customer=customer,
@@ -217,6 +223,7 @@ def invoice(
         subtotal=Decimal("2000.00"),
         total_vat=Decimal("300.00"),
         total_amount=Decimal("2300.00"),
+        payment_status="unpaid",
         created_by=hr_admin,
     )
 
@@ -231,6 +238,39 @@ def invoice(
         hs_code="HS001",
         rate=Decimal("1000.00"),
         vat_percentage=Decimal("15.00"),
+    )
+
+    return invoice
+
+
+@pytest.fixture
+def second_invoice(
+    db,
+    company,
+    customer,
+    sales_order,
+    hr_admin,
+):
+    invoice = Invoice.objects.create(
+        company=company,
+        customer=customer,
+        sales_order=sales_order,
+        invoice_date="2026-09-25",
+        due_date="2026-10-10",
+        customer_name=customer.customer_name,
+        customer_email=customer.admin_email,
+        customer_phone=customer.phno,
+        customer_address=customer.billing_address,
+        company_name=company.name,
+        company_email=company.email,
+        company_phone=company.contact_number,
+        company_address=company.address,
+        amount_paid=Decimal("1000.00"),
+        subtotal=Decimal("3000.00"),
+        total_vat=Decimal("450.00"),
+        total_amount=Decimal("3450.00"),
+        payment_status="partially_paid",
+        created_by=hr_admin,
     )
 
     return invoice
@@ -254,6 +294,7 @@ def test_get_sales_order_dropdown(
     )
 
     assert response.status_code == 200
+
     assert response.data["message"] == (
         "Sales orders retrieved successfully."
     )
@@ -294,7 +335,9 @@ def test_get_sales_order_details(
     assert "items" in data
     assert len(data["items"]) == 1
 
-    assert Decimal(str(data["items"][0]["quantity"])) == Decimal("2.00")
+    assert Decimal(
+        str(data["items"][0]["quantity"])
+    ) == Decimal("2.00")
 
 
 # ============================================================
@@ -332,17 +375,17 @@ def test_create_invoice_from_sales_order(
         "Invoice created successfully."
     )
 
-    invoice = Invoice.objects.get(
+    created_invoice = Invoice.objects.get(
         sales_order=sales_order
     )
 
-    assert invoice.company == sales_order.company
-    assert invoice.customer == sales_order.customer
-    assert invoice.sales_order == sales_order
+    assert created_invoice.company == sales_order.company
+    assert created_invoice.customer == sales_order.customer
+    assert created_invoice.sales_order == sales_order
 
-    assert invoice.subtotal == Decimal("2000.00")
-    assert invoice.total_vat == Decimal("300.00")
-    assert invoice.total_amount == Decimal("2300.00")
+    assert created_invoice.subtotal == Decimal("2000.00")
+    assert created_invoice.total_vat == Decimal("300.00")
+    assert created_invoice.total_amount == Decimal("2300.00")
 
 
 # ============================================================
@@ -474,7 +517,7 @@ def test_patch_invoice_payment(
 
 
 # ============================================================
-# INVOICE SUMMARY
+# GENERAL INVOICE SUMMARY
 # ============================================================
 
 
@@ -500,10 +543,22 @@ def test_invoice_summary(
     assert "average_invoice_value" in data
     assert "total_invoice_count" in data
 
-    assert Decimal(str(data["total_invoice_value"])) == Decimal("2300.00")
-    assert Decimal(str(data["payment_received"])) == Decimal("0.00")
-    assert Decimal(str(data["outstanding_amount"])) == Decimal("2300.00")
-    assert Decimal(str(data["average_invoice_value"])) == Decimal("2300.00")
+    assert Decimal(
+        str(data["total_invoice_value"])
+    ) == Decimal("2300.00")
+
+    assert Decimal(
+        str(data["payment_received"])
+    ) == Decimal("0.00")
+
+    assert Decimal(
+        str(data["outstanding_amount"])
+    ) == Decimal("2300.00")
+
+    assert Decimal(
+        str(data["average_invoice_value"])
+    ) == Decimal("2300.00")
+
     assert data["total_invoice_count"] == 1
 
 
@@ -767,7 +822,9 @@ def test_invoice_company_isolation(
         is_active=True,
     )
 
-    api_client.force_authenticate(user=second_admin)
+    api_client.force_authenticate(
+        user=second_admin
+    )
 
     response = api_client.get(
         "/api/finance/invoice/"
@@ -799,10 +856,599 @@ def test_cannot_retrieve_other_company_invoice(
         is_active=True,
     )
 
-    api_client.force_authenticate(user=second_admin)
+    api_client.force_authenticate(
+        user=second_admin
+    )
 
     response = api_client.get(
         f"/api/finance/invoice/{invoice.id}/"
     )
 
     assert response.status_code == 404
+
+
+# ============================================================
+# CUSTOMER INVOICE LIST
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_list(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/"
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    data = response.data["results"][0]
+
+    assert data["invoice_number"] == invoice.invoice_number
+    assert data["invoice_date"] == "2026-09-17"
+    assert data["due_date"] == "2026-10-02"
+
+    assert Decimal(
+        str(data["invoice_amount"])
+    ) == Decimal("2300.00")
+
+    assert Decimal(
+        str(data["paid_amount"])
+    ) == Decimal("0.00")
+
+    assert data["status"] == "unpaid"
+
+
+# ============================================================
+# CUSTOMER INVOICE SEARCH BY INVOICE NUMBER
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_search_by_invoice_number(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "search": invoice.invoice_number
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["invoice_number"]
+        == invoice.invoice_number
+    )
+
+
+# ============================================================
+# CUSTOMER INVOICE SEARCH BY ORDER REFERENCE
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_search_by_order_reference(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    sales_order,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "search": sales_order.so_number
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["order_ref"]
+        == sales_order.so_number
+    )
+
+
+# ============================================================
+# CUSTOMER INVOICE DATE FROM FILTER
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_filter_date_from(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    second_invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "date_from": "2026-09-20"
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["invoice_number"]
+        == second_invoice.invoice_number
+    )
+
+
+# ============================================================
+# CUSTOMER INVOICE DATE TO FILTER
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_filter_date_to(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    second_invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "date_to": "2026-09-20"
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["invoice_number"]
+        == invoice.invoice_number
+    )
+
+
+# ============================================================
+# CUSTOMER INVOICE DATE RANGE FILTER
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_date_range(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    second_invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "date_from": "2026-09-18",
+            "date_to": "2026-09-30",
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["invoice_number"]
+        == second_invoice.invoice_number
+    )
+
+
+# ============================================================
+# CUSTOMER INVOICE PAYMENT STATUS FILTER
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_filter_payment_status(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    second_invoice,
+):
+    api_client.force_authenticate(user=hr_admin)
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/",
+        {
+            "payment_status": "partially_paid"
+        },
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 1
+
+    assert (
+        response.data["results"][0]["invoice_number"]
+        == second_invoice.invoice_number
+    )
+
+    assert (
+        response.data["results"][0]["status"]
+        == "partially_paid"
+    )
+
+
+# ============================================================
+# CUSTOMER ISOLATION
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_list_is_customer_specific(
+    api_client,
+    hr_admin,
+    company,
+    invoice,
+):
+    other_customer = Customer.objects.create(
+        company=company,
+        customer_name="Other Customer",
+        admin_email="other@example.com",
+        phno="9999999999",
+        billing_address="Other Address",
+        client_status="active",
+    )
+
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{other_customer.id}/invoices/"
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 0
+
+
+# ============================================================
+# CUSTOMER INVOICE COMPANY ISOLATION
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_list_company_isolation(
+    api_client,
+    invoice,
+    customer,
+    second_company,
+):
+    second_admin = User.objects.create_user(
+        username="secondcustomerinvoiceadmin",
+        email="secondcustomerinvoiceadmin@example.com",
+        password="TestPassword123",
+        is_hr_admin=True,
+        company=second_company,
+        is_active=True,
+    )
+
+    api_client.force_authenticate(
+        user=second_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/"
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 0
+
+
+# ============================================================
+# CUSTOMER INVOICE SUMMARY
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_summary(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+    second_invoice,
+):
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/summary/"
+    )
+
+    assert response.status_code == 200
+
+    assert response.data["message"] == (
+        "Customer invoice summary retrieved successfully."
+    )
+
+    data = response.data["data"]
+
+    assert data["total_invoice"] == 2
+
+    assert Decimal(
+        str(data["total_invoice_value"])
+    ) == Decimal("5750.00")
+
+    assert data["paid_invoice"] == 0
+
+    assert Decimal(
+        str(data["outstanding_amount"])
+    ) == Decimal("4750.00")
+
+    assert data["pending_invoice"] == 2
+
+
+# ============================================================
+# CUSTOMER INVOICE SUMMARY - PAID
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_summary_paid_invoice(
+    api_client,
+    hr_admin,
+    customer,
+    invoice,
+):
+    invoice.amount_paid = Decimal("2300.00")
+    invoice.payment_status = "paid"
+
+    invoice.save(
+        update_fields=[
+            "amount_paid",
+            "payment_status",
+        ]
+    )
+
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/summary/"
+    )
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_invoice"] == 1
+
+    assert Decimal(
+        str(data["total_invoice_value"])
+    ) == Decimal("2300.00")
+
+    assert data["paid_invoice"] == 1
+
+    assert Decimal(
+        str(data["outstanding_amount"])
+    ) == Decimal("0.00")
+
+    assert data["pending_invoice"] == 0
+
+
+# ============================================================
+# CUSTOMER INVOICE SUMMARY - PARTIALLY PAID
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_summary_partially_paid(
+    api_client,
+    hr_admin,
+    customer,
+    second_invoice,
+):
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/summary/"
+    )
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_invoice"] == 1
+
+    assert Decimal(
+        str(data["total_invoice_value"])
+    ) == Decimal("3450.00")
+
+    assert data["paid_invoice"] == 0
+
+    assert Decimal(
+        str(data["outstanding_amount"])
+    ) == Decimal("2450.00")
+
+    assert data["pending_invoice"] == 1
+
+
+# ============================================================
+# CUSTOMER WITH NO INVOICES
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_list_empty(
+    api_client,
+    hr_admin,
+    company,
+):
+    empty_customer = Customer.objects.create(
+        company=company,
+        customer_name="Empty Invoice Customer",
+        admin_email="empty@example.com",
+        phno="9000000000",
+        billing_address="Empty Address",
+        client_status="active",
+    )
+
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{empty_customer.id}/invoices/"
+    )
+
+    assert response.status_code == 200
+
+    assert "results" in response.data
+    assert len(response.data["results"]) == 0
+
+
+# ============================================================
+# CUSTOMER SUMMARY WITH NO INVOICES
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_customer_invoice_summary_empty(
+    api_client,
+    hr_admin,
+    company,
+):
+    empty_customer = Customer.objects.create(
+        company=company,
+        customer_name="No Invoice Customer",
+        admin_email="noinvoice@example.com",
+        phno="9111111111",
+        billing_address="No Invoice Address",
+        client_status="active",
+    )
+
+    api_client.force_authenticate(
+        user=hr_admin
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{empty_customer.id}/invoices/summary/"
+    )
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_invoice"] == 0
+
+    assert Decimal(
+        str(data["total_invoice_value"])
+    ) == Decimal("0.00")
+
+    assert data["paid_invoice"] == 0
+
+    assert Decimal(
+        str(data["outstanding_amount"])
+    ) == Decimal("0.00")
+
+    assert data["pending_invoice"] == 0
+
+
+# ============================================================
+# CUSTOMER INVOICE LIST - UNAUTHENTICATED
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_unauthenticated_customer_invoice_list(
+    api_client,
+    customer,
+):
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/"
+    )
+
+    assert response.status_code in [401, 403]
+
+
+# ============================================================
+# CUSTOMER INVOICE LIST - NON HR ADMIN
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_non_hr_admin_cannot_access_customer_invoice_list(
+    api_client,
+    employee,
+    customer,
+):
+    api_client.force_authenticate(
+        user=employee
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/"
+    )
+
+    assert response.status_code == 403
+
+
+# ============================================================
+# CUSTOMER INVOICE SUMMARY - NON HR ADMIN
+# ============================================================
+
+
+@pytest.mark.django_db
+def test_non_hr_admin_cannot_access_customer_invoice_summary(
+    api_client,
+    employee,
+    customer,
+):
+    api_client.force_authenticate(
+        user=employee
+    )
+
+    response = api_client.get(
+        f"/api/finance/invoice/customer/{customer.id}/invoices/summary/"
+    )
+
+    assert response.status_code == 403
