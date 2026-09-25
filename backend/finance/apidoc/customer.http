@@ -241,9 +241,7 @@ GET {{baseUrl}}/api/finance/customer/summary/?client_status=active
 Authorization: Bearer {{token}}
 
 
-### 20. INDIVIDUAL CUSTOMER OVERVIEW
-GET {{baseUrl}}/api/finance/customer/1/overview/
-Authorization: Bearer {{token}}
+
 
 
 ### 21. UPLOAD DOCUMENT TO INDIVIDUAL CUSTOMER

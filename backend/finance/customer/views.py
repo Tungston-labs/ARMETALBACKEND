@@ -37,7 +37,8 @@ from finance.credit_note.models import CreditNote
 from finance.credit_note.serializers import CreditNoteSerializer, CreditNoteListSerializer
 from finance.invoice.models import Invoice
 from finance.ledger.models import CustomerLedger
-from finance.ledger.serializers import CustomerLedgerSerializer, CustomerLedgerListSerializer
+from finance.ledger.serializers import CustomerLedgerSerializer
+from finance.ledger.services import recalculate_customer_ledger
 
 from .models import (
     Customer,
@@ -53,6 +54,7 @@ from .serializers import (
     CustomerQuotationsKPISerializer,
     CustomerPaymentsKPISerializer,
     CustomerCreditNotesKPISerializer,
+    CustomerLedgerKPISerializer,
 )
 
 
@@ -1082,6 +1084,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
         header_data = CustomerHeaderSerializer(customer).data
         company = request.user.company
 
+        # Recalculate customer ledger running balances to ensure data accuracy
+        recalculate_customer_ledger(
+            customer_id=customer.id,
+            company_id=company.id
+        )
+
         ledger_qs = CustomerLedger.objects.filter(
             customer=customer,
             company=company
@@ -1141,31 +1149,53 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "outstanding": closing_balance,
         }
 
-        ordering_param = request.query_params.get("ordering", "transaction_date")
+        # Search filter
+        search_query = request.query_params.get("search", "").strip()
+        if search_query:
+            ledger_qs = ledger_qs.filter(
+                Q(reference_number__icontains=search_query) |
+                Q(description__icontains=search_query)
+            )
+
+        # Transaction type filter
+        type_param = request.query_params.get("transaction_type") or request.query_params.get("type")
+        if type_param:
+            ledger_qs = ledger_qs.filter(transaction_type=type_param)
+
+        # Date range filters
+        from_date = request.query_params.get("from_date")
+        if from_date:
+            ledger_qs = ledger_qs.filter(transaction_date__gte=from_date)
+
+        to_date = request.query_params.get("to_date")
+        if to_date:
+            ledger_qs = ledger_qs.filter(transaction_date__lte=to_date)
+
+        # Ordering
+        ordering_param = request.query_params.get("ordering", "-transaction_date")
         allowed_ordering = [
             "transaction_date", "-transaction_date",
+            "created_at", "-created_at",
+            "reference_number", "-reference_number",
             "debit", "-debit",
             "credit", "-credit",
             "balance", "-balance",
-            "created_at", "-created_at",
         ]
         if ordering_param in allowed_ordering:
-            ledger_qs = ledger_qs.order_by(ordering_param)
+            ledger_qs = ledger_qs.order_by(ordering_param, "-id")
         else:
-            ledger_qs = ledger_qs.order_by("transaction_date")
-
-        serializer_cls = CustomerLedgerSerializer if request.query_params.get("full") == "true" else CustomerLedgerListSerializer
+            ledger_qs = ledger_qs.order_by("-transaction_date", "-id")
 
         page = self.paginate_queryset(ledger_qs)
         if page is not None:
-            serializer = serializer_cls(page, many=True)
+            serializer = CustomerLedgerSerializer(page, many=True, context={"request": request})
             response = self.get_paginated_response(serializer.data)
             response.data["message"] = "Customer ledger retrieved successfully."
             response.data["customer_header"] = header_data
             response.data["kpi_cards"] = kpi_cards
             return response
 
-        serializer = serializer_cls(ledger_qs, many=True)
+        serializer = CustomerLedgerSerializer(ledger_qs, many=True, context={"request": request})
         return Response(
             {
                 "message": "Customer ledger retrieved successfully.",

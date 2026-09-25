@@ -288,7 +288,34 @@ class CustomerLedgerCustomerSummarySerializer(
         decimal_places=2,
     )
 
+from rest_framework import serializers
 
+
+class CustomerFinancialSummarySerializer(serializers.Serializer):
+    total_receivable = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    total_invoice = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    total_collection = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    total_credit = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    overdue_amount = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
 
 
 

@@ -42,6 +42,14 @@ class CreditNote(TimeStampedModel):
         related_name="credit_notes"
     )
 
+    invoice = models.ForeignKey(
+        "invoice.Invoice",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="credit_notes"
+    )
+
     invoice_ref = models.CharField(
         max_length=100,
         blank=True,
@@ -184,6 +192,14 @@ class CreditNoteItem(TimeStampedModel):
 
     product = models.ForeignKey(
         "product.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="credit_note_items"
+    )
+
+    invoice_item = models.ForeignKey(
+        "invoice.InvoiceItem",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

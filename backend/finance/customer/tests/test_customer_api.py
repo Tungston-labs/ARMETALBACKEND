@@ -2119,3 +2119,158 @@ def test_individual_customer_credit_notes_company_isolation(
     response = client.get(url)
 
     assert response.status_code == 404
+
+
+# ============================================================
+# INDIVIDUAL CUSTOMER LEDGER TESTS
+# ============================================================
+
+@pytest.mark.django_db
+def test_individual_customer_ledger_success_and_kpis(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.ledger.models import CustomerLedger
+
+    entry1 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-01",
+        transaction_type="opening_balance",
+        reference_number="OPEN-001",
+        description="Opening Balance",
+        debit=Decimal("1000.00"),
+        credit=Decimal("0.00"),
+        balance=Decimal("1000.00"),
+        created_by=user,
+    )
+
+    entry2 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-05",
+        transaction_type="invoice",
+        reference_number="INV-001",
+        description="Sales Invoice #1",
+        debit=Decimal("5000.00"),
+        credit=Decimal("0.00"),
+        balance=Decimal("6000.00"),
+        created_by=user,
+    )
+
+    entry3 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-10",
+        transaction_type="payment",
+        reference_number="PAY-001",
+        description="Customer Payment Received",
+        debit=Decimal("0.00"),
+        credit=Decimal("2000.00"),
+        balance=Decimal("4000.00"),
+        created_by=user,
+    )
+
+    entry4 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-15",
+        transaction_type="credit_note",
+        reference_number="CN-001",
+        description="Credit Note Adjustment",
+        debit=Decimal("0.00"),
+        credit=Decimal("500.00"),
+        balance=Decimal("3500.00"),
+        created_by=user,
+    )
+
+    url = f"/api/finance/customer/{customer.id}/ledger/"
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Customer ledger retrieved successfully."
+    assert response.data["customer_header"]["id"] == customer.id
+
+    kpi = response.data["kpi_cards"]
+    assert Decimal(str(kpi["opening_balance"])) == Decimal("10000.00")  # customer fixture opening_balance is 10000.00
+    assert Decimal(str(kpi["total_invoices"])) == Decimal("5000.00")
+    assert Decimal(str(kpi["total_payments"])) == Decimal("2000.00")
+    assert Decimal(str(kpi["credit_notes"])) == Decimal("500.00")
+    # closing_balance is total_debit_all - total_credit_all (6000 - 2500 = 3500)
+    assert Decimal(str(kpi["closing_balance"])) == Decimal("3500.00")
+    assert Decimal(str(kpi["outstanding"])) == Decimal("3500.00")
+
+    results = response.data["results"]
+    assert len(results) == 4
+
+
+@pytest.mark.django_db
+def test_individual_customer_ledger_filters_and_search(
+    authenticated_client,
+    company,
+    customer,
+    user,
+):
+    from finance.ledger.models import CustomerLedger
+
+    entry1 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-05",
+        transaction_type="invoice",
+        reference_number="INV-100",
+        description="Project Alpha Invoice",
+        debit=Decimal("4000.00"),
+        credit=Decimal("0.00"),
+        created_by=user,
+    )
+
+    entry2 = CustomerLedger.objects.create(
+        company=company,
+        customer=customer,
+        transaction_date="2026-01-10",
+        transaction_type="payment",
+        reference_number="PAY-200",
+        description="Wire Transfer Alpha",
+        debit=Decimal("0.00"),
+        credit=Decimal("1500.00"),
+        created_by=user,
+    )
+
+    url = f"/api/finance/customer/{customer.id}/ledger/"
+
+    # Test search query param
+    res_search = authenticated_client.get(url, {"search": "INV-100"})
+    assert res_search.status_code == 200
+    assert len(res_search.data["results"]) == 1
+    assert res_search.data["results"][0]["reference_number"] == "INV-100"
+
+    # Test transaction_type query param
+    res_type = authenticated_client.get(url, {"transaction_type": "payment"})
+    assert res_type.status_code == 200
+    assert len(res_type.data["results"]) == 1
+    assert res_type.data["results"][0]["reference_number"] == "PAY-200"
+
+    # Test date range filter
+    res_date = authenticated_client.get(url, {
+        "from_date": "2026-01-08",
+        "to_date": "2026-01-12"
+    })
+    assert res_date.status_code == 200
+    assert len(res_date.data["results"]) == 1
+    assert res_date.data["results"][0]["reference_number"] == "PAY-200"
+
+
+@pytest.mark.django_db
+def test_individual_customer_ledger_company_isolation(
+    another_user,
+    customer,
+):
+    client = APIClient()
+    client.force_authenticate(user=another_user)
+    url = f"/api/finance/customer/{customer.id}/ledger/"
+    response = client.get(url)
+
+    assert response.status_code == 404
