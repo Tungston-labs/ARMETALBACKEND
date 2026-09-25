@@ -142,20 +142,15 @@ def calculate_next_invoice_date(
 # ==========================================================
 # RECURRING SERVICE VIEWSET
 # ==========================================================
-
-class RecurringServiceViewSet(
-    viewsets.ModelViewSet
-):
-
+from rest_framework.exceptions import ValidationError
+class RecurringServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [
         IsAuthenticated,
         IsCompanyActive,
         IsHRAdmin,
     ]
 
-    serializer_class = (
-        RecurringServiceSerializer
-    )
+    serializer_class = RecurringServiceSerializer
 
     filter_backends = [
         DjangoFilterBackend,
@@ -188,34 +183,18 @@ class RecurringServiceViewSet(
         "-created_at",
     ]
 
-    # ======================================================
-    # QUERYSET
-    # ======================================================
-
     def get_queryset(self):
-
         user = self.request.user
 
         if (
             not user.is_authenticated
-            or not getattr(
-                user,
-                "company",
-                None,
-            )
+            or not getattr(user, "company", None)
         ):
-            return (
-                RecurringService
-                .objects
-                .none()
-            )
+            return RecurringService.objects.none()
 
         return (
-            RecurringService
-            .objects
-            .filter(
-                company=user.company
-            )
+            RecurringService.objects
+            .filter(company=user.company)
             .select_related(
                 "product",
                 "category",
@@ -226,6 +205,20 @@ class RecurringServiceViewSet(
             )
         )
 
+    def perform_create(self, serializer):
+        user = self.request.user
+
+        if not getattr(user, "company", None):
+            
+
+            raise ValidationError(
+                {"detail": "User is not associated with a company."}
+            )
+
+        serializer.save(
+            company=user.company,
+            created_by=user,
+        )
 
 # ==========================================================
 # RECURRING BILLING VIEWSET

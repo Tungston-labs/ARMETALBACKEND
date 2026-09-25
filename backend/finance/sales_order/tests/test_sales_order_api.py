@@ -1,12 +1,15 @@
 import pytest
+
 from decimal import Decimal
 from datetime import date
 
 from django.db import IntegrityError
+from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model
+
 from rest_framework.test import APIClient
 
 from superadmin.models import Company
-from django.contrib.auth import get_user_model
 
 from finance.category.models import Category
 from finance.customer.models import Customer
@@ -14,7 +17,8 @@ from finance.product.models import Product
 from finance.warehouse.models import Warehouse
 from finance.quotation.models import Quotation, QuotationItem
 from finance.sales_order.models import SalesOrder, SalesOrderItem
-from django.core.exceptions import ValidationError
+from finance.invoice.models import Invoice
+
 
 User = get_user_model()
 
@@ -30,6 +34,14 @@ COMPANIES_URL = "/api/finance/sales-order/companies/"
 CUSTOMERS_URL = "/api/finance/sales-order/customers/"
 WAREHOUSES_URL = "/api/finance/sales-order/warehouses/"
 
+CUSTOMER_ORDERS_URL = (
+    "/api/finance/sales-order/customer/{}/orders/"
+)
+
+CUSTOMER_ORDERS_SUMMARY_URL = (
+    "/api/finance/sales-order/customer/{}/orders/summary/"
+)
+
 
 # ============================================================
 # HELPERS
@@ -38,8 +50,11 @@ WAREHOUSES_URL = "/api/finance/sales-order/warehouses/"
 def get_list_results(response):
     """
     Supports both:
+
         [...]
+
     and:
+
         {"results": [...]}
     """
     assert response.status_code == 200
@@ -121,7 +136,10 @@ def authenticated_client(api_client, company_admin):
 
 
 @pytest.fixture
-def second_authenticated_client(api_client, second_company_user):
+def second_authenticated_client(
+    api_client,
+    second_company_user,
+):
     api_client.force_authenticate(user=second_company_user)
     return api_client
 
@@ -143,7 +161,10 @@ def category(company, company_admin):
 
 
 @pytest.fixture
-def second_category(second_company, second_company_user):
+def second_category(
+    second_company,
+    second_company_user,
+):
     return Category.objects.create(
         company=second_company,
         code="CAT002",
@@ -187,7 +208,10 @@ def customer(company, company_admin):
 
 
 @pytest.fixture
-def second_customer(second_company, second_company_user):
+def second_customer(
+    second_company,
+    second_company_user,
+):
     return Customer.objects.create(
         company=second_company,
         customer_name="Second Customer",
@@ -246,7 +270,11 @@ def product(company, company_admin, category):
 
 
 @pytest.fixture
-def second_product(second_company, second_company_user, second_category):
+def second_product(
+    second_company,
+    second_company_user,
+    second_category,
+):
     return Product.objects.create(
         company=second_company,
         product_name="Second Product",
@@ -321,7 +349,10 @@ def inactive_warehouse(company, company_admin):
 
 
 @pytest.fixture
-def second_warehouse(second_company, second_company_user):
+def second_warehouse(
+    second_company,
+    second_company_user,
+):
     return Warehouse.objects.create(
         company=second_company,
         warehouse_name="Second Warehouse",
@@ -347,7 +378,12 @@ def second_warehouse(second_company, second_company_user):
 # ------------------------------------------------------------
 
 @pytest.fixture
-def quotation(company, company_admin, customer, product):
+def quotation(
+    company,
+    company_admin,
+    customer,
+    product,
+):
     quotation = Quotation.objects.create(
         company=company,
         customer=customer,
@@ -373,7 +409,12 @@ def quotation(company, company_admin, customer, product):
 
 
 @pytest.fixture
-def rejected_quotation(company, company_admin, customer, product):
+def rejected_quotation(
+    company,
+    company_admin,
+    customer,
+    product,
+):
     quotation = Quotation.objects.create(
         company=company,
         customer=customer,
@@ -586,9 +627,8 @@ def test_create_sales_order_auto_prefills_company_and_customer(
     warehouse,
 ):
     """
-    The current serializer requires company/customer at DRF field validation
-    level, so this test sends them explicitly.
-
+    The current serializer requires company/customer at DRF field
+    validation level, so this test sends them explicitly.
     The serializer itself also confirms they match the quotation.
     """
     payload = {
@@ -630,6 +670,7 @@ def test_list_sales_orders(
     results = get_list_results(response)
 
     assert len(results) >= 1
+
     assert any(
         item["id"] == sales_order.id
         for item in results
@@ -736,6 +777,56 @@ def test_delete_sales_order(
 
     assert not SalesOrder.objects.filter(
         id=sales_order.id
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_sales_order_cannot_be_deleted_when_invoice_exists(
+    authenticated_client,
+    sales_order,
+    company,
+    customer,
+):
+    invoice = Invoice.objects.create(
+        company=company,
+        customer=customer,
+        sales_order=sales_order,
+        invoice_date=date(2026, 2, 1),
+        due_date=date(2026, 3, 1),
+        payment_status="unpaid",
+        company_name=company.name,
+        company_email=company.email,
+        company_phone=company.contact_number,
+        company_address=company.address,
+        customer_name=customer.customer_name,
+        customer_email=customer.admin_email,
+        customer_phone=customer.phno,
+        customer_address=customer.billing_address,
+        subtotal=Decimal("1000.00"),
+        total_vat=Decimal("150.00"),
+        discount=Decimal("0.00"),
+        round_off=Decimal("0.00"),
+        total_amount=Decimal("1150.00"),
+        amount_paid=Decimal("0.00"),
+    )
+
+    url = f"{SALES_ORDER_URL}{sales_order.id}/"
+
+    response = authenticated_client.delete(url)
+
+    assert response.status_code == 400
+
+    assert response.data["detail"] == (
+        "This Sales Order cannot be deleted "
+        "because it is referenced by an Invoice."
+    )
+
+    assert SalesOrder.objects.filter(
+        id=sales_order.id
+    ).exists()
+
+    assert Invoice.objects.filter(
+        id=invoice.id
     ).exists()
 
 
@@ -963,7 +1054,6 @@ def test_sales_order_company_isolation(
     second_product,
     second_company_quotation,
 ):
-    # Create a Sales Order belonging to another company
     other_order = SalesOrder.objects.create(
         company=second_company,
         quotation=second_company_quotation,
@@ -992,11 +1082,16 @@ def test_sales_order_company_isolation(
     other_order.calculate_totals()
     other_order.update_delivery_status()
 
-    response = authenticated_client.get(SALES_ORDER_URL)
+    response = authenticated_client.get(
+        SALES_ORDER_URL
+    )
 
     results = get_list_results(response)
 
-    ids = [item["id"] for item in results]
+    ids = [
+        item["id"]
+        for item in results
+    ]
 
     assert sales_order.id in ids
     assert other_order.id not in ids
@@ -1132,12 +1227,9 @@ def test_sales_order_item_remaining_quantity(
     assert item.remaining_quantity == Decimal("1.00")
 
 
-
-
 @pytest.mark.django_db
 def test_sales_order_item_cannot_deliver_more_than_quantity(
     sales_order,
-    quotation,
     product,
 ):
     item = SalesOrderItem(
@@ -1163,7 +1255,9 @@ def test_quotation_list(
     authenticated_client,
     quotation,
 ):
-    response = authenticated_client.get(QUOTATIONS_URL)
+    response = authenticated_client.get(
+        QUOTATIONS_URL
+    )
 
     results = get_list_results(response)
 
@@ -1179,11 +1273,16 @@ def test_quotation_list_excludes_rejected_quotation(
     quotation,
     rejected_quotation,
 ):
-    response = authenticated_client.get(QUOTATIONS_URL)
+    response = authenticated_client.get(
+        QUOTATIONS_URL
+    )
 
     results = get_list_results(response)
 
-    ids = [item["id"] for item in results]
+    ids = [
+        item["id"]
+        for item in results
+    ]
 
     assert quotation.id in ids
     assert rejected_quotation.id not in ids
@@ -1227,7 +1326,6 @@ def test_quotation_detail(
     assert response.data["quote_number"] == quotation.quote_number
     assert response.data["company"] == quotation.company_id
     assert response.data["customer"] == quotation.customer_id
-
     assert "items" in response.data
 
 
@@ -1241,13 +1339,17 @@ def test_company_list_for_company_user(
     company,
     second_company,
 ):
-    response = authenticated_client.get(COMPANIES_URL)
+    response = authenticated_client.get(
+        COMPANIES_URL
+    )
 
     assert response.status_code == 200
-
     assert isinstance(response.data, list)
 
-    ids = [item["id"] for item in response.data]
+    ids = [
+        item["id"]
+        for item in response.data
+    ]
 
     assert company.id in ids
     assert second_company.id not in ids
@@ -1264,12 +1366,17 @@ def test_customer_list(
     customer,
     second_customer,
 ):
-    response = authenticated_client.get(CUSTOMERS_URL)
+    response = authenticated_client.get(
+        CUSTOMERS_URL
+    )
 
     assert response.status_code == 200
     assert isinstance(response.data, list)
 
-    ids = [item["id"] for item in response.data]
+    ids = [
+        item["id"]
+        for item in response.data
+    ]
 
     assert customer.id in ids
     assert second_customer.id not in ids
@@ -1289,7 +1396,10 @@ def test_customer_search(
 
     assert response.status_code == 200
 
-    ids = [item["id"] for item in response.data]
+    ids = [
+        item["id"]
+        for item in response.data
+    ]
 
     assert customer.id in ids
 
@@ -1305,11 +1415,17 @@ def test_warehouse_list(
     inactive_warehouse,
     second_warehouse,
 ):
-    response = authenticated_client.get(WAREHOUSES_URL)
+    response = authenticated_client.get(
+        WAREHOUSES_URL
+    )
 
     assert response.status_code == 200
+    assert isinstance(response.data, list)
 
-    ids = [item["id"] for item in response.data]
+    ids = [
+        item["id"]
+        for item in response.data
+    ]
 
     assert warehouse.id in ids
 
@@ -1328,7 +1444,9 @@ def test_warehouse_list(
 def test_sales_order_list_requires_authentication(
     api_client,
 ):
-    response = api_client.get(SALES_ORDER_URL)
+    response = api_client.get(
+        SALES_ORDER_URL
+    )
 
     assert response.status_code in [401, 403]
 
@@ -1337,7 +1455,9 @@ def test_sales_order_list_requires_authentication(
 def test_sales_order_summary_requires_authentication(
     api_client,
 ):
-    response = api_client.get(SUMMARY_URL)
+    response = api_client.get(
+        SUMMARY_URL
+    )
 
     assert response.status_code in [401, 403]
 
@@ -1421,3 +1541,591 @@ def test_other_company_user_cannot_delete_sales_order(
     assert SalesOrder.objects.filter(
         id=sales_order.id
     ).exists()
+
+
+# ============================================================
+# CUSTOMER SALES ORDER LIST
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_list(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_list_is_customer_specific(
+    authenticated_client,
+    company,
+    company_admin,
+    customer,
+    product,
+    sales_order,
+):
+    other_customer = Customer.objects.create(
+        company=company,
+        customer_name="Other Customer",
+        company_name="Other Customer Company",
+        industry="Technology",
+        website="https://otherexample.com",
+        cr_number="CR003",
+        currency="SAR",
+        vat_number="VAT003",
+        payment_term="net_30",
+        billing_address="Other Billing Address",
+        city="Riyadh",
+        state="Riyadh",
+        country="Saudi Arabia",
+        phno="0503333333",
+        admin_email="other@example.com",
+        financial_email="otherfinance@example.com",
+        technical_email="othertechnical@example.com",
+        client_status="active",
+        credit_limit=Decimal("10000.00"),
+        opening_balance=Decimal("0.00"),
+        created_by=company_admin,
+    )
+
+    other_quotation = Quotation.objects.create(
+        company=company,
+        customer=other_customer,
+        issue_date=date(2026, 2, 1),
+        valid_till=date(2026, 2, 28),
+        status="approved",
+        notes="Other customer quotation",
+        created_by=company_admin,
+    )
+
+    other_quotation_item = QuotationItem.objects.create(
+        quotation=other_quotation,
+        product=product,
+        service_name="",
+        description="Other customer quotation item",
+        quantity=Decimal("1.00"),
+        hs_code="1234",
+        rate=Decimal("500.00"),
+        vat_percentage=Decimal("15.00"),
+    )
+
+    other_order = SalesOrder.objects.create(
+        company=company,
+        quotation=other_quotation,
+        customer=other_customer,
+        order_date=date(2026, 2, 1),
+        delivery_date=date(2026, 2, 10),
+        due_date=date(2026, 3, 1),
+        payment_terms="net_30",
+        order_status="pending",
+        discount=Decimal("0.00"),
+        round_off=Decimal("0.00"),
+        created_by=company_admin,
+    )
+
+    SalesOrderItem.objects.create(
+        sales_order=other_order,
+        quotation_item=other_quotation_item,
+        product=product,
+        service_name="",
+        description="Other customer item",
+        quantity=Decimal("1.00"),
+        delivered_quantity=Decimal("0.00"),
+        hs_code="1234",
+        rate=Decimal("500.00"),
+        vat_percentage=Decimal("15.00"),
+    )
+
+    other_order.calculate_totals()
+    other_order.update_delivery_status()
+
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    ids = [
+        item["id"]
+        for item in results
+    ]
+
+    assert sales_order.id in ids
+    assert other_order.id not in ids
+@pytest.mark.django_db
+def test_customer_sales_order_company_isolation(
+    authenticated_client,
+    sales_order,
+    second_company,
+    second_company_user,
+    second_customer,
+    second_product,
+    second_company_quotation,
+):
+    other_order = SalesOrder.objects.create(
+        company=second_company,
+        quotation=second_company_quotation,
+        customer=second_customer,
+        order_date=date(2026, 1, 5),
+        payment_terms="net_30",
+        order_status="pending",
+        discount=Decimal("0.00"),
+        round_off=Decimal("0.00"),
+        created_by=second_company_user,
+    )
+
+    SalesOrderItem.objects.create(
+        sales_order=other_order,
+        quotation_item=second_company_quotation.items.first(),
+        product=second_product,
+        service_name="",
+        description="Other company item",
+        quantity=Decimal("1.00"),
+        delivered_quantity=Decimal("0.00"),
+        hs_code="5678",
+        rate=Decimal("600.00"),
+        vat_percentage=Decimal("15.00"),
+    )
+
+    other_order.calculate_totals()
+    other_order.update_delivery_status()
+
+    url = CUSTOMER_ORDERS_URL.format(
+        second_customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert results == []
+
+
+# ============================================================
+# CUSTOMER SALES ORDER SEARCH
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_search_by_so_number(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "search": sales_order.so_number,
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_search_by_quotation_number(
+    authenticated_client,
+    customer,
+    sales_order,
+    quotation,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "search": quotation.quote_number,
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+# ============================================================
+# CUSTOMER SALES ORDER DATE FILTERS
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_filter_date_from(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "date_from": "2026-01-01",
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_filter_date_to(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "date_to": "2026-01-10",
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_date_range(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "date_from": "2026-01-01",
+            "date_to": "2026-01-31",
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+# ============================================================
+# CUSTOMER SALES ORDER STATUS FILTERS
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_filter_order_status(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "order_status": sales_order.order_status,
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_filter_delivery_status(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(
+        url,
+        {
+            "delivery_status": sales_order.delivery_status,
+        },
+    )
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert any(
+        item["id"] == sales_order.id
+        for item in results
+    )
+
+
+# ============================================================
+# CUSTOMER SALES ORDER SUMMARY
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    assert response.data["message"] == (
+        "Customer sales order summary retrieved successfully."
+    )
+
+    data = response.data["data"]
+
+    assert "total_orders" in data
+    assert "open_orders" in data
+    assert "completed_orders" in data
+    assert "total_order_amount" in data
+
+    assert data["total_orders"] >= 1
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary_amount(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert Decimal(
+        str(data["total_order_amount"])
+    ) == sales_order.order_value
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary_completed_order(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    item = sales_order.items.first()
+
+    item.delivered_quantity = item.quantity
+    item.save()
+
+    sales_order.update_delivery_status()
+    sales_order.refresh_from_db()
+
+    assert sales_order.delivery_status == "completed"
+
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_orders"] == 1
+    assert data["completed_orders"] == 1
+    assert data["open_orders"] == 0
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary_open_order(
+    authenticated_client,
+    customer,
+    sales_order,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_orders"] == 1
+    assert data["open_orders"] == 1
+    assert data["completed_orders"] == 0
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary_empty(
+    authenticated_client,
+    customer,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_orders"] == 0
+    assert data["open_orders"] == 0
+    assert data["completed_orders"] == 0
+
+    assert Decimal(
+        str(data["total_order_amount"])
+    ) == Decimal("0")
+
+
+# ============================================================
+# CUSTOMER SALES ORDER AUTHENTICATION
+# ============================================================
+
+@pytest.mark.django_db
+def test_customer_sales_order_list_requires_authentication(
+    api_client,
+    customer,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = api_client.get(url)
+
+    assert response.status_code in [401, 403]
+
+
+@pytest.mark.django_db
+def test_customer_sales_order_summary_requires_authentication(
+    api_client,
+    customer,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = api_client.get(url)
+
+    assert response.status_code in [401, 403]
+
+
+# ============================================================
+# CUSTOMER SALES ORDER OTHER COMPANY ACCESS
+# ============================================================
+
+@pytest.mark.django_db
+def test_other_company_user_cannot_access_customer_sales_orders(
+    second_authenticated_client,
+    customer,
+):
+    url = CUSTOMER_ORDERS_URL.format(
+        customer.id
+    )
+
+    response = second_authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    results = get_list_results(response)
+
+    assert results == []
+
+
+@pytest.mark.django_db
+def test_other_company_user_customer_summary_is_empty(
+    second_authenticated_client,
+    customer,
+):
+    url = CUSTOMER_ORDERS_SUMMARY_URL.format(
+        customer.id
+    )
+
+    response = second_authenticated_client.get(url)
+
+    assert response.status_code == 200
+
+    data = response.data["data"]
+
+    assert data["total_orders"] == 0
+    assert data["open_orders"] == 0
+    assert data["completed_orders"] == 0
+
+    assert Decimal(
+        str(data["total_order_amount"])
+    ) == Decimal("0")
