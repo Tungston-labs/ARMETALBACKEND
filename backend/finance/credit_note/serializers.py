@@ -28,6 +28,28 @@ class CreditNoteItemSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
+class CreditNoteListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.ReadOnlyField(source="customer.customer_name")
+    balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = CreditNote
+        fields = [
+            "id",
+            "cn_number",
+            "customer",
+            "customer_name",
+            "invoice_ref",
+            "issue_date",
+            "reason",
+            "credit_amount",
+            "applied_amount",
+            "balance",
+            "status",
+            "created_at",
+        ]
+
+
 class CreditNoteSerializer(serializers.ModelSerializer):
     cn_number = serializers.CharField(required=False, allow_blank=True)
     customer_name = serializers.ReadOnlyField(source="customer.customer_name")

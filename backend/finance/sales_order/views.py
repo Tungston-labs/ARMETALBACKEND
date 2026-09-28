@@ -743,7 +743,7 @@ class CustomerSalesOrderListView(generics.ListAPIView):
     permission_classes = [
         IsAuthenticated,
         IsCompanyActive,
-        IsHRAdmin,
+        
     ]
 
     serializer_class = CustomerSalesOrderSerializer
@@ -755,9 +755,9 @@ class CustomerSalesOrderListView(generics.ListAPIView):
     ]
 
     search_fields = [
-        "so_number",
-        "quotation__quotation_number",
-    ]
+    "so_number",
+    "quotation__quote_number",
+]
 
     ordering_fields = [
         "so_number",
@@ -867,7 +867,7 @@ class CustomerSalesOrderSummaryView(generics.GenericAPIView):
     permission_classes = [
         IsAuthenticated,
         IsCompanyActive,
-        IsHRAdmin,
+        
     ]
 
     def get(self, request, customer_id, *args, **kwargs):

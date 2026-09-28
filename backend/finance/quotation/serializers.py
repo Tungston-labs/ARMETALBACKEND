@@ -53,6 +53,26 @@ class QuotationConversionSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "quotation", "customer", "company", "created_at"]
 
 
+class QuotationListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.ReadOnlyField(source="customer.customer_name")
+
+    class Meta:
+        model = Quotation
+        fields = [
+            "id",
+            "quote_number",
+            "customer",
+            "customer_name",
+            "issue_date",
+            "valid_till",
+            "quote_amount",
+            "negotiation_amount",
+            "status",
+            "notes",
+            "created_at",
+        ]
+
+
 class QuotationSerializer(serializers.ModelSerializer):
     quote_number = serializers.CharField(required=False, allow_blank=True)
     items = QuotationItemSerializer(many=True, required=False)

@@ -1,5 +1,5 @@
 @baseUrl = http://127.0.0.1:8000
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMTg0MjI1LCJpYXQiOjE3OTAxNTU0MjUsImp0aSI6Ijg5MGU0NmNjMTIzMzQ5OTQ4NmFjOWE1NTljNTQwN2NmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.wOQ1WOK61yMcCSqMrI2oapj6E3EfxYJgO7tKlzaOzK8
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMzUzNDU5LCJpYXQiOjE3OTAzMjQ2NTksImp0aSI6Ijk1ZTQ0MWE4MDNmYjQzYmE4YzY0MTczYjRiYWE4YjY0IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZuJx8UfXesH0C3lRL1FRKeEyJ9DSkpvU6-tC6cdGXNU
 
 ### ============================================================
 ### CUSTOMER API
@@ -286,7 +286,6 @@ GET {{baseUrl}}/api/finance/customer/1/credit_notes/
 Authorization: Bearer {{token}}
 
 
-### 27. INDIVIDUAL CUSTOMER CREDIT NOTES - SEARCH & FILTER
 GET {{baseUrl}}/api/finance/customer/1/credit_notes/?search=CN&reason=sales_return&status=open
 Authorization: Bearer {{token}}
 
@@ -305,6 +304,12 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice=1
 Authorization: Bearer {{token}}
 
-### 20. INDIVIDUAL CUSTOMER OVERVIEW
-GET {{baseUrl}}/api/finance/customer/1/overview/
+
+### 31. DELETE CUSTOMER DOCUMENT
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/?document_id=15
+Authorization: Bearer {{token}}
+
+
+### 32. DELETE CUSTOMER DOCUMENT - PATH ALIAS
+DELETE {{baseUrl}}/api/finance/customer/1/delete_document/15/
 Authorization: Bearer {{token}}

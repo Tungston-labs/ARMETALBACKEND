@@ -30,11 +30,11 @@ from user.permissions import (
 )
 
 from finance.quotation.models import Quotation
-from finance.quotation.serializers import QuotationSerializer
+from finance.quotation.serializers import QuotationSerializer, QuotationListSerializer
 from finance.payment.models import Payment
 from finance.payment.serializers import PaymentListSerializer
 from finance.credit_note.models import CreditNote
-from finance.credit_note.serializers import CreditNoteSerializer
+from finance.credit_note.serializers import CreditNoteSerializer, CreditNoteListSerializer
 from finance.invoice.models import Invoice
 from finance.ledger.models import CustomerLedger
 from finance.ledger.serializers import CustomerLedgerSerializer
@@ -48,6 +48,7 @@ from .models import (
 from .serializers import (
     CustomerSerializer,
     CustomerDocumentSerializer,
+    CustomerDocumentUploadSerializer,
     CustomerHeaderSerializer,
     CustomerOverviewSerializer,
     CustomerQuotationsKPISerializer,
@@ -122,7 +123,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
 
     def get_object(self):
-        if self.action in ["overview", "upload_document", "quotations", "payments", "credit_notes", "credit_notes_alt", "ledger"]:
+        if self.action in ["overview", "upload_document", "delete_document", "quotations", "payments", "credit_notes", "credit_notes_alt", "ledger"]:
             queryset = self.get_queryset()
             lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
             filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
@@ -475,9 +476,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @extend_schema(
         summary="Upload Document to Individual Customer",
         description="Uploads one or multiple documents for the specified customer overview page.",
+        request={
+            "multipart/form-data": CustomerDocumentUploadSerializer
+        },
         responses={
             201: OpenApiResponse(
-                description="Uploaded document details"
+                description="Uploaded document details",
+                response=CustomerDocumentSerializer(many=True)
             ),
             400: OpenApiResponse(
                 description="Bad Request - No document file provided"
@@ -538,6 +543,86 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
 
     # ---------------------------------------------------------
+    # DELETE DOCUMENT FROM CUSTOMER
+    # ---------------------------------------------------------
+
+    @extend_schema(
+        summary="Delete Document from Individual Customer",
+        description="Deletes a customer document by document ID (passed as URL path component /delete_document/<doc_id>/ or query parameter ?document_id=<doc_id>).",
+        parameters=[
+            OpenApiParameter("document_id", int, description="ID of the document to delete", required=False),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Document deleted successfully.",
+                response=CustomerDocumentSerializer(many=True)
+            ),
+            400: OpenApiResponse(description="Bad Request - Missing document_id"),
+            404: OpenApiResponse(description="Document or Customer not found")
+        }
+    )
+    @action(
+        detail=True,
+        methods=["delete", "post"],
+        url_path=r"delete_document(?:/(?P<doc_id>\d+))?"
+    )
+    def delete_document(
+        self,
+        request,
+        pk=None,
+        doc_id=None
+    ):
+        customer = self.get_object()
+
+        target_doc_id = (
+            doc_id or
+            request.query_params.get("document_id") or
+            request.data.get("document_id") or
+            request.data.get("doc_id")
+        )
+
+        if not target_doc_id:
+            return Response(
+                {
+                    "message": "Delete failed. document_id is required.",
+                    "errors": {"document_id": ["This field or URL parameter is required."]}
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        document = CustomerDocument.objects.filter(
+            id=target_doc_id,
+            customer=customer
+        ).first()
+
+        if not document:
+            return Response(
+                {
+                    "message": "Document not found for this customer.",
+                    "errors": {"document_id": ["Invalid document ID for this customer."]}
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if document.document:
+            document.document.delete(save=False)
+        document.delete()
+
+        remaining_documents = CustomerDocument.objects.filter(customer=customer)
+        doc_serializer = CustomerDocumentSerializer(
+            remaining_documents,
+            many=True
+        )
+
+        return Response(
+            {
+                "message": "Document deleted successfully.",
+                "documents": doc_serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    # ---------------------------------------------------------
     # INDIVIDUAL CUSTOMER QUOTATIONS
     # ---------------------------------------------------------
 
@@ -547,9 +632,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
         parameters=[
             OpenApiParameter("search", str, description="Search term across quote_number, bill_to_name, notes"),
             OpenApiParameter("status", str, description="Filter by status (pending, approved, rejected, converted)"),
-            OpenApiParameter("issue_date", str, description="Filter by issue date (YYYY-MM-DD)"),
+            OpenApiParameter("from_date", str, description="Filter from issue date (YYYY-MM-DD)"),
+            OpenApiParameter("to_date", str, description="Filter to issue date (YYYY-MM-DD)"),
+            OpenApiParameter("start_date", str, description="Alias for from_date (YYYY-MM-DD)"),
+            OpenApiParameter("end_date", str, description="Alias for to_date (YYYY-MM-DD)"),
+            OpenApiParameter("issue_date", str, description="Filter by exact issue date (YYYY-MM-DD)"),
             OpenApiParameter("valid_till", str, description="Filter by valid till date (YYYY-MM-DD)"),
             OpenApiParameter("ordering", str, description="Field to order by (e.g. -created_at, quote_amount)"),
+            OpenApiParameter("full", str, description="Pass 'true' to include nested line items and conversions"),
         ],
         responses={
             200: OpenApiResponse(
@@ -568,7 +658,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
         pk=None
     ):
         customer = self.get_object()
-
         header_data = CustomerHeaderSerializer(customer).data
 
         quotations_qs = Quotation.objects.filter(
@@ -576,7 +665,36 @@ class CustomerViewSet(viewsets.ModelViewSet):
             company=request.user.company
         )
 
-        # KPI Metrics for this specific customer
+        # Date range filtration
+        from_date = request.query_params.get("from_date") or request.query_params.get("start_date")
+        to_date = request.query_params.get("to_date") or request.query_params.get("end_date")
+
+        if from_date:
+            quotations_qs = quotations_qs.filter(issue_date__gte=from_date)
+        if to_date:
+            quotations_qs = quotations_qs.filter(issue_date__lte=to_date)
+
+        issue_date_param = request.query_params.get("issue_date")
+        if issue_date_param:
+            quotations_qs = quotations_qs.filter(issue_date=issue_date_param)
+
+        valid_till_param = request.query_params.get("valid_till")
+        if valid_till_param:
+            quotations_qs = quotations_qs.filter(valid_till=valid_till_param)
+
+        status_param = request.query_params.get("status")
+        if status_param:
+            quotations_qs = quotations_qs.filter(status=status_param)
+
+        search_query = request.query_params.get("search", "").strip()
+        if search_query:
+            quotations_qs = quotations_qs.filter(
+                Q(quote_number__icontains=search_query) |
+                Q(bill_to_name__icontains=search_query) |
+                Q(notes__icontains=search_query)
+            )
+
+        # KPI Metrics for filtered customer quotations
         kpi_stats = quotations_qs.aggregate(
             total_value=Coalesce(Sum("quote_amount"), Decimal("0.00")),
             total_negotiation=Coalesce(Sum("negotiation_amount"), Decimal("0.00"))
@@ -596,27 +714,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "pending_quotations": pending_quotes,
         }
 
-        # Search filter
-        search_query = request.query_params.get("search", "").strip()
-        if search_query:
-            quotations_qs = quotations_qs.filter(
-                Q(quote_number__icontains=search_query) |
-                Q(bill_to_name__icontains=search_query) |
-                Q(notes__icontains=search_query)
-            )
-
-        status_param = request.query_params.get("status")
-        if status_param:
-            quotations_qs = quotations_qs.filter(status=status_param)
-
-        issue_date_param = request.query_params.get("issue_date")
-        if issue_date_param:
-            quotations_qs = quotations_qs.filter(issue_date=issue_date_param)
-
-        valid_till_param = request.query_params.get("valid_till")
-        if valid_till_param:
-            quotations_qs = quotations_qs.filter(valid_till=valid_till_param)
-
         ordering_param = request.query_params.get("ordering", "-created_at")
         allowed_ordering = [
             "quote_number", "-quote_number",
@@ -632,16 +729,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
         else:
             quotations_qs = quotations_qs.order_by("-created_at")
 
+        serializer_cls = QuotationSerializer if request.query_params.get("full") == "true" else QuotationListSerializer
+
         page = self.paginate_queryset(quotations_qs)
         if page is not None:
-            serializer = QuotationSerializer(page, many=True)
+            serializer = serializer_cls(page, many=True)
             response = self.get_paginated_response(serializer.data)
             response.data["message"] = "Customer quotations retrieved successfully."
             response.data["customer_header"] = header_data
             response.data["kpi_cards"] = kpi_cards
             return response
 
-        serializer = QuotationSerializer(quotations_qs, many=True)
+        serializer = serializer_cls(quotations_qs, many=True)
         return Response(
             {
                 "message": "Customer quotations retrieved successfully.",
@@ -663,6 +762,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
             OpenApiParameter("search", str, description="Search term across receipt_number, invoice_number, reference_number, notes"),
             OpenApiParameter("payment_method", str, description="Filter by payment method (bank_transfer, cheque, online_payment, cash)"),
             OpenApiParameter("status", str, description="Filter by status (completed, pending, cancelled)"),
+            OpenApiParameter("from_date", str, description="Filter from payment date (YYYY-MM-DD)"),
+            OpenApiParameter("to_date", str, description="Filter to payment date (YYYY-MM-DD)"),
+            OpenApiParameter("start_date", str, description="Alias for from_date (YYYY-MM-DD)"),
+            OpenApiParameter("end_date", str, description="Alias for to_date (YYYY-MM-DD)"),
             OpenApiParameter("ordering", str, description="Field to order by (e.g. -payment_date, amount_received)"),
         ],
         responses={
@@ -692,26 +795,60 @@ class CustomerViewSet(viewsets.ModelViewSet):
             company=company
         ).select_related("company", "customer", "invoice", "created_by")
 
-        # 1. Total payments received (completed payments)
+        # Date range filtration
+        from_date = request.query_params.get("from_date") or request.query_params.get("start_date")
+        to_date = request.query_params.get("to_date") or request.query_params.get("end_date")
+
+        if from_date:
+            payments_qs = payments_qs.filter(payment_date__gte=from_date)
+        if to_date:
+            payments_qs = payments_qs.filter(payment_date__lte=to_date)
+
+        search_query = request.query_params.get("search", "").strip()
+        if search_query:
+            payments_qs = payments_qs.filter(
+                Q(receipt_number__icontains=search_query) |
+                Q(invoice__invoice_number__icontains=search_query) |
+                Q(reference_number__icontains=search_query) |
+                Q(notes__icontains=search_query)
+            )
+
+        method_param = request.query_params.get("payment_method")
+        if method_param:
+            payments_qs = payments_qs.filter(payment_method=method_param)
+
+        status_param = request.query_params.get("status")
+        if status_param:
+            payments_qs = payments_qs.filter(status=status_param)
+
+        # 1. Total payments received (completed payments in filtered set)
         total_payments_received = payments_qs.filter(
             status="completed"
         ).aggregate(
             total=Coalesce(Sum("amount_received"), Decimal("0.00"))
         )["total"]
 
-        # 2. This month collections (completed payments in current month)
-        this_month_collections = payments_qs.filter(
-            status="completed",
-            payment_date__gte=start_of_month
-        ).aggregate(
-            total=Coalesce(Sum("amount_received"), Decimal("0.00"))
-        )["total"]
+        # 2. Collections in period / this month
+        if from_date or to_date:
+            this_month_collections = total_payments_received
+        else:
+            this_month_collections = payments_qs.filter(
+                status="completed",
+                payment_date__gte=start_of_month
+            ).aggregate(
+                total=Coalesce(Sum("amount_received"), Decimal("0.00"))
+            )["total"]
 
         # 3. Pending & Overdue amounts on invoices of this customer
         customer_invoices = Invoice.objects.filter(
             customer=customer,
             company=company
         ).exclude(payment_status="paid")
+
+        if from_date:
+            customer_invoices = customer_invoices.filter(invoice_date__gte=from_date)
+        if to_date:
+            customer_invoices = customer_invoices.filter(invoice_date__lte=to_date)
 
         pending_payments = Decimal("0.00")
         overdue_amount = Decimal("0.00")
@@ -729,24 +866,6 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "pending_payments": pending_payments,
             "overdue_amount": overdue_amount,
         }
-
-        # Search filter
-        search_query = request.query_params.get("search", "").strip()
-        if search_query:
-            payments_qs = payments_qs.filter(
-                Q(receipt_number__icontains=search_query) |
-                Q(invoice__invoice_number__icontains=search_query) |
-                Q(reference_number__icontains=search_query) |
-                Q(notes__icontains=search_query)
-            )
-
-        method_param = request.query_params.get("payment_method")
-        if method_param:
-            payments_qs = payments_qs.filter(payment_method=method_param)
-
-        status_param = request.query_params.get("status")
-        if status_param:
-            payments_qs = payments_qs.filter(status=status_param)
 
         ordering_param = request.query_params.get("ordering", "-created_at")
         allowed_ordering = [
@@ -792,7 +911,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
             OpenApiParameter("search", str, description="Search term across cn_number, invoice_ref, reason, notes"),
             OpenApiParameter("status", str, description="Filter by status (open, partially_applied, closed, cancelled, draft)"),
             OpenApiParameter("reason", str, description="Filter by reason (sales_return, price_adjustment, damaged_goods, etc.)"),
+            OpenApiParameter("from_date", str, description="Filter from issue date (YYYY-MM-DD)"),
+            OpenApiParameter("to_date", str, description="Filter to issue date (YYYY-MM-DD)"),
+            OpenApiParameter("start_date", str, description="Alias for from_date (YYYY-MM-DD)"),
+            OpenApiParameter("end_date", str, description="Alias for to_date (YYYY-MM-DD)"),
             OpenApiParameter("ordering", str, description="Field to order by (e.g. -issue_date, credit_amount)"),
+            OpenApiParameter("full", str, description="Pass 'true' to include nested items"),
         ],
         responses={
             200: OpenApiResponse(
@@ -834,28 +958,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
         cn_qs = CreditNote.objects.filter(
             customer=customer,
             company=company
-        ).select_related("company", "customer", "created_by").prefetch_related("items")
+        ).select_related("company", "customer", "created_by")
 
-        # KPI Metrics for this customer
-        total_credit_notes = cn_qs.count()
-        total_credit_value = cn_qs.aggregate(
-            total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
-        )["total"]
+        # Date range filtration
+        from_date = request.query_params.get("from_date") or request.query_params.get("start_date")
+        to_date = request.query_params.get("to_date") or request.query_params.get("end_date")
 
-        this_month_value = cn_qs.filter(
-            issue_date__gte=start_of_month
-        ).aggregate(
-            total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
-        )["total"]
-
-        open_credit_notes = cn_qs.filter(status="open").count()
-
-        kpi_cards = {
-            "total_credit_notes": total_credit_notes,
-            "total_credit_value": total_credit_value,
-            "this_month": this_month_value,
-            "open_credit_notes": open_credit_notes,
-        }
+        if from_date:
+            cn_qs = cn_qs.filter(issue_date__gte=from_date)
+        if to_date:
+            cn_qs = cn_qs.filter(issue_date__lte=to_date)
 
         # Search filter
         search_query = request.query_params.get("search", "").strip()
@@ -875,6 +987,30 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if reason_param:
             cn_qs = cn_qs.filter(reason=reason_param)
 
+        # KPI Metrics for filtered customer credit notes
+        total_credit_notes = cn_qs.count()
+        total_credit_value = cn_qs.aggregate(
+            total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
+        )["total"]
+
+        if from_date or to_date:
+            this_month_value = total_credit_value
+        else:
+            this_month_value = cn_qs.filter(
+                issue_date__gte=start_of_month
+            ).aggregate(
+                total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
+            )["total"]
+
+        open_credit_notes = cn_qs.filter(status="open").count()
+
+        kpi_cards = {
+            "total_credit_notes": total_credit_notes,
+            "total_credit_value": total_credit_value,
+            "this_month": this_month_value,
+            "open_credit_notes": open_credit_notes,
+        }
+
         ordering_param = request.query_params.get("ordering", "-created_at")
         allowed_ordering = [
             "cn_number", "-cn_number",
@@ -889,16 +1025,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
         else:
             cn_qs = cn_qs.order_by("-created_at")
 
+        serializer_cls = CreditNoteSerializer if request.query_params.get("full") == "true" else CreditNoteListSerializer
+
         page = self.paginate_queryset(cn_qs)
         if page is not None:
-            serializer = CreditNoteSerializer(page, many=True)
+            serializer = serializer_cls(page, many=True)
             response = self.get_paginated_response(serializer.data)
             response.data["message"] = "Customer credit notes retrieved successfully."
             response.data["customer_header"] = header_data
             response.data["kpi_cards"] = kpi_cards
             return response
 
-        serializer = CreditNoteSerializer(cn_qs, many=True)
+        serializer = serializer_cls(cn_qs, many=True)
         return Response(
             {
                 "message": "Customer credit notes retrieved successfully.",
@@ -910,19 +1048,21 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
 
     # ---------------------------------------------------------
-    # INDIVIDUAL CUSTOMER LEDGER REPORT
+    # INDIVIDUAL CUSTOMER LEDGER
     # ---------------------------------------------------------
 
     @extend_schema(
         summary="Get Individual Customer Ledger Report",
-        description="Retrieves customer header info, KPI cards (opening_balance, total_invoices, total_payments, credit_notes, closing_balance, outstanding), and paginated customer ledger transaction entries with search and date range filters.",
+        description="Retrieves header info, ledger KPI statistics summary (opening balance, total invoices/debit, total payments/credit, credit notes, closing balance) and a paginated list of ledger transactions for a specific customer.",
         parameters=[
-            OpenApiParameter("search", str, description="Search term across reference_number and description"),
-            OpenApiParameter("transaction_type", str, description="Filter by transaction type (invoice, payment, credit_note, debit_note, opening_balance, adjustment)"),
-            OpenApiParameter("type", str, description="Alias for transaction_type"),
-            OpenApiParameter("from_date", str, description="Filter transactions on or after date (YYYY-MM-DD)"),
-            OpenApiParameter("to_date", str, description="Filter transactions on or before date (YYYY-MM-DD)"),
-            OpenApiParameter("ordering", str, description="Field to order by (e.g. -transaction_date, balance)"),
+            OpenApiParameter("search", str, description="Search term across reference_number, description, invoice number"),
+            OpenApiParameter("transaction_type", str, description="Filter by transaction_type (invoice, payment, credit_note, opening_balance, adjustment)"),
+            OpenApiParameter("from_date", str, description="Filter from transaction date (YYYY-MM-DD)"),
+            OpenApiParameter("to_date", str, description="Filter to transaction date (YYYY-MM-DD)"),
+            OpenApiParameter("start_date", str, description="Alias for from_date (YYYY-MM-DD)"),
+            OpenApiParameter("end_date", str, description="Alias for to_date (YYYY-MM-DD)"),
+            OpenApiParameter("ordering", str, description="Field to order by (e.g. transaction_date, -transaction_date)"),
+            OpenApiParameter("full", str, description="Pass 'true' to include full relational objects"),
         ],
         responses={
             200: OpenApiResponse(
@@ -955,41 +1095,56 @@ class CustomerViewSet(viewsets.ModelViewSet):
             company=company
         ).select_related("company", "customer", "invoice", "payment", "created_by")
 
-        # KPI Metrics for this customer
-        opening_balance = customer.opening_balance or Decimal("0.00")
+        from_date = request.query_params.get("from_date") or request.query_params.get("start_date")
+        to_date = request.query_params.get("to_date") or request.query_params.get("end_date")
 
-        total_invoices = ledger_qs.filter(
-            transaction_type="invoice"
-        ).aggregate(
-            total=Coalesce(Sum("debit"), Decimal("0.00"))
-        )["total"]
-
-        total_payments = ledger_qs.filter(
-            transaction_type="payment"
-        ).aggregate(
-            total=Coalesce(Sum("credit"), Decimal("0.00"))
-        )["total"]
-
-        credit_notes = ledger_qs.filter(
-            transaction_type="credit_note"
-        ).aggregate(
-            total=Coalesce(Sum("credit"), Decimal("0.00"))
-        )["total"]
-
-        has_ob_entry = ledger_qs.filter(transaction_type="opening_balance").exists()
-        total_debit_all = ledger_qs.aggregate(total=Coalesce(Sum("debit"), Decimal("0.00")))["total"]
-        total_credit_all = ledger_qs.aggregate(total=Coalesce(Sum("credit"), Decimal("0.00")))["total"]
-
-        if has_ob_entry:
-            closing_balance = total_debit_all - total_credit_all
+        initial_opening_balance = customer.opening_balance or Decimal("0.00")
+        if from_date:
+            prior_entries = CustomerLedger.objects.filter(
+                customer=customer,
+                company=company,
+                transaction_date__lt=from_date
+            ).aggregate(
+                prior_debit=Coalesce(Sum("debit"), Decimal("0.00")),
+                prior_credit=Coalesce(Sum("credit"), Decimal("0.00"))
+            )
+            opening_balance = initial_opening_balance + prior_entries["prior_debit"] - prior_entries["prior_credit"]
+            ledger_qs = ledger_qs.filter(transaction_date__gte=from_date)
         else:
-            closing_balance = opening_balance + total_debit_all - total_credit_all
+            opening_balance = initial_opening_balance
+
+        if to_date:
+            ledger_qs = ledger_qs.filter(transaction_date__lte=to_date)
+
+        transaction_type = request.query_params.get("transaction_type")
+        if transaction_type:
+            ledger_qs = ledger_qs.filter(transaction_type=transaction_type)
+
+        search_query = request.query_params.get("search", "").strip()
+        if search_query:
+            ledger_qs = ledger_qs.filter(
+                Q(reference_number__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(invoice__invoice_number__icontains=search_query) |
+                Q(payment__receipt_number__icontains=search_query)
+            )
+
+        # KPI Metrics
+        debit_credit_stats = ledger_qs.aggregate(
+            total_debit=Coalesce(Sum("debit"), Decimal("0.00")),
+            total_credit=Coalesce(Sum("credit"), Decimal("0.00")),
+            credit_notes=Coalesce(Sum("credit", filter=Q(transaction_type="credit_note")), Decimal("0.00"))
+        )
+        total_invoices = debit_credit_stats["total_debit"]
+        total_payments = debit_credit_stats["total_credit"]
+        cn_amount = debit_credit_stats["credit_notes"]
+        closing_balance = opening_balance + total_invoices - total_payments
 
         kpi_cards = {
             "opening_balance": opening_balance,
             "total_invoices": total_invoices,
             "total_payments": total_payments,
-            "credit_notes": credit_notes,
+            "credit_notes": cn_amount,
             "closing_balance": closing_balance,
             "outstanding": closing_balance,
         }

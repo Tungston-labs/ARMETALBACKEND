@@ -69,6 +69,29 @@ class CustomerLedgerSerializer(
         read_only_fields = fields
 
 
+class CustomerLedgerListSerializer(serializers.ModelSerializer):
+    transaction_type_display = serializers.CharField(
+        source="get_transaction_type_display",
+        read_only=True,
+    )
+
+    class Meta:
+        model = CustomerLedger
+        fields = [
+            "id",
+            "transaction_date",
+            "reference_number",
+            "description",
+            "transaction_type",
+            "transaction_type_display",
+            "debit",
+            "credit",
+            "balance",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
 class CustomerLedgerCreateSerializer(
     serializers.ModelSerializer
 ):
