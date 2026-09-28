@@ -1,10 +1,7 @@
 from decimal import Decimal
-
 from django.db import transaction
-
 from finance.invoice.models import Invoice
 from finance.payment.models import Payment
-
 from .models import CustomerLedger
 
 

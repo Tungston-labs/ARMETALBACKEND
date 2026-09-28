@@ -3,32 +3,14 @@ from django.shortcuts import render
 from django.db.models import Count, Sum, Q
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from django_filters.rest_framework import (
-    DjangoFilterBackend
-)
-
-from rest_framework.filters import (
-    SearchFilter,
-    OrderingFilter
-)
-
-from drf_spectacular.utils import (
-    extend_schema,
-    OpenApiResponse,
-    OpenApiParameter
-)
-
-from user.permissions import (
-    IsHRAdmin,
-    IsCompanyActive
-)
-
+from django_filters.rest_framework import (DjangoFilterBackend)
+from rest_framework.filters import (SearchFilter,OrderingFilter)
+from drf_spectacular.utils import (extend_schema,OpenApiResponse,OpenApiParameter)
+from user.permissions import (IsHRAdmin,IsCompanyActive)
 from finance.quotation.models import Quotation
 from finance.quotation.serializers import QuotationSerializer, QuotationListSerializer
 from finance.payment.models import Payment
@@ -45,8 +27,8 @@ from .models import (
     CustomerDocument
 )
 
-from .serializers import (
-    CustomerSerializer,
+
+from .serializers import (CustomerSerializer,
     CustomerDocumentSerializer,
     CustomerDocumentUploadSerializer,
     CustomerHeaderSerializer,

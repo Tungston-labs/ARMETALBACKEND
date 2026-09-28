@@ -1,50 +1,18 @@
 from decimal import Decimal
-
-
-from django.db.models import (
-    Sum,
-    Q,
-    F,
-    DecimalField,
-    Value,
-)
+from django.db.models import (Sum,Q,F,DecimalField,Value,)
 from django.db.models.functions import Coalesce
-
 from rest_framework.response import Response
 from rest_framework import status
-
-
 from django.db.models import Sum
-
-from django_filters.rest_framework import (
-    DjangoFilterBackend,
-)
-
-from rest_framework import (
-    status,
-    viewsets,
-)
-
+from django_filters.rest_framework import (DjangoFilterBackend,)
+from rest_framework import (status,viewsets,)
 from rest_framework.decorators import action
-
-from rest_framework.filters import (
-    OrderingFilter,
-    SearchFilter,
-)
-
+from rest_framework.filters import (OrderingFilter,SearchFilter,)
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework.response import Response
-
 from finance.customer.models import Customer
-
-from user.permissions import (
-    IsCompanyActive,
-    IsHRAdmin,
-)
-
+from user.permissions import (IsCompanyActive,IsHRAdmin,)
 from .models import CustomerLedger
-
 from .serializers import (
     CustomerLedgerSerializer,
     CustomerLedgerCreateSerializer,
@@ -53,9 +21,6 @@ from .serializers import (
 from django.utils import timezone
 from finance.payment.models import Payment
 from finance.invoice.models import Invoice
-
-
-
 
 class CustomerLedgerViewSet(
     viewsets.ModelViewSet

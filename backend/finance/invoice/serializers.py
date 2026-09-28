@@ -1,19 +1,10 @@
 from decimal import Decimal
-
 from django.db import transaction
-
 from rest_framework import serializers
-
 from .models import Invoice, InvoiceItem
-
 from finance.product.models import Product
 from finance.customer.models import Customer
-
-from finance.sales_order.models import (
-    SalesOrder,
-    SalesOrderItem,
-)
-
+from finance.sales_order.models import (SalesOrder,SalesOrderItem,)
 
 # =========================================================
 # INVOICE ITEM SERIALIZER
@@ -812,12 +803,6 @@ class InvoiceSalesOrderSerializer(
 
         ]
 
-
-
-
-from rest_framework import serializers
-
-from .models import Invoice
 
 
 class CustomerInvoiceSerializer(serializers.ModelSerializer):

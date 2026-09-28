@@ -1,29 +1,26 @@
 from django.db.models import Count, Sum, Q
 from django.shortcuts import get_object_or_404
-
-from rest_framework import generics
+from rest_framework import generics,status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status as http_status
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-
 from superadmin.models import Company
 from finance.customer.models import Customer
 from finance.warehouse.models import Warehouse
 from finance.quotation.models import Quotation
 from finance.invoice.models import Invoice
-
 from .models import SalesOrder
-
 from .serializers import (
     SalesOrderSerializer,
     SalesOrderListSerializer,
-    SalesOrderQuotationSerializer,
+    SalesOrderQuotationSerializer,CustomerSalesOrderSerializer
 )
-
 from .filters import SalesOrderFilter
+from django.db.models import ProtectedError
+from user.permissions import IsCompanyActive, IsHRAdmin
+
 
 
 # =========================================================
@@ -195,11 +192,7 @@ class SalesOrderListCreateView(
 # SALES ORDER DETAIL
 # =========================================================
 
-from django.db.models import ProtectedError
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from finance.invoice.models import Invoice
+
 class SalesOrderDetailView(
     generics.RetrieveUpdateDestroyAPIView
 ):
@@ -723,19 +716,7 @@ class SalesOrderWarehouseListView(
 
 
 
-from django.db.models import Q
 
-from rest_framework import generics
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-
-from user.permissions import IsCompanyActive, IsHRAdmin
-
-from finance.customer.models import Customer
-
-from .models import SalesOrder
-from .serializers import CustomerSalesOrderSerializer
 
 
 class CustomerSalesOrderListView(generics.ListAPIView):
@@ -852,14 +833,6 @@ class CustomerSalesOrderListView(generics.ListAPIView):
     
 
 
-from django.db.models import Q, Sum
-from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from user.permissions import IsCompanyActive, IsHRAdmin
-
-from .models import SalesOrder
 
 
 class CustomerSalesOrderSummaryView(generics.GenericAPIView):

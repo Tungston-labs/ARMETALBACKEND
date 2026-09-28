@@ -3,10 +3,8 @@ from django.db.models.signals import (
     post_save,
 )
 from django.dispatch import receiver
-
 from finance.invoice.models import Invoice
 from finance.payment.models import Payment
-
 from .services import (
     delete_payment_ledger,
     sync_invoice_ledger,

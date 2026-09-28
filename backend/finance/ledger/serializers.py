@@ -1,9 +1,6 @@
 from decimal import Decimal
-
 from rest_framework import serializers
-
 from finance.customer.models import Customer
-
 from .models import CustomerLedger
 
 
@@ -287,8 +284,6 @@ class CustomerLedgerCustomerSummarySerializer(
         max_digits=15,
         decimal_places=2,
     )
-
-from rest_framework import serializers
 
 
 class CustomerFinancialSummarySerializer(serializers.Serializer):

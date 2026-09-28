@@ -1,62 +1,35 @@
 from decimal import Decimal
-
 from django.http import FileResponse
-
-from django.db.models import (
-    Sum,
-    Avg,
-)
-
+from django.db.models import (Sum,Avg,)
 from django.core.mail import EmailMessage
-
-from rest_framework import (
-    status,
-    viewsets,
-)
-
+from rest_framework import (status,viewsets,)
 from rest_framework.decorators import action
-
 from rest_framework.permissions import IsAuthenticated
-
 from rest_framework.response import Response
-
-from django_filters.rest_framework import (
-    DjangoFilterBackend
-)
-
-from rest_framework.filters import (
-    SearchFilter,
-    OrderingFilter,
-)
-
-from user.permissions import (
-    IsHRAdmin,
-    IsCompanyActive,
-)
-
+from django_filters.rest_framework import (DjangoFilterBackend)
+from rest_framework.filters import (SearchFilter,OrderingFilter,)
+from user.permissions import (IsHRAdmin,IsCompanyActive,)
 from finance.product.models import Product
-
 from finance.customer.models import Customer
-
 from finance.sales_order.models import SalesOrder
-
 from .models import Invoice
-
 from .serializers import (
-    InvoiceSerializer,
+InvoiceSerializer,
     InvoiceListSerializer,
     InvoiceSalesOrderSerializer,
 )
-
 from .filters import InvoiceFilter
-
-from .pdf_utils import (
-    generate_invoice_pdf
-)
+from .pdf_utils import (generate_invoice_pdf)
 from decimal import Decimal
-
 from django.db.models import F, Sum
-
+from django.db.models import Q
+from rest_framework import generics
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from user.permissions import IsCompanyActive, IsHRAdmin
+from .models import Invoice
+from .serializers import CustomerInvoiceSerializer
 
 class InvoiceViewSet(
     viewsets.ModelViewSet
@@ -972,17 +945,6 @@ class InvoiceViewSet(
         )
     
 
-from django.db.models import Q
-
-from rest_framework import generics
-from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-
-from user.permissions import IsCompanyActive, IsHRAdmin
-
-from .models import Invoice
-from .serializers import CustomerInvoiceSerializer
 
 
 class CustomerInvoiceListView(generics.ListAPIView):

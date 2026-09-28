@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'finance.payment',
     'finance.sales_return',
     'finance.recurring',
+    'finance.vendor',
 ]
 
 MIDDLEWARE = [

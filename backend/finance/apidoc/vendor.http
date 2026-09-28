@@ -1,0 +1,169 @@
+
+@baseUrl = http://localhost:8000/api/finance/vendor
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNjEyMjIzLCJpYXQiOjE3OTA1ODM0MjMsImp0aSI6IjQ0MjZjYzBlMDAxNjQ2ZDNhOTQ0MDIzMGFmMjEzNjdlIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.NqiERBm85UUlWOXyD9Yz4Chr3j4cpGlsEJ18RqLGW0c
+
+### =====================================================
+### 1. CREATE VENDOR
+### =====================================================
+
+POST {{baseUrl}}/vendors/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "name": "ABC Trading LLC",
+    "vendor_type": "equipment",
+    "opening_balance": "5000.00",
+    "credit_limit": "50000.00",
+    "cr_number": "CR123456",
+    "currency": "AED",
+    "vat_registration_number": "VAT123456",
+    "payment_term": "30_days",
+    "cr_expiry_date": "2027-12-31",
+
+    "billing_address": "Business Bay",
+    "city": "Dubai",
+    "state": "Dubai",
+    "country": "UAE",
+    "postal": "00000",
+
+    "phno": "0501234567",
+    "admin_email": "admin@example.com",
+    "financial_email": "finance@example.com",
+    "technical_email": "tech@example.com",
+
+    "bank_name": "ABC Bank",
+    "account_num": "123456789",
+    "iban": "AE123456789",
+    "branch": "Dubai Main Branch",
+
+    "client_status": "active"
+}
+
+
+### =====================================================
+### 2. LIST ALL VENDORS
+### =====================================================
+
+GET {{baseUrl}}/vendors/
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 3. LIST VENDORS - PAGE 1
+### =====================================================
+
+GET {{baseUrl}}/vendors/?page=1
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 4. LIST VENDORS - CUSTOM PAGE SIZE
+### =====================================================
+
+GET {{baseUrl}}/vendors/?page=1&page_size=20
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 5. SEARCH VENDORS BY NAME
+### =====================================================
+
+GET {{baseUrl}}/vendors/?search=ABC
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 6. SEARCH BY VENDOR ID
+### =====================================================
+
+GET {{baseUrl}}/vendors/?search=VEN00001
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 7. FILTER ACTIVE VENDORS
+### =====================================================
+
+GET {{baseUrl}}/vendors/?client_status=active
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 8. FILTER INACTIVE VENDORS
+### =====================================================
+
+GET {{baseUrl}}/vendors/?client_status=inactive
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 9. FILTER BY VENDOR TYPE
+### =====================================================
+
+GET {{baseUrl}}/vendors/?vendor_type=equipment
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 10. FILTER BY PAYMENT TERM
+### =====================================================
+
+GET {{baseUrl}}/vendors/?payment_term=30_days
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 11. COMBINE FILTERS AND SEARCH
+### =====================================================
+
+GET {{baseUrl}}/vendors/?client_status=active&vendor_type=telecom&payment_term=30_days&search=ABC&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 12. ORDER BY VENDOR NAME
+### =====================================================
+
+GET {{baseUrl}}/vendors/?ordering=name
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 13. ORDER BY LATEST CREATED
+### =====================================================
+
+GET {{baseUrl}}/vendors/?ordering=-created_at
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 14. VENDOR DASHBOARD
+### =====================================================
+
+GET {{baseUrl}}/dashboard/
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### 15. UPLOAD MULTIPLE VENDOR DOCUMENTS
+### =====================================================
+### Use multipart/form-data.
+### In VS Code REST Client, use the form-data syntax below.
+### Replace the file paths with actual local files.
+
+POST {{baseUrl}}/vendors/1/upload-documents/
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=VendorBoundary
+
+--VendorBoundary
+Content-Disposition: form-data; name="documents"; filename="license.pdf"
+Content-Type: application/pdf
+
+< ./license.pdf
+--VendorBoundary
+Content-Disposition: form-data; name="documents"; filename="vat.pdf"
+Content-Type: application/pdf
+
+< ./vat.pdf
+--VendorBoundary--
