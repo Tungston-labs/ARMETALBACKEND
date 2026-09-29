@@ -10,6 +10,7 @@ class Product(TimeStampedModel):
         ("service", "Service"),
     )
 
+
     STATUS_CHOICES = (
         ("active", "Active"),
         ("inactive", "Inactive"),
