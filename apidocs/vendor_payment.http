@@ -1,0 +1,76 @@
+### 1. Get Vendor Payments KPI Metrics
+GET {{baseUrl}}/api/finance/vendor/payments/kpi/
+Authorization: Bearer {{token}}
+
+###
+
+### 2. List Vendor Payments (Paginated with Filters & Search)
+GET {{baseUrl}}/api/finance/vendor/payments/?status=completed&search=Mediora
+Authorization: Bearer {{token}}
+
+###
+
+### 3. Record Vendor Payment
+POST {{baseUrl}}/api/finance/vendor/payments/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "bill": 1,
+  "payment_date": "2026-04-28",
+  "payment_type": "full_payment",
+  "payment_method": "bank_transfer",
+  "amount_paid": "250000.00",
+  "reference_number": "TRF-987654",
+  "notes": "Full payment for purchase bill INV 0123",
+  "status": "completed"
+}
+
+###
+
+### 4. Get Vendor Payment Detail by ID
+GET {{baseUrl}}/api/finance/vendor/payments/1/
+Authorization: Bearer {{token}}
+
+###
+
+### 5. Update Vendor Payment (Full PUT)
+PUT {{baseUrl}}/api/finance/vendor/payments/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "bill": 1,
+  "payment_date": "2026-04-28",
+  "payment_type": "partial_payment",
+  "payment_method": "cheque",
+  "amount_paid": "100000.00",
+  "reference_number": "CHQ-123456",
+  "notes": "Revised payment amount",
+  "status": "completed"
+}
+
+###
+
+### 6. Update Vendor Payment Status (Partial PATCH)
+PATCH {{baseUrl}}/api/finance/vendor/payments/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "cancelled"
+}
+
+###
+
+### 7. Export Vendor Payments CSV
+GET {{baseUrl}}/api/finance/vendor/payments/export/
+Authorization: Bearer {{token}}
+
+###
+
+### 8. Delete Vendor Payment
+DELETE {{baseUrl}}/api/finance/vendor/payments/1/
+Authorization: Bearer {{token}}
