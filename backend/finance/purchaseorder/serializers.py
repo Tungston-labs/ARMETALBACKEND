@@ -408,3 +408,4 @@ class ProductDropdownSerializer(serializers.ModelSerializer):
             "tax_type",
             "description",
         ]
+

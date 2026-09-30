@@ -827,129 +827,255 @@ class VendorPaymentViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_200_OK,
         )
+    
 
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        instance.delete()
-        return Response(
-            {
-                "message": "Vendor payment deleted successfully.",
+from decimal import Decimal
+
+from django.db.models import Sum
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Vendor
+from .serializers import VendorOverviewSerializer,VendorPurchaseOrderSerializer
+
+from finance.purchaseorder.models import PurchaseOrder
+
+
+class VendorOverviewView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = VendorOverviewSerializer
+    lookup_url_kwarg = "vendor_id"
+
+    def get_queryset(self):
+        return Vendor.objects.filter(
+            company=self.request.user.company
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        vendor = self.get_object()
+
+        purchase_orders = PurchaseOrder.objects.filter(
+            company=request.user.company,
+            vendor=vendor,
+        )
+
+        total_purchase_orders = purchase_orders.count()
+
+        total_purchase_value = (
+            purchase_orders.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        pending_purchase_orders = purchase_orders.filter(
+            status__in=[
+                "draft",
+                "pending",
+                "approved",
+                "ordered",
+            ]
+        ).count()
+
+        received_purchase_orders = purchase_orders.filter(
+            status="received"
+        ).count()
+
+        cancelled_purchase_orders = purchase_orders.filter(
+            status="cancelled"
+        ).count()
+
+        bills = vendor.bills.filter(
+            company=request.user.company
+        )
+
+        total_bills = bills.count()
+
+        total_bill_amount = (
+            bills.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        total_paid = (
+            bills.aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        outstanding_amount = (
+            total_bill_amount - total_paid
+        )
+
+        return Response({
+            "vendor": self.get_serializer(vendor).data,
+
+            "summary": {
+                "total_purchase_orders": total_purchase_orders,
+                "total_purchase_value": str(total_purchase_value),
+
+                "pending_purchase_orders": pending_purchase_orders,
+                "received_purchase_orders": received_purchase_orders,
+                "cancelled_purchase_orders": cancelled_purchase_orders,
+
+                "total_bills": total_bills,
+                "total_bill_amount": str(total_bill_amount),
+                "total_paid": str(total_paid),
+                "outstanding_amount": str(
+                    max(outstanding_amount, Decimal("0.00"))
+                ),
+            }
+        })
+   
+from decimal import Decimal
+
+from django.db.models import Sum, Q
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from finance.purchaseorder.models import PurchaseOrder
+
+from .serializers import VendorPurchaseOrderSerializer
+from .models import Vendor
+
+
+class VendorPurchaseOrderListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = VendorPurchaseOrderSerializer
+
+    def get_queryset(self):
+        vendor_id = self.kwargs["vendor_id"]
+
+        queryset = (
+            PurchaseOrder.objects
+            .filter(
+                company=self.request.user.company,
+                vendor_id=vendor_id,
+            )
+            .select_related(
+                "vendor",
+                "warehouse",
+            )
+            .order_by("-created_at")
+        )
+
+        search = self.request.query_params.get("search")
+
+        if search:
+            queryset = queryset.filter(
+                Q(po_number__icontains=search)
+                | Q(pr_reference__icontains=search)
+            )
+
+        order_status = self.request.query_params.get(
+            "order_status"
+        )
+
+        delivery_status = self.request.query_params.get(
+            "delivery_status"
+        )
+
+        bill_status = self.request.query_params.get(
+            "bill_status"
+        )
+
+        if order_status:
+            queryset = queryset.filter(
+                status=order_status
+            )
+
+        if delivery_status:
+            queryset = queryset.filter(
+                receipt_status=delivery_status
+            )
+
+        if bill_status:
+            queryset = queryset.filter(
+                bill_status=bill_status
+            )
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(
+            self.get_queryset()
+        )
+
+        # Summary should be based on ALL purchase orders
+        # of this vendor, not the filtered search result.
+        vendor_id = kwargs["vendor_id"]
+
+        all_vendor_orders = PurchaseOrder.objects.filter(
+            company=request.user.company,
+            vendor_id=vendor_id,
+        )
+
+        total_orders = all_vendor_orders.count()
+
+        total_po_value = (
+            all_vendor_orders.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # Orders waiting for approval
+        pending_approval_count = all_vendor_orders.filter(
+            status="pending"
+        ).count()
+
+        # Open orders
+        open_orders_count = all_vendor_orders.filter(
+            status__in=[
+                "approved",
+                "ordered",
+                "partially_received",
+            ]
+        ).count()
+
+        # Completed orders
+        completed_orders_count = all_vendor_orders.filter(
+            status="received"
+        ).count()
+
+        # Pagination
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(
+                page,
+                many=True,
+            )
+
+            response_data = {
+                "summary": {
+                    "total_orders": total_orders,
+                    "total_po_value": str(total_po_value),
+                    "pending_approval_count": pending_approval_count,
+                    "open_orders_count": open_orders_count,
+                    "completed_orders_count": completed_orders_count,
+                },
+                "purchase_orders": serializer.data,
+            }
+
+            return Response(response_data)
+
+        serializer = self.get_serializer(
+            queryset,
+            many=True,
+        )
+
+        return Response({
+            "summary": {
+                "total_orders": total_orders,
+                "total_po_value": str(total_po_value),
+                "pending_approval_count": pending_approval_count,
+                "open_orders_count": open_orders_count,
+                "completed_orders_count": completed_orders_count,
             },
-            status=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        summary="Vendor Payment KPI Metrics",
-        description="Retrieve financial summary KPIs including Total Payments, Payments This Month, Outstanding, and Advance Payments.",
-        responses={200: VendorPaymentKPISerializer},
-    )
-    @action(detail=False, methods=["get"], url_path="kpi")
-    def kpi(self, request):
-        user = request.user
-        company = user.company
-
-        today = timezone.now().date()
-        start_of_month = today.replace(day=1)
-
-        vendor_id = request.query_params.get("vendor")
-
-        payment_qs = VendorPayment.objects.filter(company=company)
-        bill_qs = Bill.objects.filter(company=company)
-
-        if vendor_id:
-            payment_qs = payment_qs.filter(vendor_id=vendor_id)
-            bill_qs = bill_qs.filter(vendor_id=vendor_id)
-
-        # 1. Total payments
-        total_payments = (
-            payment_qs.filter(
-                status="completed",
-            ).aggregate(
-                total=Sum("amount_paid")
-            )["total"]
-            or Decimal("0.00")
-        )
-
-        # 2. Payments this month
-        payments_this_month = (
-            payment_qs.filter(
-                status="completed",
-                payment_date__gte=start_of_month,
-            ).aggregate(
-                total=Sum("amount_paid")
-            )["total"]
-            or Decimal("0.00")
-        )
-
-        # 3. Outstanding payables (total unpaid on non-paid bills)
-        outstanding = Decimal("0.00")
-        for b in bill_qs.exclude(status="paid"):
-            outstanding += b.balance
-
-        # 4. Advance payments
-        advance_payments = (
-            payment_qs.filter(
-                status="completed",
-                payment_type="advance_payment",
-            ).aggregate(
-                total=Sum("amount_paid")
-            )["total"]
-            or Decimal("0.00")
-        )
-
-        data = {
-            "total_payments": total_payments,
-            "payments_this_month": payments_this_month,
-            "outstanding": outstanding,
-            "advance_payments": advance_payments,
-        }
-
-        serializer = VendorPaymentKPISerializer(data)
-        return Response(
-            {
-                "message": "Vendor payment KPI metrics retrieved successfully.",
-                "data": serializer.data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-    @extend_schema(
-        summary="Export Vendor Payments",
-        description="Export vendor payment records in CSV format.",
-        responses={200: OpenApiTypes.BINARY},
-    )
-    @action(detail=False, methods=["get"], url_path="export")
-    def export(self, request):
-        queryset = self.filter_queryset(self.get_queryset())
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="vendor_payments_export.csv"'
-
-        writer = csv.writer(response)
-        writer.writerow([
-            "Payment No",
-            "Vendor",
-            "Bill No",
-            "Payment Date",
-            "Payment Type",
-            "Payment Method",
-            "Amount (SAR)",
-            "Reference Number",
-            "Status",
-            "Notes",
-        ])
-
-        for payment in queryset:
-            writer.writerow([
-                payment.receipt_number,
-                payment.vendor.name if payment.vendor else "",
-                payment.bill.bill_number if payment.bill else "",
-                payment.payment_date,
-                payment.get_payment_type_display(),
-                payment.get_payment_method_display(),
-                payment.amount_paid,
-                payment.reference_number,
-                payment.get_status_display(),
-                payment.notes,
-            ])
-
-        return response
+            "purchase_orders": serializer.data,
+        })
