@@ -65,13 +65,12 @@ def another_company(db):
 def user(db, company):
     user = User.objects.create_user(
         username="testuser",
+        email="testuser@example.com",
         password="Test@12345",
     )
-
     user.company = company
     user.is_company_admin = True
     user.save()
-
     return user
 
 
@@ -79,13 +78,12 @@ def user(db, company):
 def another_user(db, another_company):
     user = User.objects.create_user(
         username="anotheruser",
+        email="anotheruser@example.com",
         password="Test@12345",
     )
-
     user.company = another_company
     user.is_company_admin = True
     user.save()
-
     return user
 
 
