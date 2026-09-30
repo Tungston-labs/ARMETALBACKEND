@@ -1,0 +1,233 @@
+
+# ==============================================================================
+# PURCHASE ORDER API DOCUMENTATION & HTTP TEST SUITE
+# ==============================================================================
+
+@baseUrl = http://127.0.0.1:8000
+@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNzA0NTYyLCJpYXQiOjE3OTA2NzU3NjIsImp0aSI6IjNmY2U4N2YzZjY5MTQwNzliY2ViMjhiY2E0MDc4NDUxIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZF_zQoDaDiJaRVMHHQlTjChh0I8agzZ0P4V1sI_hwUE
+
+
+# ------------------------------------------------------------------------------
+# 1. AUTHENTICATE TO GET JWT TOKEN
+# ------------------------------------------------------------------------------
+
+### Login and get JWT token
+
+POST {{baseUrl}}/api/token/
+Content-Type: application/json
+
+{
+    "username": "YOUR_USERNAME",
+    "password": "YOUR_PASSWORD"
+}
+
+
+# ------------------------------------------------------------------------------
+# 2. CREATE PURCHASE ORDER
+# ------------------------------------------------------------------------------
+
+### Create a new Purchase Order with multiple items
+
+POST {{baseUrl}}/api/finance/purchase-order/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+    "vendor": 1,
+    "pr_reference": "PR-2026-001",
+    "order_date": "2026-09-29",
+    "expected_delivery_date": "2026-10-10",
+    "payment_terms": "30 days",
+    "status": "pending",
+    "warehouse": 1,
+    "shipping_method": "road",
+    "discount": "100.00",
+    "round_off": "0.00",
+    "notes": "Urgent purchase order",
+    "items": [
+        {
+            "product": 1,
+            "description": "Network Cable",
+            "quantity": "100.00",
+            "hs_code": "854449",
+            "rate": "25.00",
+            "vat_percentage": "5.00"
+        },
+        {
+            "product": 2,
+            "description": "Network Switch",
+            "quantity": "5.00",
+            "hs_code": "851762",
+            "rate": "2000.00",
+            "vat_percentage": "15.00"
+        }
+    ]
+}
+
+
+# ------------------------------------------------------------------------------
+# 3. LIST PURCHASE ORDERS
+# ------------------------------------------------------------------------------
+
+### List all Purchase Orders for the logged-in company
+
+GET {{baseUrl}}/api/finance/purchase-order/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 4. SEARCH & FILTER PURCHASE ORDERS
+# ------------------------------------------------------------------------------
+
+### Search by PO number, vendor name, or PR reference
+
+GET {{baseUrl}}/api/finance/purchase-order/?search=PO00001
+Authorization: {{authToken}}
+
+
+### Search by vendor name
+
+GET {{baseUrl}}/api/finance/purchase-order/?search=ABC
+Authorization: {{authToken}}
+
+
+### Filter Purchase Orders by vendor ID
+
+GET {{baseUrl}}/api/finance/purchase-order/?vendor=1
+Authorization: {{authToken}}
+
+
+### Filter by order status - Pending
+
+GET {{baseUrl}}/api/finance/purchase-order/?status=pending
+Authorization: {{authToken}}
+
+
+### Filter by order status - Approved
+
+GET {{baseUrl}}/api/finance/purchase-order/?status=approved
+Authorization: {{authToken}}
+
+
+### Filter by order status - Received
+
+GET {{baseUrl}}/api/finance/purchase-order/?status=received
+Authorization: {{authToken}}
+
+
+### Filter by receipt status
+
+GET {{baseUrl}}/api/finance/purchase-order/?receipt_status=partially_received
+Authorization: {{authToken}}
+
+
+### Filter by bill status
+
+GET {{baseUrl}}/api/finance/purchase-order/?bill_status=pending
+Authorization: {{authToken}}
+
+
+### Combined search and filters
+
+GET {{baseUrl}}/api/finance/purchase-order/?search=ABC&vendor=1&status=pending&page=1&page_size=10
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 5. GET PURCHASE ORDER DETAILS
+# ------------------------------------------------------------------------------
+
+### Get Purchase Order by ID (including items)
+
+GET {{baseUrl}}/api/finance/purchase-order/1/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 6. PURCHASE ORDER DASHBOARD SUMMARY
+# ------------------------------------------------------------------------------
+
+### Get dashboard summary for logged-in company
+
+GET {{baseUrl}}/api/finance/purchase-order/dashboard/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 7. VENDOR DROPDOWN
+# ------------------------------------------------------------------------------
+
+### Get vendors for Purchase Order dropdown
+
+GET {{baseUrl}}/api/finance/purchase-order/dropdowns/vendors/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 8. WAREHOUSE DROPDOWN
+# ------------------------------------------------------------------------------
+
+### Get warehouses for Purchase Order dropdown
+
+GET {{baseUrl}}/api/finance/purchase-order/dropdowns/warehouses/
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 9. PRODUCT DROPDOWN
+# ------------------------------------------------------------------------------
+
+### Get active products for Purchase Order dropdown
+
+GET {{baseUrl}}/api/finance/purchase-order/dropdowns/products/
+Authorization: {{authToken}}
+
+
+### Search products by name, code, or SKU
+
+GET {{baseUrl}}/api/finance/purchase-order/dropdowns/products/?search=cable
+Authorization: {{authToken}}
+
+
+# ------------------------------------------------------------------------------
+# 10. AVAILABLE PURCHASE ORDER STATUS VALUES
+# ------------------------------------------------------------------------------
+
+### Order Status
+
+# draft
+# pending
+# approved
+# ordered
+# partially_received
+# received
+# cancelled
+
+
+### Receipt Status
+
+# pending
+# partially_received
+# received
+
+
+### Bill Status
+
+# pending
+# partially_billed
+# billed
+
+
+### Shipping Method
+
+# road
+# air
+# sea
+# courier
+# pickup
+# other
+
+
+# ==============================================================================
+# END OF PURCHASE ORDER API DOCUMENTATION
+# ==============================================================================
