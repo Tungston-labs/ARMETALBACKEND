@@ -79,6 +79,8 @@ INSTALLED_APPS = [
     'finance.sales_return',
     'finance.recurring',
     'finance.vendor',
+    'finance.bill',
+    'finance.debit_note',
     'finance.purchaseorder',
 ]
 

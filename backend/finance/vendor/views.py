@@ -1,6 +1,8 @@
+import csv
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Sum, Q
+from django.http import HttpResponse
 from django.utils import timezone
 
 from rest_framework import (
@@ -25,14 +27,15 @@ from rest_framework.response import Response
 from django_filters.rest_framework import (
     DjangoFilterBackend,
 )
-
-from user.permissions import (
-    IsHRAdmin,
-    IsCompanyActive,
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+    OpenApiTypes,
 )
 
+from user.permissions import IsHRAdmin, IsCompanyActive
 from shared.pagination import CustomPagination
-
+from finance.bill.models import Bill
 from .models import (
     Vendor,
     VendorBill,
@@ -43,7 +46,12 @@ from .models import (
 from .serializers import (
     VendorSerializer,
     VendorCreateSerializer,
+    VendorPaymentSerializer,
+    VendorPaymentListSerializer,
+    VendorPaymentKPISerializer,
 )
+from .filters import VendorPaymentFilter
+
 
 
 class VendorViewSet(viewsets.ModelViewSet):
@@ -514,53 +522,15 @@ class VendorViewSet(viewsets.ModelViewSet):
                 document_name=uploaded_file.name,
             )
 
-            vendor_document.document.save(
-                uploaded_file.name,
-                uploaded_file,
-                save=True,
-            )
-
-            saved_documents.append(
-                vendor_document
-            )
-
-        # Refresh
-        vendor = (
-            Vendor.objects
-            .filter(
-                company=request.user.company,
-                pk=vendor.pk,
-            )
-            .select_related(
-                "company",
-                "created_by",
-            )
-            .prefetch_related(
-                "documents"
-            )
-            .get()
-        )
-
-        serializer = VendorSerializer(
-            vendor,
-            context={
-                "request": request,
-            },
-        )
-
-        return Response(
-            {
-                "message": (
-                    "Vendor documents uploaded "
-                    "successfully."
-                ),
-                "documents_uploaded": len(
-                    saved_documents
-                ),
-                "data": serializer.data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return Response({
+            "message": (
+                "Vendor documents uploaded successfully."
+            ),
+            "data": VendorSerializer(
+                vendor,
+                context=self.get_serializer_context(),
+            ).data,
+        }, status=status.HTTP_201_CREATED)
 
 
 # ======================================================
@@ -603,10 +573,7 @@ class VendorDashboardView(
             )
 
         today = timezone.localdate()
-
-        month_start = today.replace(
-            day=1
-        )
+        month_start = today.replace(day=1)
 
         vendors = Vendor.objects.filter(
             company=company
@@ -724,6 +691,265 @@ class VendorDashboardView(
                         total_payable_outstanding
                     ),
                 },
+            }
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List Vendor Payments",
+        description="Retrieve a paginated list of vendor payments for the authenticated user's company with search and filter support.",
+        responses={200: VendorPaymentListSerializer(many=True)},
+    ),
+    create=extend_schema(
+        summary="Record Vendor Payment",
+        description="Record a new vendor payment transaction. Links to vendor and optional bill, updating bill paid status automatically.",
+        request=VendorPaymentSerializer,
+        responses={201: VendorPaymentSerializer},
+    ),
+    retrieve=extend_schema(
+        summary="Retrieve Vendor Payment",
+        description="Retrieve details of a specific vendor payment by ID.",
+        responses={200: VendorPaymentSerializer},
+    ),
+    update=extend_schema(
+        summary="Update Vendor Payment",
+        description="Update vendor payment record details.",
+        request=VendorPaymentSerializer,
+        responses={200: VendorPaymentSerializer},
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Vendor Payment",
+        description="Partially update vendor payment record details.",
+        request=VendorPaymentSerializer,
+        responses={200: VendorPaymentSerializer},
+    ),
+    destroy=extend_schema(
+        summary="Delete Vendor Payment",
+        description="Delete a vendor payment record and update linked bill payment status.",
+        responses={200: OpenApiTypes.OBJECT},
+    ),
+)
+class VendorPaymentViewSet(viewsets.ModelViewSet):
+    serializer_class = VendorPaymentSerializer
+    permission_classes = [
+        IsAuthenticated,
+    ]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = VendorPaymentFilter
+    search_fields = [
+        "receipt_number",
+        "vendor__name",
+        "bill__bill_number",
+        "reference_number",
+        "notes",
+    ]
+    ordering_fields = [
+        "created_at",
+        "payment_date",
+        "amount_paid",
+        "receipt_number",
+    ]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated or not getattr(user, "company", None):
+            return VendorPayment.objects.none()
+
+        return (
+            VendorPayment.objects.filter(company=user.company)
+            .select_related("company", "vendor", "bill", "created_by")
+        )
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        company = getattr(user, "company", None)
+        serializer.save(company=company, created_by=user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        response_serializer = self.get_serializer(serializer.instance)
+        return Response(
+            {
+                "message": "Vendor payment recorded successfully.",
+                "data": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = VendorPaymentListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = VendorPaymentListSerializer(queryset, many=True)
+        return Response(
+            {
+                "message": "Vendor payments retrieved successfully.",
+                "data": serializer.data,
+            }
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(
+            {
+                "message": "Vendor payment retrieved successfully.",
+                "data": serializer.data,
+            }
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial,
+        )
+        serializer.is_valid(raise_exception=True)
+        payment = serializer.save()
+        response_serializer = self.get_serializer(payment)
+        return Response(
+            {
+                "message": "Vendor payment updated successfully.",
+                "data": response_serializer.data,
             },
             status=status.HTTP_200_OK,
         )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(
+            {
+                "message": "Vendor payment deleted successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Vendor Payment KPI Metrics",
+        description="Retrieve financial summary KPIs including Total Payments, Payments This Month, Outstanding, and Advance Payments.",
+        responses={200: VendorPaymentKPISerializer},
+    )
+    @action(detail=False, methods=["get"], url_path="kpi")
+    def kpi(self, request):
+        user = request.user
+        company = user.company
+
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+
+        vendor_id = request.query_params.get("vendor")
+
+        payment_qs = VendorPayment.objects.filter(company=company)
+        bill_qs = Bill.objects.filter(company=company)
+
+        if vendor_id:
+            payment_qs = payment_qs.filter(vendor_id=vendor_id)
+            bill_qs = bill_qs.filter(vendor_id=vendor_id)
+
+        # 1. Total payments
+        total_payments = (
+            payment_qs.filter(
+                status="completed",
+            ).aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # 2. Payments this month
+        payments_this_month = (
+            payment_qs.filter(
+                status="completed",
+                payment_date__gte=start_of_month,
+            ).aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # 3. Outstanding payables (total unpaid on non-paid bills)
+        outstanding = Decimal("0.00")
+        for b in bill_qs.exclude(status="paid"):
+            outstanding += b.balance
+
+        # 4. Advance payments
+        advance_payments = (
+            payment_qs.filter(
+                status="completed",
+                payment_type="advance_payment",
+            ).aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        data = {
+            "total_payments": total_payments,
+            "payments_this_month": payments_this_month,
+            "outstanding": outstanding,
+            "advance_payments": advance_payments,
+        }
+
+        serializer = VendorPaymentKPISerializer(data)
+        return Response(
+            {
+                "message": "Vendor payment KPI metrics retrieved successfully.",
+                "data": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Export Vendor Payments",
+        description="Export vendor payment records in CSV format.",
+        responses={200: OpenApiTypes.BINARY},
+    )
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="vendor_payments_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Payment No",
+            "Vendor",
+            "Bill No",
+            "Payment Date",
+            "Payment Type",
+            "Payment Method",
+            "Amount (SAR)",
+            "Reference Number",
+            "Status",
+            "Notes",
+        ])
+
+        for payment in queryset:
+            writer.writerow([
+                payment.receipt_number,
+                payment.vendor.name if payment.vendor else "",
+                payment.bill.bill_number if payment.bill else "",
+                payment.payment_date,
+                payment.get_payment_type_display(),
+                payment.get_payment_method_display(),
+                payment.amount_paid,
+                payment.reference_number,
+                payment.get_status_display(),
+                payment.notes,
+            ])
+
+        return response

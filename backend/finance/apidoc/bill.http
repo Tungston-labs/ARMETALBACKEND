@@ -1,0 +1,105 @@
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMzUzNDU5LCJpYXQiOjE3OTAzMjQ2NTksImp0aSI6Ijk1ZTQ0MWE4MDNmYjQzYmE4YzY0MTczYjRiYWE4YjY0IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZuJx8UfXesH0C3lRL1FRKeEyJ9DSkpvU6-tC6cdGXNU
+@baseUrl = http://127.0.0.1:8000
+
+
+### 1. Get Purchase Bill KPI Card Metrics
+GET {{baseUrl}}/api/finance/bill/kpi/
+Authorization: Bearer {{token}}
+
+###
+
+### 2. List Purchase Bills (Paginated with Filters & Search)
+GET {{baseUrl}}/api/finance/bill/?status=unpaid&search=Chicking
+Authorization: Bearer {{token}}
+
+###
+
+### 3. Create New Purchase Bill
+POST {{baseUrl}}/api/finance/bill/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "po_reference": "INV 0123 - Chicking",
+  "bill_date": "2026-04-17",
+  "due_date": "2026-04-30",
+  "payment_terms": "NET 10",
+  "due_date_note": "Damaged Goods",
+  "note": "Initial Purchase Order Bill",
+  "from_name": "TUNGSTON LABS",
+  "from_address": "Tungston Labs, Ullampilly Building",
+  "from_phone": "+91 97783 77526",
+  "from_email": "info@tungstonlabs.com",
+  "discount": "19.69",
+  "round_off": "0.00",
+  "items": [
+    {
+      "product": 1,
+      "particular": "Product 1 description",
+      "quantity": "1.00",
+      "hs_code": "25366",
+      "rate": "197.00",
+      "vat_percentage": "15.00"
+    },
+    {
+      "product": 2,
+      "particular": "Product 2 description",
+      "quantity": "1.00",
+      "hs_code": "25366",
+      "rate": "197.00",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+###
+
+### 4. Get Purchase Bill Detail by ID
+GET {{baseUrl}}/api/finance/bill/1/
+Authorization: Bearer {{token}}
+
+###
+
+### 5. Update Purchase Bill (Full PUT)
+PUT {{baseUrl}}/api/finance/bill/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "bill_number": "BIL00001",
+  "po_reference": "INV 0123 - Chicking",
+  "bill_date": "2026-04-17",
+  "due_date": "2026-04-30",
+  "payment_terms": "NET 10",
+  "due_date_note": "Damaged Goods",
+  "note": "Updated Purchase Bill Note",
+  "discount": "19.69",
+  "items": [
+    {
+      "particular": "Product 1 description updated",
+      "quantity": "2.00",
+      "hs_code": "25366",
+      "rate": "197.00",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+###
+
+### 6. Update Purchase Bill Payment Status (Partial PATCH)
+PATCH {{baseUrl}}/api/finance/bill/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount_paid": "400.00"
+}
+
+###
+
+### 7. Delete Purchase Bill
+DELETE {{baseUrl}}/api/finance/bill/1/
+Authorization: Bearer {{token}}
