@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'finance.recurring',
     'finance.vendor',
     'finance.bill',
+    'finance.debit_note',
 ]
 
 MIDDLEWARE = [
@@ -91,6 +92,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "finance.vendor.middleware.RequestTimingMiddleware",
 ]
 
 ROOT_URLCONF = 'backend.urls'

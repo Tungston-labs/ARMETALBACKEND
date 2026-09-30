@@ -1,0 +1,88 @@
+### 1. Get Debit Note KPI Card Metrics
+GET {{baseUrl}}/api/finance/debit-notes/kpi/
+Authorization: Bearer {{token}}
+
+###
+
+### 2. List Debit Notes (Paginated with Filters & Search)
+GET {{baseUrl}}/api/finance/debit-notes/?status=open&search=Chicking
+Authorization: Bearer {{token}}
+
+###
+
+### 3. Get Bill Details for Debit Note Construction (Prefill Endpoint)
+GET {{baseUrl}}/api/finance/debit-notes/bill-details/?bill=1
+Authorization: Bearer {{token}}
+
+###
+
+### 4. Create New Debit Note
+POST {{baseUrl}}/api/finance/debit-notes/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "bill": 1,
+  "issue_date": "2026-04-28",
+  "reason": "damaged_goods",
+  "notes": "Damaged goods returned to vendor",
+  "items": [
+    {
+      "bill_item": 1,
+      "product": 1,
+      "item_name": "Product 1 description",
+      "billed_qty": "400.00",
+      "already_debited_qty": "0.00",
+      "quantity": "80.00",
+      "rate": "18.50",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+###
+
+### 5. Get Debit Note Detail by ID
+GET {{baseUrl}}/api/finance/debit-notes/1/
+Authorization: Bearer {{token}}
+
+###
+
+### 6. Update Debit Note (Full PUT)
+PUT {{baseUrl}}/api/finance/debit-notes/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vendor": 1,
+  "bill": 1,
+  "issue_date": "2026-04-29",
+  "reason": "defective_items",
+  "notes": "Revised debit note for defective items",
+  "debit_amount": "5000.00",
+  "applied_amount": "1000.00"
+}
+
+###
+
+### 7. Partial Update Debit Note Applied Amount (PATCH)
+PATCH {{baseUrl}}/api/finance/debit-notes/1/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "applied_amount": "5000.00"
+}
+
+###
+
+### 8. Export Debit Notes CSV
+GET {{baseUrl}}/api/finance/debit-notes/export/
+Authorization: Bearer {{token}}
+
+###
+
+### 9. Delete Debit Note
+DELETE {{baseUrl}}/api/finance/debit-notes/1/
+Authorization: Bearer {{token}}

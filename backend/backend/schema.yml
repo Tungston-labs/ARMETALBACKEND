@@ -3419,6 +3419,308 @@ paths:
               schema:
                 $ref: '#/components/schemas/Customer'
           description: ''
+  /api/finance/debit-notes/:
+    get:
+      operationId: finance_debit_notes_list
+      description: Retrieves a paginated list of debit notes for the authenticated
+        company, along with KPI statistics.
+      summary: List Debit Notes
+      parameters:
+      - in: query
+        name: bill
+        schema:
+          type: number
+      - in: query
+        name: bill_ref
+        schema:
+          type: string
+      - in: query
+        name: end_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: issue_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: issue_date_after
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: issue_date_before
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: reason
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: status
+        schema:
+          type: string
+      - in: query
+        name: vendor
+        schema:
+          type: number
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDebitNoteListList'
+          description: ''
+    post:
+      operationId: finance_debit_notes_create
+      description: Creates a new debit note under the user's company.
+      summary: Create New Debit Note
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+        required: true
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebitNote'
+          description: ''
+        '400':
+          description: Validation Error
+  /api/finance/debit-notes/{id}/:
+    get:
+      operationId: finance_debit_notes_retrieve
+      description: Retrieves detailed information of a specific debit note by ID.
+      summary: Get Debit Note Details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebitNote'
+          description: ''
+        '404':
+          description: Debit Note Not Found
+    put:
+      operationId: finance_debit_notes_update
+      description: Updates all fields of an existing debit note.
+      summary: Edit/Update Debit Note (Full)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DebitNote'
+        required: true
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebitNote'
+          description: ''
+        '400':
+          description: Validation Error
+        '404':
+          description: Debit Note Not Found
+    patch:
+      operationId: finance_debit_notes_partial_update
+      description: Partially updates fields of an existing debit note.
+      summary: Edit/Update Debit Note (Partial)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDebitNote'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDebitNote'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDebitNote'
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DebitNote'
+          description: ''
+        '400':
+          description: Validation Error
+        '404':
+          description: Debit Note Not Found
+    delete:
+      operationId: finance_debit_notes_destroy
+      description: Deletes a debit note by ID.
+      summary: Delete Debit Note
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Debit Note Not Found
+  /api/finance/debit-notes/bill-details/:
+    get:
+      operationId: finance_debit_notes_bill_details_retrieve
+      description: Retrieves bill header metadata, bill value, cumulative already
+        debited amount, remaining balance, and item breakdown.
+      summary: Get Bill Debit Note Details
+      parameters:
+      - in: query
+        name: bill
+        schema:
+          type: integer
+        description: Bill ID
+      - in: query
+        name: bill_id
+        schema:
+          type: integer
+        description: Alias for Bill ID
+      - in: query
+        name: bill_number
+        schema:
+          type: string
+        description: Bill Number (e.g. BIL00001)
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          description: Bill items and already debited details
+        '404':
+          description: Bill not found
+  /api/finance/debit-notes/export/:
+    get:
+      operationId: finance_debit_notes_export_retrieve
+      description: Export debit note records in CSV format.
+      summary: Export Debit Notes
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/finance/debit-notes/kpi/:
+    get:
+      operationId: finance_debit_notes_kpi_retrieve
+      description: Returns KPI card statistics for debit notes under the authenticated
+        user's company.
+      summary: Get Debit Note KPI Card Metrics
+      tags:
+      - finance
+      security:
+      - BearerAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          description: Debit Note KPI Statistics
   /api/finance/delivery-notes/:
     get:
       operationId: finance_delivery_notes_list
@@ -10313,7 +10615,7 @@ components:
           pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
           readOnly: true
         status:
-          $ref: '#/components/schemas/CreditNoteStatusEnum'
+          $ref: '#/components/schemas/StatusA65Enum'
         from_company_name:
           type: string
           maxLength: 200
@@ -10433,20 +10735,6 @@ components:
         * `discount_adjustment` - Discount Adjustment
         * `pricing_error` - Pricing Error
         * `other` - Other
-    CreditNoteStatusEnum:
-      enum:
-      - open
-      - partially_applied
-      - closed
-      - cancelled
-      - draft
-      type: string
-      description: |-
-        * `open` - Open
-        * `partially_applied` - Partially Applied
-        * `closed` - Closed
-        * `cancelled` - Cancelled
-        * `draft` - Draft
     CurrencyEnum:
       enum:
       - AED
@@ -11041,6 +11329,244 @@ components:
       - task
       - time_taken
       - updated_at
+    DebitNote:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        dn_number:
+          type: string
+        vendor:
+          type: integer
+          nullable: true
+        vendor_name:
+          type: string
+          readOnly: true
+        bill:
+          type: integer
+          nullable: true
+        bill_number:
+          type: string
+          readOnly: true
+        bill_ref:
+          type: string
+          maxLength: 150
+        issue_date:
+          type: string
+          format: date
+        reason:
+          $ref: '#/components/schemas/ReasonE66Enum'
+        reason_name:
+          type: string
+          readOnly: true
+        debit_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        applied_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusA65Enum'
+        status_name:
+          type: string
+          readOnly: true
+        from_company_name:
+          type: string
+          maxLength: 250
+        from_address:
+          type: string
+        from_phone_number:
+          type: string
+          maxLength: 50
+        from_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        bill_to_name:
+          type: string
+          maxLength: 250
+        bill_to_address:
+          type: string
+        bill_to_phone:
+          type: string
+          maxLength: 50
+        finance_contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        sub_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        total_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebitNoteItem'
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - balance
+      - bill_number
+      - company
+      - created_at
+      - created_by
+      - id
+      - issue_date
+      - reason_name
+      - status_name
+      - updated_at
+      - vendor_name
+    DebitNoteItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        bill_item:
+          type: integer
+          nullable: true
+        product:
+          type: integer
+          nullable: true
+        product_name:
+          type: string
+          readOnly: true
+        item_name:
+          type: string
+          maxLength: 250
+        description:
+          type: string
+        billed_qty:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        already_debited_qty:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        vat_percentage:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+        vat_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+      required:
+      - id
+      - product_name
+    DebitNoteList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        dn_number:
+          type: string
+          maxLength: 50
+        vendor:
+          type: integer
+          nullable: true
+        vendor_name:
+          type: string
+          readOnly: true
+        bill:
+          type: integer
+          nullable: true
+        bill_number:
+          type: string
+          readOnly: true
+        bill_ref:
+          type: string
+          maxLength: 150
+        issue_date:
+          type: string
+          format: date
+        reason:
+          $ref: '#/components/schemas/ReasonE66Enum'
+        reason_name:
+          type: string
+          readOnly: true
+        debit_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        applied_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusA65Enum'
+        status_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - balance
+      - bill_number
+      - created_at
+      - id
+      - issue_date
+      - reason_name
+      - status_name
+      - vendor_name
     DeletedEmployee:
       type: object
       properties:
@@ -12908,6 +13434,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DailyTask'
+    PaginatedDebitNoteListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebitNoteList'
     PaginatedDeletedEmployeeList:
       type: object
       required:
@@ -14044,7 +14593,7 @@ components:
           pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
           readOnly: true
         status:
-          $ref: '#/components/schemas/CreditNoteStatusEnum'
+          $ref: '#/components/schemas/StatusA65Enum'
         from_company_name:
           type: string
           maxLength: 200
@@ -14339,6 +14888,118 @@ components:
           nullable: true
         employee:
           type: integer
+          readOnly: true
+    PatchedDebitNote:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        company:
+          type: integer
+          readOnly: true
+        dn_number:
+          type: string
+        vendor:
+          type: integer
+          nullable: true
+        vendor_name:
+          type: string
+          readOnly: true
+        bill:
+          type: integer
+          nullable: true
+        bill_number:
+          type: string
+          readOnly: true
+        bill_ref:
+          type: string
+          maxLength: 150
+        issue_date:
+          type: string
+          format: date
+        reason:
+          $ref: '#/components/schemas/ReasonE66Enum'
+        reason_name:
+          type: string
+          readOnly: true
+        debit_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        applied_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/StatusA65Enum'
+        status_name:
+          type: string
+          readOnly: true
+        from_company_name:
+          type: string
+          maxLength: 250
+        from_address:
+          type: string
+        from_phone_number:
+          type: string
+          maxLength: 50
+        from_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        bill_to_name:
+          type: string
+          maxLength: 250
+        bill_to_address:
+          type: string
+        bill_to_phone:
+          type: string
+          maxLength: 50
+        finance_contact_email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        sub_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        total_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,13}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DebitNoteItem'
+        created_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
           readOnly: true
     PatchedDeliveryNote:
       type: object
@@ -15830,7 +16491,7 @@ components:
           maxLength: 200
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
-        vendor_type_name:
+        vendor_type_display:
           type: string
           readOnly: true
         opening_balance:
@@ -15846,7 +16507,7 @@ components:
           maxLength: 100
         currency:
           $ref: '#/components/schemas/CurrencyEnum'
-        currency_name:
+        currency_display:
           type: string
           readOnly: true
         vat_registration_number:
@@ -15854,7 +16515,7 @@ components:
           maxLength: 100
         payment_term:
           $ref: '#/components/schemas/PaymentTerm699Enum'
-        payment_term_name:
+        payment_term_display:
           type: string
           readOnly: true
         cr_expiry_date:
@@ -15913,13 +16574,8 @@ components:
           maxLength: 150
         client_status:
           $ref: '#/components/schemas/ClientStatusEnum'
-        client_status_name:
+        client_status_display:
           type: string
-          readOnly: true
-        documents:
-          type: array
-          items:
-            $ref: '#/components/schemas/VendorDocument'
           readOnly: true
         created_by:
           type: integer
@@ -15932,6 +16588,11 @@ components:
         updated_at:
           type: string
           format: date-time
+          readOnly: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/VendorDocument'
           readOnly: true
     PatchedVendorPayment:
       type: object
@@ -16894,6 +17555,26 @@ components:
       required:
       - id
       - product_name
+    ReasonE66Enum:
+      enum:
+      - returned_goods
+      - damaged_goods
+      - defective_items
+      - overbilling
+      - quality_issue
+      - wrong_item_delivered
+      - pricing_error
+      - other
+      type: string
+      description: |-
+        * `returned_goods` - Returned Goods
+        * `damaged_goods` - Damaged Goods
+        * `defective_items` - Defective Items
+        * `overbilling` - Overbilling
+        * `quality_issue` - Quality Issue
+        * `wrong_item_delivered` - Wrong Item Delivered
+        * `pricing_error` - Pricing Error
+        * `other` - Other
     ReasonF1eEnum:
       enum:
       - damaged_product
@@ -18177,6 +18858,20 @@ components:
       description: |-
         * `active` - Active
         * `inactive` - Inactive
+    StatusA65Enum:
+      enum:
+      - open
+      - partially_applied
+      - closed
+      - cancelled
+      - draft
+      type: string
+      description: |-
+        * `open` - Open
+        * `partially_applied` - Partially Applied
+        * `closed` - Closed
+        * `cancelled` - Cancelled
+        * `draft` - Draft
     StatusB3aEnum:
       enum:
       - On Hold
@@ -18380,7 +19075,7 @@ components:
           maxLength: 200
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
-        vendor_type_name:
+        vendor_type_display:
           type: string
           readOnly: true
         opening_balance:
@@ -18396,7 +19091,7 @@ components:
           maxLength: 100
         currency:
           $ref: '#/components/schemas/CurrencyEnum'
-        currency_name:
+        currency_display:
           type: string
           readOnly: true
         vat_registration_number:
@@ -18404,7 +19099,7 @@ components:
           maxLength: 100
         payment_term:
           $ref: '#/components/schemas/PaymentTerm699Enum'
-        payment_term_name:
+        payment_term_display:
           type: string
           readOnly: true
         cr_expiry_date:
@@ -18463,13 +19158,8 @@ components:
           maxLength: 150
         client_status:
           $ref: '#/components/schemas/ClientStatusEnum'
-        client_status_name:
+        client_status_display:
           type: string
-          readOnly: true
-        documents:
-          type: array
-          items:
-            $ref: '#/components/schemas/VendorDocument'
           readOnly: true
         created_by:
           type: integer
@@ -18483,19 +19173,24 @@ components:
           type: string
           format: date-time
           readOnly: true
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/VendorDocument'
+          readOnly: true
       required:
-      - client_status_name
+      - client_status_display
       - company
       - created_at
       - created_by
-      - currency_name
+      - currency_display
       - documents
       - id
       - name
-      - payment_term_name
+      - payment_term_display
       - updated_at
       - vendor_id
-      - vendor_type_name
+      - vendor_type_display
     VendorCreate:
       type: object
       description: |-
@@ -18516,7 +19211,7 @@ components:
           maxLength: 200
         vendor_type:
           $ref: '#/components/schemas/VendorTypeEnum'
-        vendor_type_name:
+        vendor_type_display:
           type: string
           readOnly: true
         opening_balance:
@@ -18532,7 +19227,7 @@ components:
           maxLength: 100
         currency:
           $ref: '#/components/schemas/CurrencyEnum'
-        currency_name:
+        currency_display:
           type: string
           readOnly: true
         vat_registration_number:
@@ -18540,7 +19235,7 @@ components:
           maxLength: 100
         payment_term:
           $ref: '#/components/schemas/PaymentTerm699Enum'
-        payment_term_name:
+        payment_term_display:
           type: string
           readOnly: true
         cr_expiry_date:
@@ -18599,15 +19294,9 @@ components:
           maxLength: 150
         client_status:
           $ref: '#/components/schemas/ClientStatusEnum'
-        client_status_name:
+        client_status_display:
           type: string
           readOnly: true
-        documents:
-          type: array
-          items:
-            type: string
-            format: uri
-          writeOnly: true
         created_by:
           type: integer
           readOnly: true
@@ -18620,30 +19309,39 @@ components:
           type: string
           format: date-time
           readOnly: true
+        documents:
+          type: array
+          items:
+            type: string
+            format: uri
+          writeOnly: true
       required:
-      - client_status_name
+      - client_status_display
       - company
       - created_at
       - created_by
-      - currency_name
+      - currency_display
       - id
       - name
-      - payment_term_name
+      - payment_term_display
       - updated_at
       - vendor_id
-      - vendor_type_name
+      - vendor_type_display
     VendorDocument:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        document:
-          type: string
-          format: uri
         document_name:
           type: string
           maxLength: 200
+        document:
+          type: string
+          format: uri
+        document_url:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -18651,6 +19349,7 @@ components:
       required:
       - created_at
       - document
+      - document_url
       - id
     VendorPayment:
       type: object

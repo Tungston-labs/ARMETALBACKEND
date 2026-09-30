@@ -11,15 +11,18 @@ from rest_framework import (
     filters,
     status,
 )
+
 from rest_framework.decorators import action
+
 from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.parsers import (
     MultiPartParser,
     FormParser,
     JSONParser,
 )
+
 from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
 
 from django_filters.rest_framework import (
     DjangoFilterBackend,
@@ -48,6 +51,7 @@ from .serializers import (
     VendorPaymentKPISerializer,
 )
 from .filters import VendorPaymentFilter
+
 
 
 class VendorViewSet(viewsets.ModelViewSet):
@@ -102,98 +106,367 @@ class VendorViewSet(viewsets.ModelViewSet):
 
     ordering = ["-created_at"]
 
+    # ==================================================
+    # QUERYSET
+    # ==================================================
+
     def get_queryset(self):
+
         user = self.request.user
 
-        if not getattr(user, "company", None):
+        company = getattr(
+            user,
+            "company",
+            None,
+        )
+
+        if not company:
             return Vendor.objects.none()
 
         return (
             Vendor.objects
-            .filter(company=user.company)
+            .filter(company=company)
             .select_related(
                 "company",
                 "created_by",
             )
-            .prefetch_related("documents")
+            .prefetch_related(
+                "documents"
+            )
         )
 
+    # ==================================================
+    # SERIALIZER
+    # ==================================================
+
     def get_serializer_class(self):
+
         if self.action == "create":
             return VendorCreateSerializer
 
         return VendorSerializer
 
-    def perform_create(self, serializer):
-        user = self.request.user
+    # ==================================================
+    # CREATE
+    # ==================================================
 
-        if not getattr(user, "company", None):
-            from rest_framework.exceptions import (
-                ValidationError,
+    def create(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        user = request.user
+
+        company = getattr(
+            user,
+            "company",
+            None,
+        )
+
+        if not company:
+
+            return Response(
+                {
+                    "message": (
+                        "User is not associated "
+                        "with a company."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-            raise ValidationError({
-                "detail": (
-                    "User is not associated "
-                    "with a company."
-                )
-            })
+        # ------------------------------------------
+        # Get uploaded files directly
+        # ------------------------------------------
 
-        serializer.save(
-            company=user.company,
+        documents = request.FILES.getlist(
+            "documents"
+        )
+
+        print(
+            "================================="
+        )
+        print(
+            "FILES RECEIVED:",
+            request.FILES,
+        )
+        print(
+            "DOCUMENT COUNT:",
+            len(documents),
+        )
+        print(
+            "================================="
+        )
+
+        # ------------------------------------------
+        # Vendor data only
+        # ------------------------------------------
+
+        vendor_data = request.data.copy()
+
+        # Remove documents from serializer data
+        vendor_data.pop(
+            "documents",
+            None,
+        )
+
+        # ------------------------------------------
+        # Validate vendor
+        # ------------------------------------------
+
+        serializer = VendorCreateSerializer(
+            data=vendor_data,
+            context=self.get_serializer_context(),
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        # ------------------------------------------
+        # Save vendor
+        # ------------------------------------------
+
+        vendor = serializer.save(
+            company=company,
             created_by=user,
         )
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(
-            data=request.data
+        # ------------------------------------------
+        # Save documents
+        # ------------------------------------------
+
+        saved_documents = []
+
+        for uploaded_file in documents:
+
+            vendor_document = VendorDocument(
+                vendor=vendor,
+                document_name=uploaded_file.name,
+            )
+
+            # IMPORTANT:
+            # This actually sends the file
+            # through Django's FileField storage.
+            vendor_document.document.save(
+                uploaded_file.name,
+                uploaded_file,
+                save=True,
+            )
+
+            saved_documents.append(
+                vendor_document
+            )
+
+        # ------------------------------------------
+        # Reload vendor with documents
+        # ------------------------------------------
+
+        vendor = (
+            Vendor.objects
+            .filter(
+                company=company,
+                pk=vendor.pk,
+            )
+            .select_related(
+                "company",
+                "created_by",
+            )
+            .prefetch_related(
+                "documents"
+            )
+            .get()
         )
-
-        serializer.is_valid(raise_exception=True)
-
-        self.perform_create(serializer)
-
-        vendor = serializer.instance
 
         response_serializer = VendorSerializer(
             vendor,
-            context=self.get_serializer_context(),
+            context={
+                "request": request,
+            },
         )
 
         return Response(
             {
-                "message": "Vendor created successfully.",
+                "message": (
+                    "Vendor created successfully."
+                ),
+                "documents_uploaded": len(
+                    saved_documents
+                ),
                 "data": response_serializer.data,
             },
             status=status.HTTP_201_CREATED,
         )
 
-    def list(self, request, *args, **kwargs):
+    # ==================================================
+    # LIST
+    # ==================================================
+
+    def list(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
         queryset = self.filter_queryset(
             self.get_queryset()
         )
 
-        page = self.paginate_queryset(queryset)
+        page = self.paginate_queryset(
+            queryset
+        )
 
         if page is not None:
-            serializer = self.get_serializer(
+
+            serializer = VendorSerializer(
                 page,
                 many=True,
+                context={
+                    "request": request,
+                },
             )
 
             return self.get_paginated_response(
                 serializer.data
             )
 
-        serializer = self.get_serializer(
+        serializer = VendorSerializer(
             queryset,
             many=True,
+            context={
+                "request": request,
+            },
         )
 
-        return Response({
-            "message": "Vendors fetched successfully.",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "message": (
+                    "Vendors fetched successfully."
+                ),
+                "data": serializer.data,
+            }
+        )
+
+    # ==================================================
+    # RETRIEVE
+    # ==================================================
+
+    def retrieve(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        vendor = self.get_object()
+
+        serializer = VendorSerializer(
+            vendor,
+            context={
+                "request": request,
+            },
+        )
+
+        return Response(
+            {
+                "message": (
+                    "Vendor fetched successfully."
+                ),
+                "data": serializer.data,
+            }
+        )
+
+    # ==================================================
+    # UPDATE
+    # ==================================================
+
+    def update(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        vendor = self.get_object()
+
+        partial = kwargs.pop(
+            "partial",
+            False,
+        )
+
+        serializer = VendorSerializer(
+            vendor,
+            data=request.data,
+            partial=partial,
+            context={
+                "request": request,
+            },
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        serializer.save()
+
+        return Response(
+            {
+                "message": (
+                    "Vendor updated successfully."
+                ),
+                "data": serializer.data,
+            }
+        )
+
+    # ==================================================
+    # PARTIAL UPDATE
+    # ==================================================
+
+    def partial_update(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        kwargs["partial"] = True
+
+        return self.update(
+            request,
+            *args,
+            **kwargs,
+        )
+
+    # ==================================================
+    # DELETE
+    # ==================================================
+
+    def destroy(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
+        vendor = self.get_object()
+
+        vendor.delete()
+
+        return Response(
+            {
+                "message": (
+                    "Vendor deleted successfully."
+                )
+            },
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+    # ==================================================
+    # UPLOAD DOCUMENTS
+    # ==================================================
 
     @action(
         detail=True,
@@ -204,14 +477,32 @@ class VendorViewSet(viewsets.ModelViewSet):
             FormParser,
         ],
     )
-    def upload_documents(self, request, pk=None):
+    def upload_documents(
+        self,
+        request,
+        pk=None,
+    ):
+
+        # get_object() already applies
+        # company filtering through get_queryset()
         vendor = self.get_object()
 
         documents = request.FILES.getlist(
             "documents"
         )
 
+        print(
+            "UPLOAD DOCUMENTS:",
+            request.FILES,
+        )
+
+        print(
+            "DOCUMENT COUNT:",
+            len(documents),
+        )
+
         if not documents:
+
             return Response(
                 {
                     "message": (
@@ -222,14 +513,14 @@ class VendorViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        VendorDocument.objects.bulk_create([
-            VendorDocument(
+        saved_documents = []
+
+        for uploaded_file in documents:
+
+            vendor_document = VendorDocument(
                 vendor=vendor,
-                document=document,
-                document_name=document.name,
+                document_name=uploaded_file.name,
             )
-            for document in documents
-        ])
 
         return Response({
             "message": (
@@ -242,7 +533,13 @@ class VendorViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
-class VendorDashboardView(generics.GenericAPIView):
+# ======================================================
+# VENDOR DASHBOARD
+# ======================================================
+
+class VendorDashboardView(
+    generics.GenericAPIView
+):
 
     permission_classes = [
         IsAuthenticated,
@@ -250,7 +547,13 @@ class VendorDashboardView(generics.GenericAPIView):
         IsHRAdmin,
     ]
 
-    def get(self, request, *args, **kwargs):
+    def get(
+        self,
+        request,
+        *args,
+        **kwargs,
+    ):
+
         company = getattr(
             request.user,
             "company",
@@ -258,6 +561,7 @@ class VendorDashboardView(generics.GenericAPIView):
         )
 
         if not company:
+
             return Response(
                 {
                     "message": (
@@ -285,7 +589,10 @@ class VendorDashboardView(generics.GenericAPIView):
             vendor__company=company,
         )
 
+        # ------------------------------------------
         # Vendor counts
+        # ------------------------------------------
+
         total_vendor = vendors.count()
 
         active_vendor = vendors.filter(
@@ -296,9 +603,13 @@ class VendorDashboardView(generics.GenericAPIView):
             client_status="inactive"
         ).count()
 
-        # Payments completed this month
+        # ------------------------------------------
+        # Current month payments
+        # ------------------------------------------
+
         total_payment_this_month = (
-            payments.filter(
+            payments
+            .filter(
                 status="completed",
                 payment_date__gte=month_start,
                 payment_date__lte=today,
@@ -309,25 +620,37 @@ class VendorDashboardView(generics.GenericAPIView):
             or Decimal("0.00")
         )
 
-        # Outstanding bills
+        # ------------------------------------------
+        # Total bills
+        # ------------------------------------------
+
         total_bills = (
-            bills.aggregate(
+            bills
+            .aggregate(
                 total=Sum("total_amount")
             )["total"]
             or Decimal("0.00")
         )
 
+        # ------------------------------------------
         # Opening balances
+        # ------------------------------------------
+
         total_opening_balance = (
-            vendors.aggregate(
+            vendors
+            .aggregate(
                 total=Sum("opening_balance")
             )["total"]
             or Decimal("0.00")
         )
 
-        # Completed payments, all time
+        # ------------------------------------------
+        # Completed payments
+        # ------------------------------------------
+
         total_payments = (
-            payments.filter(
+            payments
+            .filter(
                 status="completed"
             )
             .aggregate(
@@ -335,6 +658,10 @@ class VendorDashboardView(generics.GenericAPIView):
             )["total"]
             or Decimal("0.00")
         )
+
+        # ------------------------------------------
+        # Outstanding payable
+        # ------------------------------------------
 
         total_payable_outstanding = (
             total_opening_balance
@@ -347,22 +674,25 @@ class VendorDashboardView(generics.GenericAPIView):
             Decimal("0.00"),
         )
 
-        return Response({
-            "message": (
-                "Vendor dashboard fetched successfully."
-            ),
-            "data": {
-                "total_vendor": total_vendor,
-                "active_vendor": active_vendor,
-                "inactive_vendor": inactive_vendor,
-                "total_payment_this_month": (
-                    total_payment_this_month
+        return Response(
+            {
+                "message": (
+                    "Vendor dashboard fetched "
+                    "successfully."
                 ),
-                "total_payable_outstanding": (
-                    total_payable_outstanding
-                ),
-            },
-        })
+                "data": {
+                    "total_vendor": total_vendor,
+                    "active_vendor": active_vendor,
+                    "inactive_vendor": inactive_vendor,
+                    "total_payment_this_month": (
+                        total_payment_this_month
+                    ),
+                    "total_payable_outstanding": (
+                        total_payable_outstanding
+                    ),
+                },
+            }
+        )
 
 
 @extend_schema_view(
