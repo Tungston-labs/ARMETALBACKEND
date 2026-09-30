@@ -3,8 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     VendorViewSet,
-    VendorDashboardView,
-    VendorPaymentViewSet,
+    VendorDashboardView,VendorOverviewView,VendorPurchaseOrderListView
 )
 
 router = DefaultRouter()
@@ -26,6 +25,17 @@ urlpatterns = [
         "dashboard/",
         VendorDashboardView.as_view(),
         name="vendor-dashboard",
+    ),
+      path(
+        "<int:vendor_id>/overview/",
+        VendorOverviewView.as_view(),
+        name="vendor-overview",
+    ),
+
+    path(
+        "<int:vendor_id>/purchase-orders/",
+        VendorPurchaseOrderListView.as_view(),
+        name="vendor-purchase-orders",
     ),
 ]
 

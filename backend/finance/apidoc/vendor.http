@@ -1,6 +1,6 @@
 
 @baseUrl = http://localhost:8000/api/finance/vendor
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNjEyMjIzLCJpYXQiOjE3OTA1ODM0MjMsImp0aSI6IjQ0MjZjYzBlMDAxNjQ2ZDNhOTQ0MDIzMGFmMjEzNjdlIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.NqiERBm85UUlWOXyD9Yz4Chr3j4cpGlsEJ18RqLGW0c
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNzczNTQxLCJpYXQiOjE3OTA3NDQ3NDEsImp0aSI6ImI0ZTdhMTQ1ZTY0MDQzZGY4NGJlYzlmZjI2ODY1NjBmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.732eP7keXfa6Y8zux5Nzia4bep02BtXWLzpF1t-sFJ0
 
 ### =====================================================
 ### 1. CREATE VENDOR
@@ -167,3 +167,13 @@ Content-Type: application/pdf
 
 < ./vat.pdf
 --VendorBoundary--
+
+###vendor detail -customer overview
+
+GET {{baseUrl}}/1/overview/
+Authorization: Bearer {{token}}
+
+
+###
+GET {{baseUrl}}/1/purchase-orders/
+Authorization: Bearer {{token}}
