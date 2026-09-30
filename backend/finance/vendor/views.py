@@ -727,3 +727,255 @@ class VendorDashboardView(
             },
             status=status.HTTP_200_OK,
         )
+    
+
+from decimal import Decimal
+
+from django.db.models import Sum
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Vendor
+from .serializers import VendorOverviewSerializer,VendorPurchaseOrderSerializer
+
+from finance.purchaseorder.models import PurchaseOrder
+
+
+class VendorOverviewView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = VendorOverviewSerializer
+    lookup_url_kwarg = "vendor_id"
+
+    def get_queryset(self):
+        return Vendor.objects.filter(
+            company=self.request.user.company
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        vendor = self.get_object()
+
+        purchase_orders = PurchaseOrder.objects.filter(
+            company=request.user.company,
+            vendor=vendor,
+        )
+
+        total_purchase_orders = purchase_orders.count()
+
+        total_purchase_value = (
+            purchase_orders.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        pending_purchase_orders = purchase_orders.filter(
+            status__in=[
+                "draft",
+                "pending",
+                "approved",
+                "ordered",
+            ]
+        ).count()
+
+        received_purchase_orders = purchase_orders.filter(
+            status="received"
+        ).count()
+
+        cancelled_purchase_orders = purchase_orders.filter(
+            status="cancelled"
+        ).count()
+
+        bills = vendor.bills.filter(
+            company=request.user.company
+        )
+
+        total_bills = bills.count()
+
+        total_bill_amount = (
+            bills.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        total_paid = (
+            bills.aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        outstanding_amount = (
+            total_bill_amount - total_paid
+        )
+
+        return Response({
+            "vendor": self.get_serializer(vendor).data,
+
+            "summary": {
+                "total_purchase_orders": total_purchase_orders,
+                "total_purchase_value": str(total_purchase_value),
+
+                "pending_purchase_orders": pending_purchase_orders,
+                "received_purchase_orders": received_purchase_orders,
+                "cancelled_purchase_orders": cancelled_purchase_orders,
+
+                "total_bills": total_bills,
+                "total_bill_amount": str(total_bill_amount),
+                "total_paid": str(total_paid),
+                "outstanding_amount": str(
+                    max(outstanding_amount, Decimal("0.00"))
+                ),
+            }
+        })
+   
+from decimal import Decimal
+
+from django.db.models import Sum, Q
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from finance.purchaseorder.models import PurchaseOrder
+
+from .serializers import VendorPurchaseOrderSerializer
+from .models import Vendor
+
+
+class VendorPurchaseOrderListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = VendorPurchaseOrderSerializer
+
+    def get_queryset(self):
+        vendor_id = self.kwargs["vendor_id"]
+
+        queryset = (
+            PurchaseOrder.objects
+            .filter(
+                company=self.request.user.company,
+                vendor_id=vendor_id,
+            )
+            .select_related(
+                "vendor",
+                "warehouse",
+            )
+            .order_by("-created_at")
+        )
+
+        search = self.request.query_params.get("search")
+
+        if search:
+            queryset = queryset.filter(
+                Q(po_number__icontains=search)
+                | Q(pr_reference__icontains=search)
+            )
+
+        order_status = self.request.query_params.get(
+            "order_status"
+        )
+
+        delivery_status = self.request.query_params.get(
+            "delivery_status"
+        )
+
+        bill_status = self.request.query_params.get(
+            "bill_status"
+        )
+
+        if order_status:
+            queryset = queryset.filter(
+                status=order_status
+            )
+
+        if delivery_status:
+            queryset = queryset.filter(
+                receipt_status=delivery_status
+            )
+
+        if bill_status:
+            queryset = queryset.filter(
+                bill_status=bill_status
+            )
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(
+            self.get_queryset()
+        )
+
+        # Summary should be based on ALL purchase orders
+        # of this vendor, not the filtered search result.
+        vendor_id = kwargs["vendor_id"]
+
+        all_vendor_orders = PurchaseOrder.objects.filter(
+            company=request.user.company,
+            vendor_id=vendor_id,
+        )
+
+        total_orders = all_vendor_orders.count()
+
+        total_po_value = (
+            all_vendor_orders.aggregate(
+                total=Sum("total_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # Orders waiting for approval
+        pending_approval_count = all_vendor_orders.filter(
+            status="pending"
+        ).count()
+
+        # Open orders
+        open_orders_count = all_vendor_orders.filter(
+            status__in=[
+                "approved",
+                "ordered",
+                "partially_received",
+            ]
+        ).count()
+
+        # Completed orders
+        completed_orders_count = all_vendor_orders.filter(
+            status="received"
+        ).count()
+
+        # Pagination
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(
+                page,
+                many=True,
+            )
+
+            response_data = {
+                "summary": {
+                    "total_orders": total_orders,
+                    "total_po_value": str(total_po_value),
+                    "pending_approval_count": pending_approval_count,
+                    "open_orders_count": open_orders_count,
+                    "completed_orders_count": completed_orders_count,
+                },
+                "purchase_orders": serializer.data,
+            }
+
+            return Response(response_data)
+
+        serializer = self.get_serializer(
+            queryset,
+            many=True,
+        )
+
+        return Response({
+            "summary": {
+                "total_orders": total_orders,
+                "total_po_value": str(total_po_value),
+                "pending_approval_count": pending_approval_count,
+                "open_orders_count": open_orders_count,
+                "completed_orders_count": completed_orders_count,
+            },
+            "purchase_orders": serializer.data,
+        })
