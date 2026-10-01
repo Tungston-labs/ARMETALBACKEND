@@ -18,8 +18,8 @@ POST {{baseUrl}}/api/token/
 Content-Type: application/json
 
 {
-    "username": "YOUR_USERNAME",
-    "password": "YOUR_PASSWORD"
+    "username": "company",
+    "password": "password123"
 }
 
 
@@ -170,7 +170,7 @@ Authorization: {{authToken}}
 
 ### Get warehouses for Purchase Order dropdown
 
-GET {{baseUrl}}/api/finance/purchase-order/dropdowns/warehouses/
+GET {{baseUrl}}/api/finance/purch0ase-order/dropdowns/warehouses/
 Authorization: {{authToken}}
 
 
