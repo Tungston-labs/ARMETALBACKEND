@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     VendorLedgerListCreateView,
-    VendorLedgerDetailView,
+    VendorLedgerDetailView,VendorLedgerCustomerView,
 )
 
 
@@ -19,5 +19,11 @@ urlpatterns = [
         "<int:pk>/",
         VendorLedgerDetailView.as_view(),
         name="vendor-ledger-detail",
+    ),
+
+    path(
+        "vendor/<int:vendor_id>/",
+        VendorLedgerCustomerView.as_view(),
+        name="vendor-ledger-customer",
     ),
 ]

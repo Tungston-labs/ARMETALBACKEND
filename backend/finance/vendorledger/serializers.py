@@ -225,3 +225,39 @@ class VendorLedgerListSerializer(
             "payment_date": payment.payment_date,
             "amount": payment.amount_paid,
         }
+from decimal import Decimal
+
+from rest_framework import serializers
+
+from .models import VendorLedger
+
+
+class VendorLedgerCustomerSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(
+        source="get_transaction_type_display",
+        read_only=True,
+    )
+
+    running_balance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = VendorLedger
+        fields = [
+            "id",
+            "entry_date",
+            "reference_number",
+            "description",
+            "type",
+            "debit_amount",
+            "credit_amount",
+            "running_balance",
+        ]
+
+    def get_running_balance(self, obj):
+        return self.context.get(
+            "running_balances",
+            {}
+        ).get(
+            obj.id,
+            Decimal("0.00"),
+        )

@@ -1027,7 +1027,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from finance.purchaseorder.models import PurchaseOrder
-
 from .serializers import VendorPurchaseOrderSerializer
 from .models import Vendor
 
@@ -1052,6 +1051,7 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
             .order_by("-created_at")
         )
 
+        # Search
         search = self.request.query_params.get("search")
 
         if search:
@@ -1060,16 +1060,9 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 | Q(pr_reference__icontains=search)
             )
 
+        # Order status
         order_status = self.request.query_params.get(
             "order_status"
-        )
-
-        delivery_status = self.request.query_params.get(
-            "delivery_status"
-        )
-
-        bill_status = self.request.query_params.get(
-            "bill_status"
         )
 
         if order_status:
@@ -1077,14 +1070,43 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 status=order_status
             )
 
+        # Delivery status
+        delivery_status = self.request.query_params.get(
+            "delivery_status"
+        )
+
         if delivery_status:
             queryset = queryset.filter(
                 receipt_status=delivery_status
             )
 
+        # Bill status
+        bill_status = self.request.query_params.get(
+            "bill_status"
+        )
+
         if bill_status:
             queryset = queryset.filter(
                 bill_status=bill_status
+            )
+
+        # Date range
+        date_from = self.request.query_params.get(
+            "date_from"
+        )
+
+        date_to = self.request.query_params.get(
+            "date_to"
+        )
+
+        if date_from:
+            queryset = queryset.filter(
+                created_at__date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                created_at__date__lte=date_to
             )
 
         return queryset
@@ -1094,14 +1116,38 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
             self.get_queryset()
         )
 
-        # Summary should be based on ALL purchase orders
-        # of this vendor, not the filtered search result.
+        # -----------------------------------------
+        # Summary
+        # -----------------------------------------
+
         vendor_id = kwargs["vendor_id"]
 
-        all_vendor_orders = PurchaseOrder.objects.filter(
-            company=request.user.company,
-            vendor_id=vendor_id,
+        all_vendor_orders = (
+            PurchaseOrder.objects
+            .filter(
+                company=request.user.company,
+                vendor_id=vendor_id,
+            )
         )
+
+        # Apply date range to summary also
+        date_from = request.query_params.get(
+            "date_from"
+        )
+
+        date_to = request.query_params.get(
+            "date_to"
+        )
+
+        if date_from:
+            all_vendor_orders = all_vendor_orders.filter(
+                created_at__date__gte=date_from
+            )
+
+        if date_to:
+            all_vendor_orders = all_vendor_orders.filter(
+                created_at__date__lte=date_to
+            )
 
         total_orders = all_vendor_orders.count()
 
@@ -1113,25 +1159,36 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
         )
 
         # Orders waiting for approval
-        pending_approval_count = all_vendor_orders.filter(
-            status="pending"
-        ).count()
+        pending_approval_count = (
+            all_vendor_orders
+            .filter(status="pending")
+            .count()
+        )
 
         # Open orders
-        open_orders_count = all_vendor_orders.filter(
-            status__in=[
-                "approved",
-                "ordered",
-                "partially_received",
-            ]
-        ).count()
+        open_orders_count = (
+            all_vendor_orders
+            .filter(
+                status__in=[
+                    "approved",
+                    "ordered",
+                    "partially_received",
+                ]
+            )
+            .count()
+        )
 
         # Completed orders
-        completed_orders_count = all_vendor_orders.filter(
-            status="received"
-        ).count()
+        completed_orders_count = (
+            all_vendor_orders
+            .filter(status="received")
+            .count()
+        )
 
+        # -----------------------------------------
         # Pagination
+        # -----------------------------------------
+
         page = self.paginate_queryset(queryset)
 
         if page is not None:
@@ -1143,10 +1200,18 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
             response_data = {
                 "summary": {
                     "total_orders": total_orders,
-                    "total_po_value": str(total_po_value),
-                    "pending_approval_count": pending_approval_count,
-                    "open_orders_count": open_orders_count,
-                    "completed_orders_count": completed_orders_count,
+                    "total_po_value": str(
+                        total_po_value
+                    ),
+                    "pending_approval_count": (
+                        pending_approval_count
+                    ),
+                    "open_orders_count": (
+                        open_orders_count
+                    ),
+                    "completed_orders_count": (
+                        completed_orders_count
+                    ),
                 },
                 "purchase_orders": serializer.data,
             }
@@ -1161,10 +1226,18 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
         return Response({
             "summary": {
                 "total_orders": total_orders,
-                "total_po_value": str(total_po_value),
-                "pending_approval_count": pending_approval_count,
-                "open_orders_count": open_orders_count,
-                "completed_orders_count": completed_orders_count,
+                "total_po_value": str(
+                    total_po_value
+                ),
+                "pending_approval_count": (
+                    pending_approval_count
+                ),
+                "open_orders_count": (
+                    open_orders_count
+                ),
+                "completed_orders_count": (
+                    completed_orders_count
+                ),
             },
             "purchase_orders": serializer.data,
         })

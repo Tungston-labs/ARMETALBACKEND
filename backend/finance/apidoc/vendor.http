@@ -1,6 +1,6 @@
 
 @baseUrl = http://localhost:8000/api/finance/vendor
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNzczNTQxLCJpYXQiOjE3OTA3NDQ3NDEsImp0aSI6ImI0ZTdhMTQ1ZTY0MDQzZGY4NGJlYzlmZjI2ODY1NjBmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.732eP7keXfa6Y8zux5Nzia4bep02BtXWLzpF1t-sFJ0
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwODY2OTU2LCJpYXQiOjE3OTA4MzgxNTYsImp0aSI6ImZjNzA2YjY3MzBhMDQxOTdiOTJmYzUzNjlmY2JkZjBhIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.4GWqHz5f5Cjj97eD7Gv1g0kN_GjmUjQA4V0HoYKu4D0
 
 ### =====================================================
 ### 1. CREATE VENDOR
@@ -174,6 +174,11 @@ GET {{baseUrl}}/1/overview/
 Authorization: Bearer {{token}}
 
 
-###
-GET {{baseUrl}}/1/purchase-orders/
+###purchase order list - customer view
+GET {{baseUrl}}/1/purchase-orders/?date_from=2026-09-01&date_to=2026-09-30
+Authorization: Bearer {{token}}
+
+
+### vendor ledger - customer view
+GET http://localhost:8000/api/finance/vendor-ledger/vendor/1/
 Authorization: Bearer {{token}}
