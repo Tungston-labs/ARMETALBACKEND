@@ -261,3 +261,39 @@ class VendorLedgerCustomerSerializer(serializers.ModelSerializer):
             obj.id,
             Decimal("0.00"),
         )
+    
+from decimal import Decimal
+
+from rest_framework import serializers
+
+
+class VendorLedgerSummarySerializer(serializers.Serializer):
+    vendor_id = serializers.IntegerField()
+    vendor_code = serializers.CharField()
+    vendor_name = serializers.CharField()
+
+    opening_balance = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    total_billed = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    total_paid_and_debited = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    closing_payable = serializers.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+    )
+
+    due_date = serializers.DateField(
+        allow_null=True,
+    )
+
+    status = serializers.CharField()
