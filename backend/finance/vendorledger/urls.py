@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     VendorLedgerListCreateView,
-    VendorLedgerDetailView,VendorLedgerCustomerView,
+    VendorLedgerDetailView,VendorLedgerCustomerView,VendorLedgerSummaryView,
 )
 
 
@@ -26,4 +26,9 @@ urlpatterns = [
         VendorLedgerCustomerView.as_view(),
         name="vendor-ledger-customer",
     ),
+    path(
+    "summary/",
+    VendorLedgerSummaryView.as_view(),
+    name="vendor-ledger-summary",
+),
 ]

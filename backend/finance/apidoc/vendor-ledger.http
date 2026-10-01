@@ -255,4 +255,6 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}?vendor=1&from_date=2026-09-01&to_date=2026-09-30&transaction_type=payment&status=settled&search=REC
 Authorization: Bearer {{token}}
 
-
+###
+GET {{baseUrl}}summary/
+Authorization: Bearer {{token}}
