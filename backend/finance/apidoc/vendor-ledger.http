@@ -1,0 +1,258 @@
+@baseUrl = http://127.0.0.1:8000/api/finance/vendor-ledger/
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwODYzNTQxLCJpYXQiOjE3OTA4MzQ3NDEsImp0aSI6IjMxNjU3YjJiOTk1MTQ5ZmVhNmJhMzdiOGZlZjcxYzBkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.2rKpgikrXSFE3H6g_Di94uT2PBhZsAXv2NW6raC2hRw
+@vendorId = 1
+@ledgerId = 2
+
+### =========================================================
+### VENDOR LEDGER APIs
+### =========================================================
+
+
+### 1. CREATE MANUAL VENDOR LEDGER ENTRY
+### ---------------------------------------------------------
+POST {{baseUrl}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "vendor": 1,
+    "entry_date": "2026-09-23",
+    "reference_number": "MAN-0001",
+    "transaction_type": "manual",
+    "description": "Manual adjustment for vendor account",
+    "debit_amount": "500.00",
+    "credit_amount": "0.00"
+}
+
+
+### =========================================================
+### 2. CREATE CREDIT ENTRY
+### ---------------------------------------------------------
+POST {{baseUrl}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "vendor": 1,
+    "entry_date": "2026-09-23",
+    "reference_number": "CN-0001",
+    "transaction_type": "credit_note",
+    "description": "Credit note adjustment",
+    "debit_amount": "0.00",
+    "credit_amount": "250.00"
+}
+
+
+### =========================================================
+### 3. CREATE DEBIT ENTRY
+### ---------------------------------------------------------
+POST {{baseUrl}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "vendor": 1,
+    "entry_date": "2026-09-23",
+    "reference_number": "DN-0001",
+    "transaction_type": "debit_note",
+    "description": "Debit note adjustment",
+    "debit_amount": "750.00",
+    "credit_amount": "0.00"
+}
+
+
+### =========================================================
+### 4. LIST ALL VENDOR LEDGER ENTRIES
+### ---------------------------------------------------------
+GET {{baseUrl}}
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 5. GET LEDGER ENTRY BY ID
+### ---------------------------------------------------------
+GET {{baseUrl}}{{ledgerId}}/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 6. UPDATE LEDGER ENTRY
+### ---------------------------------------------------------
+PUT {{baseUrl}}{{ledgerId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "vendor": 1,
+    "entry_date": "2026-09-23",
+    "reference_number": "MAN-0001",
+    "transaction_type": "manual",
+    "description": "Updated manual adjustment",
+    "debit_amount": "600.00",
+    "credit_amount": "0.00"
+}
+
+
+### =========================================================
+### 7. PARTIAL UPDATE LEDGER ENTRY
+### ---------------------------------------------------------
+PATCH {{baseUrl}}{{ledgerId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "description": "Updated ledger description"
+}
+
+
+### =========================================================
+### 8. DELETE LEDGER ENTRY
+### ---------------------------------------------------------
+DELETE {{baseUrl}}{{ledgerId}}/
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### SEARCH
+### Search by vendor code, vendor name, reference number,
+### or description
+### =========================================================
+
+GET {{baseUrl}}?search=ABC
+Authorization: Bearer {{token}}
+
+
+### Search by vendor name
+GET {{baseUrl}}?search=Acme
+Authorization: Bearer {{token}}
+
+
+### Search by reference number
+GET {{baseUrl}}?search=BIL00001
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 9. FILTER BY VENDOR
+### ---------------------------------------------------------
+
+GET {{baseUrl}}?vendor={{vendorId}}
+Authorization: Bearer {{token}}
+
+
+### Example
+GET {{baseUrl}}?vendor=1
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 10. FILTER BY TRANSACTION TYPE
+### ---------------------------------------------------------
+
+GET {{baseUrl}}?transaction_type=bill
+Authorization: Bearer {{token}}
+
+
+### Payment transactions
+GET {{baseUrl}}?transaction_type=payment
+Authorization: Bearer {{token}}
+
+
+### Opening balance
+GET {{baseUrl}}?transaction_type=opening_balance
+Authorization: Bearer {{token}}
+
+
+### Manual entries
+GET {{baseUrl}}?transaction_type=manual
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 11. FILTER BY STATUS
+### ---------------------------------------------------------
+
+GET {{baseUrl}}?status=open
+Authorization: Bearer {{token}}
+
+
+### Partial
+GET {{baseUrl}}?status=partial
+Authorization: Bearer {{token}}
+
+
+### Settled
+GET {{baseUrl}}?status=settled
+Authorization: Bearer {{token}}
+
+
+### Cancelled
+GET {{baseUrl}}?status=cancelled
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 12. FILTER BY DATE RANGE
+### ---------------------------------------------------------
+
+GET {{baseUrl}}?from_date=2026-09-01&to_date=2026-09-23
+Authorization: Bearer {{token}}
+
+
+### From date only
+GET {{baseUrl}}?from_date=2026-09-01
+Authorization: Bearer {{token}}
+
+
+### To date only
+GET {{baseUrl}}?to_date=2026-09-23
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 13. COMBINED FILTER
+### ---------------------------------------------------------
+### Vendor + Date Range + Transaction Type
+
+GET {{baseUrl}}?vendor=1&from_date=2026-09-01&to_date=2026-09-23&transaction_type=bill
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 14. COMBINED FILTER
+### ---------------------------------------------------------
+### Vendor + Status
+
+GET {{baseUrl}}?vendor=1&status=open
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 15. SEARCH + FILTER
+### ---------------------------------------------------------
+
+GET {{baseUrl}}?search=Acme&vendor=1&transaction_type=bill&status=open
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 16. PAGINATION
+### =========================================================
+
+GET {{baseUrl}}?page=1&page_size=10
+Authorization: Bearer {{token}}
+
+
+### Page 2
+GET {{baseUrl}}?page=2&page_size=10
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### 17. VENDOR LEDGER - COMPLETE FILTER EXAMPLE
+### =========================================================
+
+GET {{baseUrl}}?vendor=1&from_date=2026-09-01&to_date=2026-09-30&transaction_type=payment&status=settled&search=REC
+Authorization: Bearer {{token}}
+
+

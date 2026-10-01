@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     'finance.bill',
     'finance.debit_note',
     'finance.purchaseorder',
+    'finance.vendorledger',
 ]
 
 MIDDLEWARE = [

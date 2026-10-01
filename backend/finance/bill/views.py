@@ -14,8 +14,11 @@ from .models import Bill
 from .serializers import BillSerializer, BillListSerializer
 from .filters import BillFilter
 from shared.pagination import CustomPagination
-
-
+from finance.vendorledger.services import sync_bill_ledger
+from finance.vendorledger.services import (
+    sync_bill_ledger,
+    delete_bill_ledger,
+)
 def get_user_company(user):
     return getattr(user, "company", None)
 
@@ -144,7 +147,29 @@ class BillListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+
+        bill = serializer.save(
+            company=company,
+            created_by=user,
+        )
+
+        sync_bill_ledger(
+            bill,
+            created_by=user,
+        )
+    def perform_update(self, serializer):
+
+        bill = serializer.save()
+
+        sync_bill_ledger(
+            bill,
+            created_by=self.request.user,
+        )
+    def perform_destroy(self, instance):
+
+        delete_bill_ledger(instance)
+
+        instance.delete()
 
     @extend_schema(
         summary="List Purchase Bills",
