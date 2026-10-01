@@ -1,7 +1,7 @@
 
 
 
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMzUzNDU5LCJpYXQiOjE3OTAzMjQ2NTksImp0aSI6Ijk1ZTQ0MWE4MDNmYjQzYmE4YzY0MTczYjRiYWE4YjY0IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.ZuJx8UfXesH0C3lRL1FRKeEyJ9DSkpvU6-tC6cdGXNU
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwODU1OTk4LCJpYXQiOjE3OTA4MjcxOTgsImp0aSI6IjNiOTgxOTMwM2NhYzQ3MjE5MWM0ZjNlMDEzMDc2ZTg1IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.N5Be4nb8Gg8iA-sMgmD9FsVqUSmPoo0PO4Wqi9_7rxc
 @baseUrl = http://127.0.0.1:8000
 
 ### 1. Get Vendor Payments KPI Metrics
@@ -22,13 +22,13 @@ Content-Type: application/json
 
 {
   "vendor": 1,
-  "bill": 1,
-  "payment_date": "2026-04-28",
+  "bill": 9,
+  "payment_date": "2026-04-30",
   "payment_type": "full_payment",
   "payment_method": "bank_transfer",
-  "amount_paid": "250000.00",
+  "amount_paid": "100000.00",
   "reference_number": "TRF-987654",
-  "notes": "Full payment for purchase bill INV 0123",
+  "notes": "Full payment for purchase bill INV 0123-second added",
   "status": "completed"
 }
 

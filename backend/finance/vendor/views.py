@@ -11,7 +11,7 @@ from rest_framework import (
     filters,
     status,
 )
-
+from django.db import transaction
 from rest_framework.decorators import action
 
 from rest_framework.permissions import IsAuthenticated
@@ -51,8 +51,18 @@ from .serializers import (
     VendorPaymentKPISerializer,
 )
 from .filters import VendorPaymentFilter
+from finance.vendorledger.services import (
+    sync_vendor_opening_balance,
+)
+from finance.vendorledger.services import (
+    sync_vendor_payment_ledger,
+    sync_bill_ledger,
+)
 
-
+from finance.vendorledger.services import (
+    delete_payment_ledger,
+    sync_bill_ledger,
+)
 
 class VendorViewSet(viewsets.ModelViewSet):
 
@@ -233,6 +243,10 @@ class VendorViewSet(viewsets.ModelViewSet):
             company=company,
             created_by=user,
         )
+        sync_vendor_opening_balance(
+            vendor,
+            created_by=user,
+        )
 
         # ------------------------------------------
         # Save documents
@@ -411,6 +425,10 @@ class VendorViewSet(viewsets.ModelViewSet):
         )
 
         serializer.save()
+        sync_vendor_opening_balance(
+        vendor,
+        created_by=request.user,
+    )
 
         return Response(
             {
@@ -730,6 +748,7 @@ class VendorDashboardView(
         responses={200: OpenApiTypes.OBJECT},
     ),
 )
+
 class VendorPaymentViewSet(viewsets.ModelViewSet):
     serializer_class = VendorPaymentSerializer
     permission_classes = [
@@ -767,9 +786,22 @@ class VendorPaymentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        user = self.request.user
-        company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+
+        payment = serializer.save(
+            company=self.request.user.company,
+            created_by=self.request.user,
+        )
+
+        sync_vendor_payment_ledger(
+            payment,
+            created_by=self.request.user,
+        )
+
+        if payment.bill:
+            sync_bill_ledger(
+                payment.bill,
+                created_by=self.request.user,
+            )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -809,23 +841,80 @@ class VendorPaymentViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
+
+        payment = self.get_object()
+
+        old_bill = payment.bill
+
         serializer = self.get_serializer(
-            instance,
+            payment,
             data=request.data,
-            partial=partial,
+            partial=kwargs.pop("partial", False),
         )
-        serializer.is_valid(raise_exception=True)
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
         payment = serializer.save()
-        response_serializer = self.get_serializer(payment)
+
+        sync_vendor_payment_ledger(
+            payment,
+            created_by=request.user,
+        )
+
+        # Update current bill ledger
+        if payment.bill:
+            sync_bill_ledger(
+                payment.bill,
+                created_by=request.user,
+            )
+
+        # If payment was moved from one bill to another,
+        # synchronize the old bill also.
+        if (
+            old_bill
+            and old_bill.id != payment.bill_id
+        ):
+            old_bill.refresh_from_db()
+
+            sync_bill_ledger(
+                old_bill,
+                created_by=request.user,
+            )
+
         return Response(
             {
                 "message": "Vendor payment updated successfully.",
-                "data": response_serializer.data,
-            },
-            status=status.HTTP_200_OK,
+                "data": self.get_serializer(payment).data,
+            }
+        )
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+
+        payment = self.get_object()
+
+        bill = payment.bill
+
+        delete_payment_ledger(payment)
+
+        payment.delete()
+
+        # VendorPayment.delete() recalculates Bill payment status.
+        if bill:
+            bill.refresh_from_db()
+
+            sync_bill_ledger(
+                bill,
+                created_by=request.user,
+            )
+
+        return Response(
+            {
+                "message": "Vendor payment deleted successfully."
+            }
         )
     
 
