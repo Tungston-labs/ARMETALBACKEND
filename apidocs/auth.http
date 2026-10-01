@@ -4,8 +4,8 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "dummycompany",
-  "password": "Password@123"
+  "username": "company",
+  "password": "password123"
 }
 ###local sqlite super admin
 POST http://127.0.0.1:8000/api/token/
@@ -33,8 +33,8 @@ POST http://127.0.0.1:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "test12@gmail.com",
-  "password": "EMPQ0DOLDU8"
+  "username": "jesna@yopmail.com",
+  "password": "EMPRR0ECGV8"
 }
 
 # common logout for super admin,hr comapny,employee

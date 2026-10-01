@@ -169,7 +169,7 @@ Authorization: {{authToken}}
 
 ### Get warehouses for Purchase Order dropdown
 
-GET {{baseUrl}}/api/finance/purchase-order/dropdowns/warehouses/
+GET {{baseUrl}}/api/finance/purch0ase-order/dropdowns/warehouses/
 Authorization: {{authToken}}
 
 
