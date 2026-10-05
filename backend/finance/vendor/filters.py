@@ -29,3 +29,30 @@ class VendorPaymentFilter(django_filters.FilterSet):
             "payment_date_after",
             "payment_date_before",
         ]
+import django_filters
+
+from .models import Vendor
+
+
+class VendorFilter(django_filters.FilterSet):
+
+    from_date = django_filters.DateFilter(
+        field_name="created_at",
+        lookup_expr="date__gte",
+    )
+
+    to_date = django_filters.DateFilter(
+        field_name="created_at",
+        lookup_expr="date__lte",
+    )
+
+    class Meta:
+        model = Vendor
+        fields = [
+            "client_status",
+            "vendor_type",
+            "payment_term",
+            "currency",
+            "from_date",
+            "to_date",
+        ]

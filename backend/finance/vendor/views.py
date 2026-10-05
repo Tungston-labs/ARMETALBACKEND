@@ -63,7 +63,7 @@ from finance.vendorledger.services import (
     delete_payment_ledger,
     sync_bill_ledger,
 )
-
+from .filters import VendorFilter
 class VendorViewSet(viewsets.ModelViewSet):
 
     permission_classes = [
@@ -85,6 +85,8 @@ class VendorViewSet(viewsets.ModelViewSet):
         filters.SearchFilter,
         filters.OrderingFilter,
     ]
+
+    filterset_class = VendorFilter
 
     filterset_fields = [
         "client_status",
