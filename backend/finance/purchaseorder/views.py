@@ -33,17 +33,22 @@ class PurchaseOrderCreateListView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     def get_queryset(self):
+
         user = self.request.user
 
         queryset = (
             PurchaseOrder.objects
-            .filter(company=user.company)
+            .filter(
+                company=user.company
+            )
             .select_related(
                 "vendor",
                 "warehouse",
                 "created_by",
             )
-            .prefetch_related("items__product")
+            .prefetch_related(
+                "items__product"
+            )
         )
 
         vendor_id = self.request.query_params.get("vendor")
@@ -56,8 +61,22 @@ class PurchaseOrderCreateListView(generics.ListCreateAPIView):
         )
         search = self.request.query_params.get("search")
 
+        # Date range
+        from_date = self.request.query_params.get(
+            "from_date"
+        )
+        to_date = self.request.query_params.get(
+            "to_date"
+        )
+
+        # ------------------------------------------
+        # Vendor filter
+        # ------------------------------------------
+
         if vendor_id:
+
             if not vendor_id.isdigit():
+
                 raise ValidationError({
                     "vendor": "Vendor must be a valid ID."
                 })
@@ -65,6 +84,10 @@ class PurchaseOrderCreateListView(generics.ListCreateAPIView):
             queryset = queryset.filter(
                 vendor_id=vendor_id
             )
+
+        # ------------------------------------------
+        # Status filters
+        # ------------------------------------------
 
         if status:
             queryset = queryset.filter(
@@ -81,15 +104,41 @@ class PurchaseOrderCreateListView(generics.ListCreateAPIView):
                 bill_status=bill_status
             )
 
+        # ------------------------------------------
+        # Search
+        # ------------------------------------------
+
         if search:
+
             queryset = queryset.filter(
-                Q(po_number__icontains=search)
-                | Q(vendor__name__icontains=search)
-                | Q(pr_reference__icontains=search)
+                Q(
+                    po_number__icontains=search
+                )
+                | Q(
+                    vendor__name__icontains=search
+                )
+                | Q(
+                    pr_reference__icontains=search
+                )
+            )
+
+        # ------------------------------------------
+        # ORDER DATE RANGE
+        # ------------------------------------------
+
+        if from_date:
+
+            queryset = queryset.filter(
+                order_date__gte=from_date
+            )
+
+        if to_date:
+
+            queryset = queryset.filter(
+                order_date__lte=to_date
             )
 
         return queryset.order_by("-created_at")
-
     def get_serializer_class(self):
         if self.request.method == "POST":
             return PurchaseOrderCreateSerializer
