@@ -1,5 +1,5 @@
 @baseUrl = http://127.0.0.1:8000
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwMzQ4MjAzLCJpYXQiOjE3OTAzMTk0MDMsImp0aSI6IjViNGVkMmE1N2E2OTQ4ODU5MDdmOGU0NTU1NzdkODI3IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Q1NdnbcYnbtFkMP7PdhvI0LcsnUOjvldOjVLTnLSmj4
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjk2MjgxLCJpYXQiOjE3OTEyNjc0ODEsImp0aSI6IjEzMzZmMjA0MDVjYjRjZWM4NTY0OTk3ZmI5NjM4ZThjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.3A4ZHOw1Rjc1g9qkf_gQYvyw7h0AZXSd-IXsp6L5Ipg
 
 ### List Categories
 GET {{baseUrl}}/api/finance/category/
@@ -13,10 +13,10 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-    "code": "CAT0020",
-    "category_name": "HomeAppliances",
+    "code": "CAT002",
+    "category_name": "abc",
     "parent_category": null,
-    "category_type": "product",
+    "category_type": "service",
     "status": "active"
 }
 

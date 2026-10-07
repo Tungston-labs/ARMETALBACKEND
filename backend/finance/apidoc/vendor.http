@@ -1,7 +1,6 @@
 
 @baseUrl = http://localhost:8000/api/finance/vendor
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjA0NTc1LCJpYXQiOjE3OTExNzU3NzUsImp0aSI6Ijk3M2ZlY2ViMmQ5OTQyMGM4ZmE1ODI0ZmVlYjM4YWRlIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.hnTS1Usb2ojgx2vnO-G-StW5daGJ_7gR2fThc79ruWg
-
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjk2MjgxLCJpYXQiOjE3OTEyNjc0ODEsImp0aSI6IjEzMzZmMjA0MDVjYjRjZWM4NTY0OTk3ZmI5NjM4ZThjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.3A4ZHOw1Rjc1g9qkf_gQYvyw7h0AZXSd-IXsp6L5Ipg
 ### =====================================================
 ### 1. CREATE VENDOR
 ### =====================================================
