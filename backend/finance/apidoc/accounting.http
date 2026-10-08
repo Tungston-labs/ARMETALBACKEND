@@ -1,0 +1,288 @@
+@baseUrl = http://127.0.0.1:8000/api/finance/
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxNDAwNTUwLCJpYXQiOjE3OTEzNzE3NTAsImp0aSI6IjIxMDQwM2YxNjczMzRmZDc4Nzg2YzEwZmM0OTNmZmJiIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.-CmbnGE080kHIIzXuWqqQJQPI8CM07Z-1Jm5Bbe3OLc
+
+
+### =====================================================
+### CHART OF ACCOUNTS - CREATE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "asset",
+    "account_name": "Cash",
+    "account_code": "1100",
+    "parent_account": null,
+    "category": "current_asset",
+    "opening_balance": "25000.00",
+    "opening_balance_type": "debit",
+    "status": "active",
+    "description": "Company cash account"
+}
+
+
+### =====================================================
+### CREATE BANK ACCOUNT
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "asset",
+    "account_name": "Bank",
+    "account_code": "1200",
+    "parent_account": null,
+    "category": "current_asset",
+    "opening_balance": "50000.00",
+    "opening_balance_type": "debit",
+    "status": "active",
+    "description": "Company bank account"
+}
+
+
+### =====================================================
+### CREATE ACCOUNTS RECEIVABLE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "asset",
+    "account_name": "Accounts Receivable",
+    "account_code": "1300",
+    "parent_account": null,
+    "category": "current_asset",
+    "opening_balance": "0.00",
+    "opening_balance_type": "debit",
+    "status": "active",
+    "description": "Customer receivable account"
+}
+
+
+### =====================================================
+### CREATE ACCOUNTS PAYABLE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "liability",
+    "account_name": "Accounts Payable",
+    "account_code": "2100",
+    "parent_account": null,
+    "category": "current_liability",
+    "opening_balance": "20000.00",
+    "opening_balance_type": "credit",
+    "status": "active",
+    "description": "Vendor payable account"
+}
+
+
+### =====================================================
+### CREATE VAT PAYABLE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "liability",
+    "account_name": "VAT Payable",
+    "account_code": "2200",
+    "parent_account": null,
+    "category": "current_liability",
+    "opening_balance": "0.00",
+    "opening_balance_type": "credit",
+    "status": "active",
+    "description": "Output VAT payable"
+}
+
+
+### =====================================================
+### CREATE CAPITAL
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "equity",
+    "account_name": "Owner Capital",
+    "account_code": "3000",
+    "parent_account": null,
+    "category": "equity",
+    "opening_balance": "100000.00",
+    "opening_balance_type": "credit",
+    "status": "active",
+    "description": "Owner capital"
+}
+
+
+### =====================================================
+### CREATE SALES REVENUE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "revenue",
+    "account_name": "Sales Revenue",
+    "account_code": "4100",
+    "parent_account": null,
+    "category": "operating_revenue",
+    "opening_balance": "0.00",
+    "opening_balance_type": "credit",
+    "status": "active",
+    "description": "Revenue from sales"
+}
+
+
+### =====================================================
+### CREATE PURCHASE EXPENSE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "expense",
+    "account_name": "Purchase Expense",
+    "account_code": "5100",
+    "parent_account": null,
+    "category": "cost_of_goods_sold",
+    "opening_balance": "0.00",
+    "opening_balance_type": "debit",
+    "status": "active",
+    "description": "Purchase related expense"
+}
+
+
+### =====================================================
+### CREATE OPERATING EXPENSE
+### =====================================================
+
+POST {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "account_type": "expense",
+    "account_name": "Office Expense",
+    "account_code": "5200",
+    "parent_account": null,
+    "category": "operating_expense",
+    "opening_balance": "5000.00",
+    "opening_balance_type": "debit",
+    "status": "active",
+    "description": "General office expenses"
+}
+
+
+### =====================================================
+### LIST ALL ACCOUNTS
+### =====================================================
+
+GET {{baseUrl}}accounting/
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### SEARCH BY ACCOUNT NAME
+### =====================================================
+
+GET {{baseUrl}}accounting/?search=bank
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### SEARCH BY ACCOUNT CODE
+### =====================================================
+
+GET {{baseUrl}}accounting/?search=1200
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER BY ACCOUNT TYPE - ASSET
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=asset
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER BY ACCOUNT TYPE - LIABILITY
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=liability
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER BY ACCOUNT TYPE - EQUITY
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=equity
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER BY ACCOUNT TYPE - REVENUE
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=revenue
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER BY ACCOUNT TYPE - EXPENSE
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=expense
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER ACTIVE ACCOUNTS
+### =====================================================
+
+GET {{baseUrl}}accounting/?status=active
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### FILTER INACTIVE ACCOUNTS
+### =====================================================
+
+GET {{baseUrl}}accounting/?status=inactive
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### COMBINED FILTER
+### Asset + Active + Search
+### =====================================================
+
+GET {{baseUrl}}accounting/?account_type=asset&status=active&search=bank
+Authorization: Bearer {{token}}
+
+
+### =====================================================
+### CHART OF ACCOUNTS - KPI
+### =====================================================
+
+GET {{baseUrl}}accounting/kpi/
+Authorization: Bearer {{token}}

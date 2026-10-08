@@ -1243,3 +1243,590 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
             },
             "purchase_orders": serializer.data,
         })
+
+
+from rest_framework import status
+from rest_framework.generics import CreateAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import VendorDocument
+from .serializers import VendorDocumentUploadSerializer
+
+
+class VendorDocumentUploadView(CreateAPIView):
+
+    serializer_class = VendorDocumentUploadSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return VendorDocument.objects.filter(
+            vendor__company=self.request.user.company
+        )
+
+    def create(self, request, *args, **kwargs):
+
+        serializer = self.get_serializer(
+            data=request.data
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        document = serializer.save()
+
+        return Response(
+            {
+                "message": "Vendor document uploaded successfully.",
+                "data": self.get_serializer(document).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+from django.db.models import Q
+
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import Vendor
+from finance.bill.models import Bill
+from .serializers import VendorBillListSerializer
+
+from django.db.models import Q, Sum, Count
+
+
+class VendorBillListView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, vendor_id):
+
+        company = request.user.company
+
+        # -----------------------------------
+        # Validate vendor
+        # -----------------------------------
+
+        vendor = Vendor.objects.filter(
+            id=vendor_id,
+            company=company,
+        ).first()
+
+        if not vendor:
+            return Response(
+                {
+                    "message": "Vendor not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # -----------------------------------
+        # Base queryset - all bills of vendor
+        # -----------------------------------
+
+        vendor_bills = Bill.objects.filter(
+            company=company,
+            vendor=vendor,
+        )
+
+        # -----------------------------------
+        # Summary
+        # -----------------------------------
+
+        summary_data = vendor_bills.aggregate(
+            total_bills=Count("id"),
+            total_bill_amount=Sum("total_amount"),
+            total_paid=Sum("amount_paid"),
+        )
+
+        total_bills = summary_data["total_bills"] or 0
+
+        total_bill_amount = (
+            summary_data["total_bill_amount"]
+            or Decimal("0.00")
+        )
+
+        total_paid = (
+            summary_data["total_paid"]
+            or Decimal("0.00")
+        )
+
+        total_balance_due = total_bill_amount - total_paid
+
+        if total_balance_due < Decimal("0.00"):
+            total_balance_due = Decimal("0.00")
+
+        overdue_bill_count = vendor_bills.filter(
+            status="overdue"
+        ).count()
+
+        # -----------------------------------
+        # List queryset
+        # -----------------------------------
+
+        queryset = (
+            vendor_bills
+            .select_related("vendor")
+        )
+
+        # Search by PO number
+        search = request.query_params.get("search")
+
+        if search:
+            queryset = queryset.filter(
+                po_reference__icontains=search
+            )
+
+        # Filter by status
+        status_value = request.query_params.get("status")
+
+        if status_value:
+            queryset = queryset.filter(
+                status=status_value
+            )
+
+        # Date range
+        date_from = request.query_params.get("date_from")
+        date_to = request.query_params.get("date_to")
+
+        if date_from:
+            queryset = queryset.filter(
+                bill_date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                bill_date__lte=date_to
+            )
+
+        queryset = queryset.order_by(
+            "-bill_date",
+            "-id",
+        )
+
+        serializer = VendorBillListSerializer(
+            queryset,
+            many=True,
+        )
+
+        # -----------------------------------
+        # Response
+        # -----------------------------------
+
+        return Response(
+            {
+                "vendor": {
+                    "id": vendor.id,
+                    "vendor_id": vendor.vendor_id,
+                    "name": vendor.name,
+                },
+
+                "summary": {
+                    "total_bills": total_bills,
+                    "total_bill_amount": str(
+                        total_bill_amount
+                    ),
+                    "total_paid": str(
+                        total_paid
+                    ),
+                    "total_balance_due": str(
+                        total_balance_due
+                    ),
+                    "overdue_bill_count": overdue_bill_count,
+                },
+
+                "count": queryset.count(),
+
+                "results": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+
+
+from .models import Vendor, VendorPayment
+from .serializers import VendorPaymentListSerializer
+
+
+class VendorPaymentListView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, vendor_id):
+
+        company = request.user.company
+
+        # -----------------------------------
+        # Validate vendor
+        # -----------------------------------
+
+        vendor = Vendor.objects.filter(
+            id=vendor_id,
+            company=company,
+        ).first()
+
+        if not vendor:
+            return Response(
+                {
+                    "message": "Vendor not found."
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # -----------------------------------
+        # Base queryset
+        # -----------------------------------
+
+        vendor_payments = VendorPayment.objects.filter(
+            company=company,
+            vendor=vendor,
+        )
+
+        # -----------------------------------
+        # Summary
+        # -----------------------------------
+
+        summary_data = vendor_payments.aggregate(
+            total_payments=Count("id"),
+
+            total_paid_amount=Sum(
+                "amount_paid",
+                filter=Q(status="completed"),
+            ),
+
+            pending_clearance=Sum(
+                "amount_paid",
+                filter=Q(status="pending"),
+            ),
+
+            failed_payments=Count(
+                "id",
+                filter=Q(status="cancelled"),
+            ),
+        )
+
+        total_payments = (
+            summary_data["total_payments"]
+            or 0
+        )
+
+        total_paid_amount = (
+            summary_data["total_paid_amount"]
+            or Decimal("0.00")
+        )
+
+        pending_clearance = (
+            summary_data["pending_clearance"]
+            or Decimal("0.00")
+        )
+
+        failed_payments = (
+            summary_data["failed_payments"]
+            or 0
+        )
+
+        # -----------------------------------
+        # This month paid amount
+        # -----------------------------------
+
+        today = timezone.localdate()
+
+        this_month_paid_amount = (
+            vendor_payments
+            .filter(
+                status="completed",
+                payment_date__year=today.year,
+                payment_date__month=today.month,
+            )
+            .aggregate(
+                total=Sum("amount_paid")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        # -----------------------------------
+        # List queryset
+        # -----------------------------------
+
+        queryset = (
+            vendor_payments
+            .select_related(
+                "vendor",
+                "bill",
+            )
+        )
+
+        # -----------------------------------
+        # Search
+        # -----------------------------------
+
+        search = request.query_params.get("search")
+
+        if search:
+            queryset = queryset.filter(
+                Q(receipt_number__icontains=search)
+                | Q(reference_number__icontains=search)
+                | Q(bill__bill_number__icontains=search)
+            )
+
+        # -----------------------------------
+        # Status filter
+        # -----------------------------------
+
+        status_value = request.query_params.get("status")
+
+        if status_value:
+            queryset = queryset.filter(
+                status=status_value
+            )
+
+        # -----------------------------------
+        # Payment method filter
+        # -----------------------------------
+
+        payment_method = request.query_params.get(
+            "payment_method"
+        )
+
+        if payment_method:
+            queryset = queryset.filter(
+                payment_method=payment_method
+            )
+
+        # -----------------------------------
+        # Date range filter
+        # -----------------------------------
+
+        date_from = request.query_params.get(
+            "date_from"
+        )
+
+        date_to = request.query_params.get(
+            "date_to"
+        )
+
+        if date_from:
+            queryset = queryset.filter(
+                payment_date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                payment_date__lte=date_to
+            )
+
+        queryset = queryset.order_by(
+            "-payment_date",
+            "-id",
+        )
+
+        # -----------------------------------
+        # Serialize
+        # -----------------------------------
+
+        serializer = VendorPaymentListSerializer(
+            queryset,
+            many=True,
+        )
+
+        # -----------------------------------
+        # Response
+        # -----------------------------------
+
+        return Response(
+            {
+                "vendor": {
+                    "id": vendor.id,
+                    "vendor_id": vendor.vendor_id,
+                    "name": vendor.name,
+                },
+
+                "summary": {
+                    "total_payments": total_payments,
+                    "total_paid_amount": str(
+                        total_paid_amount
+                    ),
+                    "this_month_paid_amount": str(
+                        this_month_paid_amount
+                    ),
+                    "pending_clearance": str(
+                        pending_clearance
+                    ),
+                    "failed_payments": failed_payments,
+                },
+
+                "count": queryset.count(),
+
+                "results": serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+from finance.debit_note.models import DebitNote
+from .serializers import VendorDebitNoteListSerializer
+
+
+class VendorDebitNoteListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, vendor_id):
+
+        company = request.user.company
+
+        # ---------------------------------------------------------
+        # Validate Vendor
+        # ---------------------------------------------------------
+        vendor = Vendor.objects.filter(
+            id=vendor_id,
+            company=company
+        ).first()
+
+        if not vendor:
+            return Response(
+                {
+                    "detail": "Vendor not found."
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # ---------------------------------------------------------
+        # Base Queryset
+        # ---------------------------------------------------------
+        base_queryset = DebitNote.objects.filter(
+            company=company,
+            vendor=vendor
+        ).select_related(
+            "vendor",
+            "bill"
+        )
+
+        # ---------------------------------------------------------
+        # SUMMARY
+        # ---------------------------------------------------------
+
+        total_debit_notes = base_queryset.exclude(
+            status="draft"
+        ).count()
+
+        total_debit_amount = (
+            base_queryset
+            .exclude(status="draft")
+            .aggregate(
+                total=Sum("debit_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        applied_to_bill_amount = (
+            base_queryset
+            .exclude(status="draft")
+            .aggregate(
+                total=Sum("applied_amount")
+            )["total"]
+            or Decimal("0.00")
+        )
+
+        pending_unapplied_amount = (
+            total_debit_amount - applied_to_bill_amount
+        )
+
+        if pending_unapplied_amount < Decimal("0.00"):
+            pending_unapplied_amount = Decimal("0.00")
+
+        cancelled_notes = base_queryset.filter(
+            status="cancelled"
+        ).count()
+
+        # ---------------------------------------------------------
+        # FILTERED LIST QUERYSET
+        # ---------------------------------------------------------
+
+        queryset = base_queryset
+
+        # Search
+        search = request.query_params.get("search")
+
+        if search:
+            queryset = queryset.filter(
+                Q(dn_number__icontains=search) |
+                Q(bill__bill_number__icontains=search) |
+                Q(bill_ref__icontains=search)
+            )
+
+        # Reason filter
+        reason = request.query_params.get("reason")
+
+        if reason:
+            queryset = queryset.filter(
+                reason=reason
+            )
+
+        # Status filter
+        status_filter = request.query_params.get("status")
+
+        if status_filter:
+            queryset = queryset.filter(
+                status=status_filter
+            )
+
+        # Date range
+        date_from = request.query_params.get("date_from")
+        date_to = request.query_params.get("date_to")
+
+        if date_from:
+            queryset = queryset.filter(
+                issue_date__gte=date_from
+            )
+
+        if date_to:
+            queryset = queryset.filter(
+                issue_date__lte=date_to
+            )
+
+        # Ordering
+        queryset = queryset.order_by(
+            "-issue_date",
+            "-id"
+        )
+
+        # ---------------------------------------------------------
+        # SERIALIZE
+        # ---------------------------------------------------------
+
+        serializer = VendorDebitNoteListSerializer(
+            queryset,
+            many=True,
+            context={"request": request}
+        )
+
+        return Response(
+            {
+                "vendor": {
+                    "id": vendor.id,
+                    "vendor_id": vendor.vendor_id,
+                    "name": vendor.name,
+                },
+
+                "summary": {
+                    "total_debit_notes": total_debit_notes,
+                    "total_debit_amount": str(
+                        total_debit_amount
+                    ),
+                    "applied_to_bill_amount": str(
+                        applied_to_bill_amount
+                    ),
+                    "pending_unapplied_amount": str(
+                        pending_unapplied_amount
+                    ),
+                    "cancelled_notes": cancelled_notes,
+                },
+
+                "count": queryset.count(),
+
+                "results": serializer.data,
+            },
+            status=status.HTTP_200_OK
+        )

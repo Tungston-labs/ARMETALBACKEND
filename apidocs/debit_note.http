@@ -1,5 +1,10 @@
+@baseUrl = http://localhost:8000/api/finance
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxNDYyNjYwLCJpYXQiOjE3OTE0MzM4NjAsImp0aSI6ImFlMzIzMDJiMDM4MzRjYTQ5YzBkMmMwNTNiNzg1Y2MyIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Mgb_SnUl039GwM3btz9A2UzQCsMZDVfdgKF4R2MFsSY
+### 
+
+
 ### 1. Get Debit Note KPI Card Metrics
-GET {{baseUrl}}/api/finance/debit-notes/kpi/
+GET {{baseUrl}}/debit-notes/kpi/
 Authorization: Bearer {{token}}
 
 ###
@@ -17,7 +22,7 @@ Authorization: Bearer {{token}}
 ###
 
 ### 4. Create New Debit Note
-POST {{baseUrl}}/api/finance/debit-notes/
+POST {{baseUrl}}/debit-notes/
 Authorization: Bearer {{token}}
 Content-Type: application/json
 

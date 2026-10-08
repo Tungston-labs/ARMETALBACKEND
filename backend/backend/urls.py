@@ -58,6 +58,8 @@ urlpatterns = [
     path('api/finance/debit-notes/', include('finance.debit_note.urls')),
     path('api/finance/purchase-order/', include('finance.purchaseorder.urls')),
     path('api/finance/vendor-ledger/', include('finance.vendorledger.urls')),
+    path('api/finance/accounting/', include('finance.accounting.urls')),
+
 
 
 
