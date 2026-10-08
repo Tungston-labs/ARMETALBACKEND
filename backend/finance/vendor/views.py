@@ -937,6 +937,8 @@ class VendorOverviewView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorOverviewSerializer
     lookup_url_kwarg = "vendor_id"
+    pagination_class = CustomPagination
+
 
     def get_queryset(self):
         return Vendor.objects.filter(
@@ -1036,6 +1038,7 @@ from .models import Vendor
 class VendorPurchaseOrderListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorPurchaseOrderSerializer
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         vendor_id = self.kwargs["vendor_id"]
@@ -1296,9 +1299,25 @@ from .serializers import VendorBillListSerializer
 from django.db.models import Q, Sum, Count
 
 
+from decimal import Decimal
+
+from django.db.models import Count, Sum
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import Vendor
+from finance.bill.models import Bill
+from .serializers import VendorBillListSerializer
+from shared.pagination import CustomPagination
+
+
 class VendorBillListView(APIView):
 
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get(self, request, vendor_id):
 
@@ -1340,7 +1359,10 @@ class VendorBillListView(APIView):
             total_paid=Sum("amount_paid"),
         )
 
-        total_bills = summary_data["total_bills"] or 0
+        total_bills = (
+            summary_data["total_bills"]
+            or 0
+        )
 
         total_bill_amount = (
             summary_data["total_bill_amount"]
@@ -1352,7 +1374,9 @@ class VendorBillListView(APIView):
             or Decimal("0.00")
         )
 
-        total_balance_due = total_bill_amount - total_paid
+        total_balance_due = (
+            total_bill_amount - total_paid
+        )
 
         if total_balance_due < Decimal("0.00"):
             total_balance_due = Decimal("0.00")
@@ -1370,7 +1394,10 @@ class VendorBillListView(APIView):
             .select_related("vendor")
         )
 
+        # -----------------------------------
         # Search by PO number
+        # -----------------------------------
+
         search = request.query_params.get("search")
 
         if search:
@@ -1378,7 +1405,10 @@ class VendorBillListView(APIView):
                 po_reference__icontains=search
             )
 
+        # -----------------------------------
         # Filter by status
+        # -----------------------------------
+
         status_value = request.query_params.get("status")
 
         if status_value:
@@ -1386,28 +1416,53 @@ class VendorBillListView(APIView):
                 status=status_value
             )
 
+        # -----------------------------------
         # Date range
+        # -----------------------------------
+
         date_from = request.query_params.get("date_from")
-        date_to = request.query_params.get("date_to")
 
         if date_from:
             queryset = queryset.filter(
                 bill_date__gte=date_from
             )
 
+        date_to = request.query_params.get("date_to")
+
         if date_to:
             queryset = queryset.filter(
                 bill_date__lte=date_to
             )
+
+        # -----------------------------------
+        # Ordering
+        # -----------------------------------
 
         queryset = queryset.order_by(
             "-bill_date",
             "-id",
         )
 
-        serializer = VendorBillListSerializer(
+        # -----------------------------------
+        # Pagination
+        # -----------------------------------
+
+        paginator = self.pagination_class()
+
+        page = paginator.paginate_queryset(
             queryset,
+            request,
+            view=self,
+        )
+
+        # -----------------------------------
+        # Serialize paginated records
+        # -----------------------------------
+
+        serializer = VendorBillListSerializer(
+            page,
             many=True,
+            context={"request": request},
         )
 
         # -----------------------------------
@@ -1436,7 +1491,11 @@ class VendorBillListView(APIView):
                     "overdue_bill_count": overdue_bill_count,
                 },
 
-                "count": queryset.count(),
+                "count": paginator.page.paginator.count,
+
+                "next": paginator.get_next_link(),
+
+                "previous": paginator.get_previous_link(),
 
                 "results": serializer.data,
             },
@@ -1444,15 +1503,25 @@ class VendorBillListView(APIView):
         )
 
 
+from decimal import Decimal
 
+from django.db.models import Q, Count, Sum
+from django.utils import timezone
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 
 from .models import Vendor, VendorPayment
 from .serializers import VendorPaymentListSerializer
+from shared.pagination import CustomPagination
 
 
 class VendorPaymentListView(APIView):
 
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get(self, request, vendor_id):
 
@@ -1617,18 +1686,35 @@ class VendorPaymentListView(APIView):
                 payment_date__lte=date_to
             )
 
+        # -----------------------------------
+        # Ordering
+        # -----------------------------------
+
         queryset = queryset.order_by(
             "-payment_date",
             "-id",
         )
 
         # -----------------------------------
-        # Serialize
+        # Pagination
+        # -----------------------------------
+
+        paginator = self.pagination_class()
+
+        page = paginator.paginate_queryset(
+            queryset,
+            request,
+            view=self,
+        )
+
+        # -----------------------------------
+        # Serialize paginated records
         # -----------------------------------
 
         serializer = VendorPaymentListSerializer(
-            queryset,
+            page,
             many=True,
+            context={"request": request},
         )
 
         # -----------------------------------
@@ -1657,20 +1743,34 @@ class VendorPaymentListView(APIView):
                     "failed_payments": failed_payments,
                 },
 
-                "count": queryset.count(),
+                "count": paginator.page.paginator.count,
+
+                "next": paginator.get_next_link(),
+
+                "previous": paginator.get_previous_link(),
 
                 "results": serializer.data,
             },
             status=status.HTTP_200_OK,
         )
 
+from decimal import Decimal
+
+from django.db.models import Q, Sum
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 
 from finance.debit_note.models import DebitNote
+
 from .serializers import VendorDebitNoteListSerializer
 
 
 class VendorDebitNoteListView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
     def get(self, request, vendor_id):
 
@@ -1695,35 +1795,37 @@ class VendorDebitNoteListView(APIView):
         # ---------------------------------------------------------
         # Base Queryset
         # ---------------------------------------------------------
-        base_queryset = DebitNote.objects.filter(
-            company=company,
-            vendor=vendor
-        ).select_related(
-            "vendor",
-            "bill"
+        base_queryset = (
+            DebitNote.objects
+            .filter(
+                company=company,
+                vendor=vendor
+            )
+            .select_related(
+                "vendor",
+                "bill"
+            )
         )
 
         # ---------------------------------------------------------
         # SUMMARY
         # ---------------------------------------------------------
 
-        total_debit_notes = base_queryset.exclude(
+        summary_queryset = base_queryset.exclude(
             status="draft"
-        ).count()
+        )
+
+        total_debit_notes = summary_queryset.count()
 
         total_debit_amount = (
-            base_queryset
-            .exclude(status="draft")
-            .aggregate(
+            summary_queryset.aggregate(
                 total=Sum("debit_amount")
             )["total"]
             or Decimal("0.00")
         )
 
         applied_to_bill_amount = (
-            base_queryset
-            .exclude(status="draft")
-            .aggregate(
+            summary_queryset.aggregate(
                 total=Sum("applied_amount")
             )["total"]
             or Decimal("0.00")
@@ -1741,7 +1843,7 @@ class VendorDebitNoteListView(APIView):
         ).count()
 
         # ---------------------------------------------------------
-        # FILTERED LIST QUERYSET
+        # FILTERED QUERYSET
         # ---------------------------------------------------------
 
         queryset = base_queryset
@@ -1751,12 +1853,12 @@ class VendorDebitNoteListView(APIView):
 
         if search:
             queryset = queryset.filter(
-                Q(dn_number__icontains=search) |
-                Q(bill__bill_number__icontains=search) |
-                Q(bill_ref__icontains=search)
+                Q(dn_number__icontains=search)
+                | Q(bill__bill_number__icontains=search)
+                | Q(bill_ref__icontains=search)
             )
 
-        # Reason filter
+        # Reason
         reason = request.query_params.get("reason")
 
         if reason:
@@ -1764,7 +1866,7 @@ class VendorDebitNoteListView(APIView):
                 reason=reason
             )
 
-        # Status filter
+        # Status
         status_filter = request.query_params.get("status")
 
         if status_filter:
@@ -1774,12 +1876,13 @@ class VendorDebitNoteListView(APIView):
 
         # Date range
         date_from = request.query_params.get("date_from")
-        date_to = request.query_params.get("date_to")
 
         if date_from:
             queryset = queryset.filter(
                 issue_date__gte=date_from
             )
+
+        date_to = request.query_params.get("date_to")
 
         if date_to:
             queryset = queryset.filter(
@@ -1793,14 +1896,26 @@ class VendorDebitNoteListView(APIView):
         )
 
         # ---------------------------------------------------------
-        # SERIALIZE
+        # PAGINATION
         # ---------------------------------------------------------
 
-        serializer = VendorDebitNoteListSerializer(
+        paginator = self.pagination_class()
+
+        page = paginator.paginate_queryset(
             queryset,
+            request,
+            view=self
+        )
+
+        serializer = VendorDebitNoteListSerializer(
+            page,
             many=True,
             context={"request": request}
         )
+
+        # ---------------------------------------------------------
+        # PAGINATED RESPONSE
+        # ---------------------------------------------------------
 
         return Response(
             {
@@ -1824,7 +1939,11 @@ class VendorDebitNoteListView(APIView):
                     "cancelled_notes": cancelled_notes,
                 },
 
-                "count": queryset.count(),
+                "count": paginator.page.paginator.count,
+
+                "next": paginator.get_next_link(),
+
+                "previous": paginator.get_previous_link(),
 
                 "results": serializer.data,
             },
