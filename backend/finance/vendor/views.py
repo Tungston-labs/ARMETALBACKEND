@@ -928,7 +928,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Vendor
-from .serializers import VendorOverviewSerializer,VendorPurchaseOrderSerializer
+from .serializers import VendorOverviewSerializer
 
 from finance.purchaseorder.models import PurchaseOrder
 
@@ -937,8 +937,6 @@ class VendorOverviewView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorOverviewSerializer
     lookup_url_kwarg = "vendor_id"
-    pagination_class = CustomPagination
-
 
     def get_queryset(self):
         return Vendor.objects.filter(
@@ -947,9 +945,11 @@ class VendorOverviewView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         vendor = self.get_object()
+        company = request.user.company
 
+        # Purchase order summary
         purchase_orders = PurchaseOrder.objects.filter(
-            company=request.user.company,
+            company=company,
             vendor=vendor,
         )
 
@@ -979,60 +979,59 @@ class VendorOverviewView(generics.RetrieveAPIView):
             status="cancelled"
         ).count()
 
-        bills = vendor.bills.filter(
-            company=request.user.company
-        )
+        # Bill summary
+        bills = vendor.bills.filter(company=company)
 
         total_bills = bills.count()
 
+        bill_summary = bills.aggregate(
+            total_bill_amount=Sum("total_amount"),
+            total_paid=Sum("amount_paid"),
+        )
+
         total_bill_amount = (
-            bills.aggregate(
-                total=Sum("total_amount")
-            )["total"]
+            bill_summary["total_bill_amount"]
             or Decimal("0.00")
         )
 
         total_paid = (
-            bills.aggregate(
-                total=Sum("amount_paid")
-            )["total"]
+            bill_summary["total_paid"]
             or Decimal("0.00")
         )
 
-        outstanding_amount = (
-            total_bill_amount - total_paid
+        outstanding_amount = max(
+            total_bill_amount - total_paid,
+            Decimal("0.00"),
         )
 
         return Response({
             "vendor": self.get_serializer(vendor).data,
-
             "summary": {
                 "total_purchase_orders": total_purchase_orders,
                 "total_purchase_value": str(total_purchase_value),
-
                 "pending_purchase_orders": pending_purchase_orders,
                 "received_purchase_orders": received_purchase_orders,
                 "cancelled_purchase_orders": cancelled_purchase_orders,
-
                 "total_bills": total_bills,
                 "total_bill_amount": str(total_bill_amount),
                 "total_paid": str(total_paid),
-                "outstanding_amount": str(
-                    max(outstanding_amount, Decimal("0.00"))
-                ),
-            }
+                "outstanding_amount": str(outstanding_amount),
+            },
         })
-   
+
+
 from decimal import Decimal
 
-from django.db.models import Sum, Q
+from django.db.models import Q, Sum
+
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from finance.purchaseorder.models import PurchaseOrder
+from shared.pagination import CustomPagination
+
 from .serializers import VendorPurchaseOrderSerializer
-from .models import Vendor
 
 
 class VendorPurchaseOrderListView(generics.ListAPIView):
@@ -1053,7 +1052,6 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 "vendor",
                 "warehouse",
             )
-            .order_by("-created_at")
         )
 
         # Search
@@ -1096,13 +1094,8 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
             )
 
         # Date range
-        date_from = self.request.query_params.get(
-            "date_from"
-        )
-
-        date_to = self.request.query_params.get(
-            "date_to"
-        )
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
 
         if date_from:
             queryset = queryset.filter(
@@ -1114,35 +1107,26 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 created_at__date__lte=date_to
             )
 
-        return queryset
+        return queryset.order_by("-created_at", "-id")
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(
-            self.get_queryset()
-        )
+        queryset = self.filter_queryset(self.get_queryset())
 
         # -----------------------------------------
         # Summary
+        # Summary follows the selected date range.
+        # Other list filters do not affect the cards.
         # -----------------------------------------
 
         vendor_id = kwargs["vendor_id"]
 
-        all_vendor_orders = (
-            PurchaseOrder.objects
-            .filter(
-                company=request.user.company,
-                vendor_id=vendor_id,
-            )
+        all_vendor_orders = PurchaseOrder.objects.filter(
+            company=request.user.company,
+            vendor_id=vendor_id,
         )
 
-        # Apply date range to summary also
-        date_from = request.query_params.get(
-            "date_from"
-        )
-
-        date_to = request.query_params.get(
-            "date_to"
-        )
+        date_from = request.query_params.get("date_from")
+        date_to = request.query_params.get("date_to")
 
         if date_from:
             all_vendor_orders = all_vendor_orders.filter(
@@ -1154,41 +1138,34 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 created_at__date__lte=date_to
             )
 
-        total_orders = all_vendor_orders.count()
-
-        total_po_value = (
-            all_vendor_orders.aggregate(
-                total=Sum("total_amount")
-            )["total"]
-            or Decimal("0.00")
+        summary_data = all_vendor_orders.aggregate(
+            total_po_value=Sum("total_amount")
         )
 
-        # Orders waiting for approval
-        pending_approval_count = (
-            all_vendor_orders
-            .filter(status="pending")
-            .count()
-        )
+        summary = {
+            "total_orders": all_vendor_orders.count(),
 
-        # Open orders
-        open_orders_count = (
-            all_vendor_orders
-            .filter(
+            "total_po_value": str(
+                summary_data["total_po_value"]
+                or Decimal("0.00")
+            ),
+
+            "pending_approval_count": all_vendor_orders.filter(
+                status="pending"
+            ).count(),
+
+            "open_orders_count": all_vendor_orders.filter(
                 status__in=[
                     "approved",
                     "ordered",
                     "partially_received",
                 ]
-            )
-            .count()
-        )
+            ).count(),
 
-        # Completed orders
-        completed_orders_count = (
-            all_vendor_orders
-            .filter(status="received")
-            .count()
-        )
+            "completed_orders_count": all_vendor_orders.filter(
+                status="received"
+            ).count(),
+        }
 
         # -----------------------------------------
         # Pagination
@@ -1202,63 +1179,44 @@ class VendorPurchaseOrderListView(generics.ListAPIView):
                 many=True,
             )
 
-            response_data = {
-                "summary": {
-                    "total_orders": total_orders,
-                    "total_po_value": str(
-                        total_po_value
-                    ),
-                    "pending_approval_count": (
-                        pending_approval_count
-                    ),
-                    "open_orders_count": (
-                        open_orders_count
-                    ),
-                    "completed_orders_count": (
-                        completed_orders_count
-                    ),
-                },
-                "purchase_orders": serializer.data,
-            }
+            return Response({
+                "summary": summary,
+                "count": self.paginator.page.paginator.count,
+                "next": self.paginator.get_next_link(),
+                "previous": self.paginator.get_previous_link(),
+                "results": serializer.data,
+            })
 
-            return Response(response_data)
-
+        # Fallback if pagination is disabled
         serializer = self.get_serializer(
             queryset,
             many=True,
         )
 
         return Response({
-            "summary": {
-                "total_orders": total_orders,
-                "total_po_value": str(
-                    total_po_value
-                ),
-                "pending_approval_count": (
-                    pending_approval_count
-                ),
-                "open_orders_count": (
-                    open_orders_count
-                ),
-                "completed_orders_count": (
-                    completed_orders_count
-                ),
-            },
-            "purchase_orders": serializer.data,
+            "summary": summary,
+            "count": queryset.count(),
+            "next": None,
+            "previous": None,
+            "results": serializer.data,
         })
 
+
+
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 from rest_framework import status
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
-from .models import VendorDocument
+from .models import VendorDocument, Vendor
 from .serializers import VendorDocumentUploadSerializer
 
 
 class VendorDocumentUploadView(CreateAPIView):
-
     serializer_class = VendorDocumentUploadSerializer
     permission_classes = [IsAuthenticated]
 
@@ -1268,22 +1226,62 @@ class VendorDocumentUploadView(CreateAPIView):
         )
 
     def create(self, request, *args, **kwargs):
+        vendor_id = request.data.get("vendor")
 
-        serializer = self.get_serializer(
-            data=request.data
+        # Accept multiple files using the same field name.
+        uploaded_files = request.FILES.getlist("document")
+
+        if not vendor_id:
+            raise ValidationError({
+                "vendor": "Vendor ID is required."
+            })
+
+        if not uploaded_files:
+            raise ValidationError({
+                "document": "Upload at least one file."
+            })
+
+        # Ensure the vendor belongs to the logged-in user's company.
+        vendor = get_object_or_404(
+            Vendor,
+            id=vendor_id,
+            company=request.user.company,
         )
 
-        serializer.is_valid(raise_exception=True)
+        created_documents = []
 
-        document = serializer.save()
+        with transaction.atomic():
+            for uploaded_file in uploaded_files:
+                serializer = self.get_serializer(
+                    data={
+                        "vendor": vendor.id,
+                        "document": uploaded_file,
+                        "document_name": uploaded_file.name,
+                    }
+                )
+
+                serializer.is_valid(raise_exception=True)
+                document = serializer.save()
+                created_documents.append(document)
+
+        response_serializer = self.get_serializer(
+            created_documents,
+            many=True,
+        )
 
         return Response(
             {
-                "message": "Vendor document uploaded successfully.",
-                "data": self.get_serializer(document).data,
+                "message": (
+                    f"{len(created_documents)} document(s) "
+                    "uploaded successfully."
+                ),
+                "count": len(created_documents),
+                "data": response_serializer.data,
             },
             status=status.HTTP_201_CREATED,
         )
+
+
 
 
 from django.db.models import Q

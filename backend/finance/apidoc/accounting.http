@@ -286,3 +286,19 @@ Authorization: Bearer {{token}}
 
 GET {{baseUrl}}accounting/kpi/
 Authorization: Bearer {{token}}
+
+
+### edit chart of acounts
+PATCH  {{baseUrl}}accounting/1/
+Authorization:Bearer {{token}}
+Content-Type: application/json
+
+{
+  "account_name": "Office Equipment",
+  "description": "Office equipment and furniture"
+}
+
+### delete account
+
+DELETE {{baseUrl}}accounting/9/
+Authorization:Bearer {{token}}
