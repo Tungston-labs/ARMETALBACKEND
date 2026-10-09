@@ -139,15 +139,24 @@ class VendorLedgerDetailView(
     
 
 
+from django.shortcuts import get_object_or_404
+
+from rest_framework import generics
+
+
+from shared.pagination import CustomPagination
+
+
+
 class VendorLedgerCustomerView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = VendorLedgerCustomerSerializer
+    pagination_class = CustomPagination
 
     def get_vendor(self):
-        vendor_id = self.kwargs["vendor_id"]
-
-        return Vendor.objects.get(
-            id=vendor_id,
+        return get_object_or_404(
+            Vendor,
+            id=self.kwargs["vendor_id"],
             company=self.request.user.company,
         )
 
@@ -155,8 +164,7 @@ class VendorLedgerCustomerView(generics.ListAPIView):
         vendor = self.get_vendor()
 
         queryset = (
-            VendorLedger.objects
-            .filter(
+            VendorLedger.objects.filter(
                 company=self.request.user.company,
                 vendor=vendor,
             )
@@ -164,21 +172,10 @@ class VendorLedgerCustomerView(generics.ListAPIView):
             .order_by("entry_date", "id")
         )
 
-        transaction_type = self.request.query_params.get(
-            "type"
-        )
-
-        search = self.request.query_params.get(
-            "search"
-        )
-
-        date_from = self.request.query_params.get(
-            "date_from"
-        )
-
-        date_to = self.request.query_params.get(
-            "date_to"
-        )
+        transaction_type = self.request.query_params.get("type")
+        search = self.request.query_params.get("search")
+        date_from = self.request.query_params.get("date_from")
+        date_to = self.request.query_params.get("date_to")
 
         if transaction_type:
             queryset = queryset.filter(
@@ -207,67 +204,45 @@ class VendorLedgerCustomerView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         vendor = self.get_vendor()
 
-        queryset = self.get_queryset()
+        # Apply all requested filters.
+        queryset = self.filter_queryset(self.get_queryset())
 
         # --------------------------------------------------
-        # Calculate running balance
-        # --------------------------------------------------
-
-        running_balance = Decimal("0.00")
-
-        running_balances = {}
-
-        for entry in queryset:
-            running_balance += (
-                entry.debit_amount
-                - entry.credit_amount
-            )
-
-            running_balances[entry.id] = running_balance
-
-        # --------------------------------------------------
-        # Cards
+        # Summary cards: calculate over the complete
+        # filtered queryset, not just the current page.
         # --------------------------------------------------
 
         total_opening_balance = (
-            queryset
-            .filter(
+            queryset.filter(
                 transaction_type="opening_balance"
-            )
-            .aggregate(
+            ).aggregate(
                 total=Sum("debit_amount")
             )["total"]
             or Decimal("0.00")
         )
 
         total_billed = (
-            queryset
-            .filter(
+            queryset.filter(
                 transaction_type="bill"
-            )
-            .aggregate(
+            ).aggregate(
                 total=Sum("debit_amount")
             )["total"]
             or Decimal("0.00")
         )
 
         total_paid = (
-            queryset
-            .filter(
+            queryset.filter(
                 transaction_type="payment"
-            )
-            .aggregate(
+            ).aggregate(
                 total=Sum("credit_amount")
             )["total"]
             or Decimal("0.00")
         )
 
         total_debit_note = (
-            queryset
-            .filter(
+            queryset.filter(
                 transaction_type="debit_note"
-            )
-            .aggregate(
+            ).aggregate(
                 total=Sum("debit_amount")
             )["total"]
             or Decimal("0.00")
@@ -277,38 +252,76 @@ class VendorLedgerCustomerView(generics.ListAPIView):
             total_paid + total_debit_note
         )
 
+        totals = queryset.aggregate(
+            total_debit=Sum("debit_amount"),
+            total_credit=Sum("credit_amount"),
+        )
+
         total_debit = (
-            queryset.aggregate(
-                total=Sum("debit_amount")
-            )["total"]
-            or Decimal("0.00")
+            totals["total_debit"] or Decimal("0.00")
         )
 
         total_credit = (
-            queryset.aggregate(
-                total=Sum("credit_amount")
-            )["total"]
-            or Decimal("0.00")
+            totals["total_credit"] or Decimal("0.00")
         )
 
-        outstanding_payable = (
-            total_debit - total_credit
-        )
+        outstanding_payable = total_debit - total_credit
 
         total_transactions = queryset.count()
 
         # --------------------------------------------------
-        # Serialize
+        # Running balance across the complete filtered
+        # queryset. This preserves balances across pages.
         # --------------------------------------------------
 
-        serializer = self.get_serializer(
-            queryset,
-            many=True,
-            context={
-                "request": request,
-                "running_balances": running_balances,
-            },
-        )
+        running_balance = Decimal("0.00")
+        running_balances = {}
+
+        for entry in queryset.iterator():
+            running_balance += (
+                entry.debit_amount - entry.credit_amount
+            )
+            running_balances[entry.id] = running_balance
+
+        # --------------------------------------------------
+        # Paginate the transaction list.
+        # --------------------------------------------------
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(
+                page,
+                many=True,
+                context={
+                    "request": request,
+                    "running_balances": running_balances,
+                },
+            )
+
+            results = serializer.data
+            count = self.paginator.page.paginator.count
+            next_page = self.paginator.get_next_link()
+            previous_page = self.paginator.get_previous_link()
+
+        else:
+            serializer = self.get_serializer(
+                queryset,
+                many=True,
+                context={
+                    "request": request,
+                    "running_balances": running_balances,
+                },
+            )
+
+            results = serializer.data
+            count = total_transactions
+            next_page = None
+            previous_page = None
+
+        # --------------------------------------------------
+        # Response
+        # --------------------------------------------------
 
         return Response({
             "vendor": {
@@ -317,12 +330,16 @@ class VendorLedgerCustomerView(generics.ListAPIView):
                 "name": vendor.name,
             },
             "cards": {
-                "total_opening_balance": total_opening_balance,
-                "total_billed": total_billed,
-                "total_paid_and_debit_note": (
+                "total_opening_balance": str(
+                    total_opening_balance
+                ),
+                "total_billed": str(total_billed),
+                "total_paid_and_debit_note": str(
                     total_paid_and_debit_note
                 ),
-                "outstanding_payable": outstanding_payable,
+                "outstanding_payable": str(
+                    outstanding_payable
+                ),
                 "total_transactions": total_transactions,
             },
             "filters": {
@@ -331,8 +348,13 @@ class VendorLedgerCustomerView(generics.ListAPIView):
                 "date_from": request.query_params.get("date_from"),
                 "date_to": request.query_params.get("date_to"),
             },
-            "data": serializer.data,
+            "count": count,
+            "next": next_page,
+            "previous": previous_page,
+            "results": results,
         })
+
+
     
 from decimal import Decimal
 

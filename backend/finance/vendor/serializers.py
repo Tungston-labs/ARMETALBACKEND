@@ -783,6 +783,10 @@ class VendorPaymentKPISerializer(serializers.Serializer):
     advance_payments = serializers.DecimalField(max_digits=15, decimal_places=2)
 
 
+from rest_framework import serializers
+
+from .models import VendorDocument
+
 
 class VendorDocumentUploadSerializer(serializers.ModelSerializer):
 
@@ -802,14 +806,15 @@ class VendorDocumentUploadSerializer(serializers.ModelSerializer):
 
     def validate_vendor(self, value):
         request = self.context["request"]
-        company = request.user.company
 
-        if value.company_id != company.id:
+        if value.company_id != request.user.company.id:
             raise serializers.ValidationError(
                 "Vendor does not belong to your company."
             )
 
         return value
+
+
 
 from rest_framework import serializers
 
