@@ -148,22 +148,6 @@ class PurchaseOrderCreateListView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save()
 
-class PurchaseOrderDetailView(generics.RetrieveAPIView):
-
-    permission_classes = [IsAuthenticated]
-    serializer_class = PurchaseOrderCreateSerializer
-
-    def get_queryset(self):
-        return (
-            PurchaseOrder.objects
-            .filter(company=self.request.user.company)
-            .select_related(
-                "vendor",
-                "warehouse",
-                "created_by",
-            )
-            .prefetch_related("items__product")
-        )
 
 
 class PurchaseOrderDashboardView(APIView):
@@ -254,3 +238,73 @@ class ProductDropdownView(generics.ListAPIView):
             )
 
         return queryset.order_by("product_name")
+
+
+from django.db.models import ProtectedError
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import PurchaseOrder
+from .serializers import PurchaseOrderCreateSerializer
+
+
+class PurchaseOrderDetailView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PurchaseOrderCreateSerializer
+
+    lookup_field = "id"
+    lookup_url_kwarg = "pk"
+
+    def get_queryset(self):
+        return (
+            PurchaseOrder.objects
+            .filter(company=self.request.user.company)
+            .select_related(
+                "vendor",
+                "warehouse",
+                "created_by",
+            )
+            .prefetch_related("items__product")
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Avoid deleting orders that have been received or billed.
+        if (
+            instance.receipt_status != "pending"
+            or instance.bill_status != "pending"
+        ):
+            return Response(
+                {
+                    "message": (
+                        "Cannot delete a purchase order that "
+                        "has received items or associated billing."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            self.perform_destroy(instance)
+        except ProtectedError:
+            return Response(
+                {
+                    "message": (
+                        "This purchase order cannot be deleted "
+                        "because it is referenced by other records."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "message": "Purchase order deleted successfully."
+            },
+            status=status.HTTP_200_OK,
+        )
+
