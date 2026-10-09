@@ -143,6 +143,12 @@ GET {{baseUrl}}/api/finance/purchase-order/1/
 Authorization: {{authToken}}
 
 
+
+
+
+
+
+
 # ------------------------------------------------------------------------------
 # 6. PURCHASE ORDER DASHBOARD SUMMARY
 # ------------------------------------------------------------------------------
@@ -227,6 +233,96 @@ Authorization: {{authToken}}
 # pickup
 # other
 
+# ------------------------------------------------------------------------------
+
+# 6. EDIT PURCHASE ORDER
+
+# ------------------------------------------------------------------------------
+
+### 6.1 Update selected purchase order fields (PATCH)
+
+PATCH {{baseUrl}}/api/finance/purchase-order/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+"expected_delivery_date": "2026-10-20",
+"payment_terms": "Net 30 days",
+"notes": "Delivery expected next week"
+}
+
+###
+
+### 6.2 Update purchase order and replace items (PATCH)
+
+PATCH {{baseUrl}}/api/finance/purchase-order/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+"vendor": 2,
+"warehouse": 1,
+"expected_delivery_date": "2026-10-20",
+"discount": "100.00",
+"round_off": "0.00",
+"notes": "Updated order details",
+"items": [
+{
+"product": 5,
+"description": "Network cable",
+"quantity": "10.00",
+"rate": "150.00",
+"vat_percentage": "18.00"
+},
+{
+"product": 8,
+"description": "Router",
+"quantity": "2.00",
+"rate": "2500.00",
+"vat_percentage": "18.00"
+}
+]
+}
+
+###
+
+### 6.3 Replace purchase order data (PUT)
+
+PUT {{baseUrl}}/api/finance/purchase-order/1/
+Authorization: {{authToken}}
+Content-Type: application/json
+
+{
+"vendor": 2,
+"warehouse": 1,
+"pr_reference": "PR-001",
+"order_date": "2026-10-09",
+"expected_delivery_date": "2026-10-20",
+"payment_terms": "Net 30 days",
+"status": "draft",
+"shipping_method": "road",
+"discount": "100.00",
+"round_off": "0.00",
+"notes": "Updated purchase order",
+"items": [
+{
+"product": 5,
+"description": "Network cable",
+"quantity": "10.00",
+"rate": "150.00",
+"vat_percentage": "18.00"
+}
+]
+}
+
+###
+
+### 6.4 Delete purchase order
+
+DELETE {{baseUrl}}/api/finance/purchase-order/4/
+Authorization: {{authToken}}
+
+###
 
 # ==============================================================================
 # END OF PURCHASE ORDER API DOCUMENTATION
