@@ -4,7 +4,7 @@
 # ==============================================================================
 
 @baseUrl = http://127.0.0.1:8000
-@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjA0NTc1LCJpYXQiOjE3OTExNzU3NzUsImp0aSI6Ijk3M2ZlY2ViMmQ5OTQyMGM4ZmE1ODI0ZmVlYjM4YWRlIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.hnTS1Usb2ojgx2vnO-G-StW5daGJ_7gR2fThc79ruWg
+@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxNTQ2OTMyLCJpYXQiOjE3OTE1MTgxMzIsImp0aSI6IjE3MjgwM2Q5ZWVhOTRiOWI5YzhiYWZkYTJkZmVmOGNjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.3D0VmTAbuxXf8Tgn5v9CYuzXcuvPcwC07ex4a_69mx8
 
 
 

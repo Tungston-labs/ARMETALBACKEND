@@ -185,3 +185,61 @@ class ChartOfAccountKPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+
+from django.shortcuts import get_object_or_404
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
+from .models import ChartOfAccount
+from .serializers import ChartOfAccountSerializer
+
+
+class ChartOfAccountDetailView(
+    generics.RetrieveUpdateDestroyAPIView
+):
+    serializer_class = ChartOfAccountSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_url_kwarg = "account_id"
+
+    def get_queryset(self):
+        return ChartOfAccount.objects.filter(
+            company=self.request.user.company
+        ).select_related(
+            "parent_account",
+            "company",
+            "created_by",
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(
+            company=self.request.user.company
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Prevent deleting an account that has child accounts.
+        if instance.child_accounts.exists():
+            return Response(
+                {
+                    "message": (
+                        "Cannot delete this account because "
+                        "it has child accounts."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        self.perform_destroy(instance)
+
+        return Response(
+            {
+                "message": "Chart of account deleted successfully."
+            },
+            status=status.HTTP_200_OK,
+        )
+
