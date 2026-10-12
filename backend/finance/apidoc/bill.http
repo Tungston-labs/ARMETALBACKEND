@@ -91,7 +91,7 @@ Content-Type: application/json
 
 
 ### 6. Update Purchase Bill Payment Status (Partial PATCH)
-PATCH {{baseUrl}}/api/finance/bill/2/
+PATCH {{baseUrl}}/api/finance/bill/1/
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
