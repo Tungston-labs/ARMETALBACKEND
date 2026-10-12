@@ -190,4 +190,4 @@ class JournalEntryLine(TimeStampedModel):
         ordering = ["id"]
 
     def __str__(self):
-        return f"{self.journal_entry.entry_number} - {self.account_name}"
+        return f"{self.journal_entry.entry_number} - {self.account.account_name}"

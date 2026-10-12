@@ -2,7 +2,7 @@
 
 ```http
 @baseUrl = http://127.0.0.1:8000/api/finance/journal
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxNTc2MDAwLCJpYXQiOjE3OTE1NDcyMDAsImp0aSI6Ijk3Njk5M2U4ZGQ2MDQ0YjA4NTVkMTQzN2IyODYzZGUxIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Babh9aYpFRoB5atdF0zXSbvAfOq4kPskGnjr_jrd6p0
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxODA1NTgxLCJpYXQiOjE3OTE3NzY3ODEsImp0aSI6Ijk1MzBmNjk2YTQ3ZTRkOWE4MzI4OWE4MTk4Yjk3Mjg0IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.da_L8SHYfs4Fnr6vYSYYmaHujlrEkVaZ94c6oi-Xwmo
 @entryId = 1
 
 ### 1. List Journal Entries
@@ -10,7 +10,7 @@ GET {{baseUrl}}/
 Authorization: Bearer {{token}}
 
 ### 2. List Entries with Date Range
-GET {{baseUrl}}/?date_from=2026-10-01&date_to=2026-10-31
+GET {{baseUrl}}/?date_from=2026-01-01&date_to=2026-10-31
 Authorization: Bearer {{token}}
 
 ### 3. Filter Manual Entries
