@@ -1,0 +1,159 @@
+### Payment Module — REST Client API Tests
+
+```http
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxODkzMjU4LCJpYXQiOjE3OTE4NjQ0NTgsImp0aSI6ImRlYjlhNWY0Yjg0OTQ0ZWVhYmEyZTlmZmUyMWViMWIzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.z4lxLMhh8Bxy1sJJ0oG811GbaOLoVhnHCQ8JsKjLHsU
+@paymentId = 1
+@customerId = 1
+@invoiceId = 1
+
+### 1. Create a Completed Bank Transfer Payment
+POST {{baseUrl}}/api/finance/payments/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "payment_date": "2026-10-12",
+  "payment_type": "full_payment",
+  "payment_method": "bank_transfer",
+  "amount_received": "400.00",
+  "reference_number": "BANK-REF-001",
+  "notes": "Customer payment by bank transfer",
+  "status": "completed"
+}
+
+### 2. Create a Pending Payment
+POST {{baseUrl}}/api/finance/payments/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "payment_date": "2026-10-12",
+  "payment_type": "partial_payment",
+  "payment_method": "bank_transfer",
+  "amount_received": "200.00",
+  "reference_number": "BANK-REF-002",
+  "notes": "Payment awaiting confirmation",
+  "status": "pending"
+}
+
+### 3. Create a Completed Online Payment
+POST {{baseUrl}}/api/finance/payments/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "payment_date": "2026-10-12",
+  "payment_type": "partial_payment",
+  "payment_method": "online_payment",
+  "amount_received": "150.00",
+  "reference_number": "ONLINE-REF-001",
+  "notes": "Online customer payment",
+  "status": "completed"
+}
+
+### 4. List Payments
+GET {{baseUrl}}/api/finance/payments/
+Authorization: Bearer {{token}}
+
+### 5. Retrieve a Payment
+GET {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+
+### 6. Update a Pending Payment (PUT)
+PUT {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "payment_date": "2026-10-12",
+  "payment_type": "partial_payment",
+  "payment_method": "bank_transfer",
+  "amount_received": "250.00",
+  "reference_number": "BANK-REF-003",
+  "notes": "Updated payment details",
+  "status": "pending"
+}
+
+### 7. Mark a Pending Payment as Completed (PATCH)
+PATCH {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "completed"
+}
+
+### 8. Update Payment Notes (PATCH)
+PATCH {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "notes": "Payment verified by finance team"
+}
+
+### 9. Update Payment Amount (PATCH)
+### Only use for payments that have not already been posted.
+PATCH {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount_received": "350.00"
+}
+
+### 10. Filter Payments by Status
+GET {{baseUrl}}/api/finance/payments/?status=completed
+Authorization: Bearer {{token}}
+
+### 11. Filter Payments by Customer
+GET {{baseUrl}}/api/finance/payments/?customer={{customerId}}
+Authorization: Bearer {{token}}
+
+### 12. Filter Payments by Invoice
+GET {{baseUrl}}/api/finance/payments/?invoice={{invoiceId}}
+Authorization: Bearer {{token}}
+
+### 13. Search Payments
+GET {{baseUrl}}/api/finance/payments/?search=BANK-REF-001
+Authorization: Bearer {{token}}
+
+### 14. Order Payments by Payment Date
+GET {{baseUrl}}/api/finance/payments/?ordering=-payment_date
+Authorization: Bearer {{token}}
+
+### 15. Payment KPI Metrics
+GET {{baseUrl}}/api/finance/payments/kpi/
+Authorization: Bearer {{token}}
+
+### 16. Payment KPI Metrics for a Customer
+GET {{baseUrl}}/api/finance/payments/kpi/?customer={{customerId}}
+Authorization: Bearer {{token}}
+
+### 17. Export Payments as CSV
+GET {{baseUrl}}/api/finance/payments/export/
+Authorization: Bearer {{token}}
+
+### 18. Delete a Pending or Cancelled Payment
+### Completed payments are rejected by the current view.
+DELETE {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+
+### 19. Cancel a Pending Payment
+PATCH {{baseUrl}}/api/finance/payments/{{paymentId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "cancelled"
+}
+```
