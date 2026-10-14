@@ -39,18 +39,21 @@ class GeneralLedgerView(APIView):
         )
 
         # Date filters: YYYY-MM-DD
+        
+       
         date_from = request.query_params.get("date_from")
         date_to = request.query_params.get("date_to")
 
         if date_from:
             queryset = queryset.filter(
-                journal_entry__entry_date__date__gte=date_from
+                journal_entry__entry_date__gte=date_from
             )
 
         if date_to:
             queryset = queryset.filter(
-                journal_entry__entry_date__date__lte=date_to
+                journal_entry__entry_date__lte=date_to
             )
+
 
         # Account filter
         account_id = request.query_params.get("account_id")
