@@ -85,6 +85,8 @@ INSTALLED_APPS = [
     'finance.vendorledger',
     'finance.accounting',
     'finance.journal',
+    'finance.general_ledger',
+    'finance.account_receivable',
 ]
 
 MIDDLEWARE = [

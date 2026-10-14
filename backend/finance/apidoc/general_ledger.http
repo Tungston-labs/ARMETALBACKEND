@@ -1,0 +1,30 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
+
+### 1. Get all General Ledger lines
+GET {{baseUrl}}/api/finance/general-ledger/
+Authorization: Bearer {{token}}
+
+### 2. Filter by date range
+GET {{baseUrl}}/api/finance/general-ledger/?date_from=2026-01-01&date_to=2026-10-14
+Authorization: Bearer {{token}}
+
+### 3. Filter by account
+GET {{baseUrl}}/api/finance/general-ledger/?account_id=1
+Authorization: Bearer {{token}}
+
+### 4. Filter by source module
+GET {{baseUrl}}/api/finance/general-ledger/?source=invoice
+Authorization: Bearer {{token}}
+
+### 5. Filter by account type
+GET {{baseUrl}}/api/finance/general-ledger/?type=asset
+Authorization: Bearer {{token}}
+
+### 6. Search journal number, account, or description
+GET {{baseUrl}}/api/finance/general-ledger/?search=invoice
+Authorization: Bearer {{token}}
+
+### 7. Combine filters and pagination
+GET {{baseUrl}}/api/finance/general-ledger/?date_from=2026-01-01&date_to=2026-10-14&account_id=1&source=invoice&type=asset&page=1&page_size=20
+Authorization: Bearer {{token}}

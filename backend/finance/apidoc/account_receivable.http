@@ -1,0 +1,31 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
+
+
+### Accounts Receivable - All invoices
+GET {{baseUrl}}/api/finance/account-receivable/
+Authorization: Bearer {{token}}
+
+### Filter by invoice date range
+GET {{baseUrl}}/api/finance/account-receivable/?date_from=2026-10-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### Search invoices or customers
+GET {{baseUrl}}/api/finance/account-receivable/?search=ABC
+Authorization: Bearer {{token}}
+
+### Filter by status
+GET {{baseUrl}}/api/finance/account-receivable/?status=overdue
+Authorization: Bearer {{token}}
+
+### Filter by customer
+GET {{baseUrl}}/api/finance/account-receivable/?customer_id=5
+Authorization: Bearer {{token}}
+
+### Pagination
+GET {{baseUrl}}/api/finance/account-receivable/?page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Combined filters
+GET {{baseUrl}}/api/finance/account-receivable/?date_from=2026-10-01&date_to=2026-10-31&status=overdue&customer_id=5&page=1&page_size=10
+Authorization: Bearer {{token}}
