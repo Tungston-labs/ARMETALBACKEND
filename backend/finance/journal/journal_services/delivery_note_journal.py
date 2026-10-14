@@ -1,6 +1,4 @@
 
-# finance/journal/journal_services/delivery_note_journal.py
-
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
@@ -11,7 +9,6 @@ from finance.accounting.models import ChartOfAccount
 from finance.journal.models import JournalEntry, JournalEntryLine
 
 
-# Replace these with the account codes configured in your company.
 INVENTORY_ACCOUNT_CODE = "1200"
 COGS_ACCOUNT_CODE = "5200"
 
@@ -33,8 +30,8 @@ def get_account(company, code, expected_type):
 
     if not account:
         raise ValidationError(
-            f"Active account {code} with type '{expected_type}' "
-            "is not configured for this company."
+            f"Active account {code} with type "
+            f"'{expected_type}' is not configured for this company."
         )
 
     return account
@@ -46,21 +43,22 @@ def create_delivery_note_journal_entry(
     created_by=None,
 ):
     """
-    Record inventory cost at delivery:
-        Debit: Cost of Goods Sold
-        Credit: Inventory
+    Record inventory cost when a delivery note is delivered.
 
-    This function must only be called when the delivery note
-    transitions to delivered.
+    Debit: Cost of Goods Sold
+    Credit: Inventory
 
-    IMPORTANT:
-    Implement get_item_cost() using your actual product-cost
-    or inventory-valuation model before enabling posting.
+    Uses Product.cost_price for inventory valuation.
+    Does not record sales revenue or output VAT.
     """
+
+    if delivery_note.delivery_status in ("pending", "cancelled"):
+        return None
 
     if delivery_note.delivery_status != "delivered":
         return None
 
+    # Prevent duplicate journal entries.
     existing_entry = JournalEntry.objects.filter(
         company=delivery_note.company,
         source="auto",
@@ -82,28 +80,39 @@ def create_delivery_note_journal_entry(
 
     total_cost = Decimal("0.00")
 
-    # Do not use the selling rate as the inventory cost.
-    # Replace this section with your actual inventory-cost lookup.
     for item in items:
+        # Service lines do not affect inventory.
+        if item.product and item.product.product_type == "service":
+            continue
+
         if not item.product:
             raise ValidationError(
-                f"Item '{item.item_name or item.service_name}' "
-                "has no linked product. Its inventory cost "
-                "cannot be determined."
+                f"Delivery note item '{item.item_name or item.service_name}' "
+                "has no linked product. Inventory cost cannot be calculated."
             )
 
-        raise ValidationError(
-            "Delivery Note journal posting is not configured yet: "
-            "connect the product's actual inventory cost or "
-            "inventory valuation service before posting."
-        )
+        if item.quantity <= 0:
+            raise ValidationError(
+                f"Quantity must be greater than zero for "
+                f"'{item.product.product_name}'."
+            )
+
+        unit_cost = money(item.product.cost_price)
+
+        if unit_cost < 0:
+            raise ValidationError(
+                f"Cost price cannot be negative for "
+                f"'{item.product.product_name}'."
+            )
+
+        total_cost += item.quantity * unit_cost
 
     total_cost = money(total_cost)
 
-    if total_cost <= Decimal("0.00"):
-        raise ValidationError(
-            "Delivery cost must be greater than zero."
-        )
+    # No inventory journal is needed if the delivery contains
+    # only services or products with zero total cost.
+    if total_cost == Decimal("0.00"):
+        return None
 
     inventory_account = get_account(
         delivery_note.company,
@@ -135,6 +144,7 @@ def create_delivery_note_journal_entry(
         posted_at=timezone.now(),
     )
 
+    # Debit Cost of Goods Sold.
     JournalEntryLine.objects.create(
         journal_entry=entry,
         account=cogs_account,
@@ -143,6 +153,7 @@ def create_delivery_note_journal_entry(
         description=f"Cost of goods sold - {delivery_note.dn_number}",
     )
 
+    # Credit Inventory.
     JournalEntryLine.objects.create(
         journal_entry=entry,
         account=inventory_account,

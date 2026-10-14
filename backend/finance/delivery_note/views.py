@@ -25,6 +25,8 @@ from finance.journal.journal_services.delivery_note_journal import (
     create_delivery_note_journal_entry,
 )
 from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 class DeliveryNoteKPICardView(APIView):
     """
     API view to retrieve KPI card metrics for Delivery Notes
@@ -172,6 +174,25 @@ class DeliveryNoteListCreateView(generics.ListCreateAPIView):
             "delivered": delivered,
             "delivery_value": stats["total_value"],
         })
+    
+
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        delivery_note = serializer.save(
+            company=self.request.user.company,
+            created_by=self.request.user,
+        )
+
+        if delivery_note.delivery_status == "delivered":
+            try:
+                create_delivery_note_journal_entry(
+                    delivery_note,
+                    created_by=self.request.user,
+                )
+            except DjangoValidationError as exc:
+                raise DRFValidationError({"detail": exc.messages})
+
 
 
 class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -242,6 +263,7 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         return super().delete(request, *args, **kwargs)
 
     
+    
     @transaction.atomic
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -250,6 +272,12 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         response = super().update(request, *args, **kwargs)
 
         instance.refresh_from_db()
+
+        print(
+            f"Delivery Note {instance.id}: "
+            f"previous_status={previous_status}, "
+            f"current_status={instance.delivery_status}"
+        )
 
         if (
             previous_status != "delivered"
@@ -260,12 +288,13 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
                     instance,
                     created_by=request.user,
                 )
-            except ValidationError as exc:
+            except DjangoValidationError as exc:
                 raise DRFValidationError({
                     "detail": exc.messages,
                 })
 
         return response
+
 
 
 

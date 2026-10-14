@@ -14,7 +14,7 @@ Content-Type: application/json
 ###
 
 # Set variable for JWT access token
-@authToken = Bearer YOUR_JWT_ACCESS_TOKEN_HERE
+@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
 
 
 # ------------------------------------------------------------------------------

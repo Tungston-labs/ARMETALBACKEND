@@ -30,7 +30,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from user.permissions import IsCompanyActive, IsHRAdmin
 from .models import Invoice
 from .serializers import CustomerInvoiceSerializer
-
+from finance.journal.journal_services.invoice_journal import (
+    create_invoice_journal_entry,
+)
 class InvoiceViewSet(
     viewsets.ModelViewSet
 ):
@@ -158,6 +160,10 @@ class InvoiceViewSet(
         )
 
         invoice = serializer.save()
+        create_invoice_journal_entry(
+            invoice,
+            created_by=request.user,
+        )
 
         self.generate_and_save_pdf(
             invoice
