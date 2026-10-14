@@ -19,8 +19,12 @@ from .serializers import (
 )
 from shared.pagination import CustomPagination
 from finance.sales_order.models import SalesOrder, SalesOrderItem
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
-
+from finance.journal.journal_services.delivery_note_journal import (
+    create_delivery_note_journal_entry,
+)
+from django.core.exceptions import ValidationError
 class DeliveryNoteKPICardView(APIView):
     """
     API view to retrieve KPI card metrics for Delivery Notes
@@ -236,6 +240,33 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        previous_status = instance.delivery_status
+
+        response = super().update(request, *args, **kwargs)
+
+        instance.refresh_from_db()
+
+        if (
+            previous_status != "delivered"
+            and instance.delivery_status == "delivered"
+        ):
+            try:
+                create_delivery_note_journal_entry(
+                    instance,
+                    created_by=request.user,
+                )
+            except ValidationError as exc:
+                raise DRFValidationError({
+                    "detail": exc.messages,
+                })
+
+        return response
+
 
 
 class DeliveryNoteSalesOrderPrefillView(APIView):

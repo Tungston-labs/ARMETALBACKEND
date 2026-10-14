@@ -1,5 +1,9 @@
-@baseUrl = http://127.0.0.1:8000/api/finance/vendor-ledger/
-
+```http
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
+@debitNoteId = 3
+@vendorId = 1
+@billId = 1
 
 ### 1. Get Debit Note KPI Card Metrics
 GET {{baseUrl}}/api/finance/debit-notes/kpi/
@@ -13,23 +17,32 @@ Authorization: Bearer {{token}}
 
 ###
 
-### 3. Get Bill Details for Debit Note Construction (Prefill Endpoint)
-GET {{baseUrl}}/api/finance/debit-notes/bill-details/?bill=1
+### 3. Filter Debit Notes by Vendor
+GET {{baseUrl}}/api/finance/debit-notes/?vendor={{vendorId}}
 Authorization: Bearer {{token}}
 
 ###
 
-### 4. Create New Debit Note
+### 4. Get Bill Details for Debit Note Construction
+GET {{baseUrl}}/api/finance/debit-notes/bill-details/?bill={{billId}}
+Authorization: Bearer {{token}}
+
+###
+
+### 5. Create Debit Note as Draft
+# The draft should not create a journal entry.
 POST {{baseUrl}}/api/finance/debit-notes/
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjk2MjgxLCJpYXQiOjE3OTEyNjc0ODEsImp0aSI6IjEzMzZmMjA0MDVjYjRjZWM4NTY0OTk3ZmI5NjM4ZThjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.3A4ZHOw1Rjc1g9qkf_gQYvyw7h0AZXSd-IXsp6L5Ipg
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "vendor": 1,
-  "bill": 1,
-  "issue_date": "2026-04-28",
+  "vendor": {{vendorId}},
+  "bill": {{billId}},
+  "issue_date": "2026-10-13",
   "reason": "damaged_goods",
+  "status": "draft",
   "notes": "Damaged goods returned to vendor",
+  "discount": "0.00",
   "items": [
     {
       "bill_item": 1,
@@ -46,46 +59,63 @@ Content-Type: application/json
 
 ###
 
-### 5. Get Debit Note Detail by ID
-GET {{baseUrl}}/api/finance/debit-notes/1/
+### 6. Get Debit Note Detail by ID
+GET {{baseUrl}}/api/finance/debit-notes/{{debitNoteId}}/
 Authorization: Bearer {{token}}
 
 ###
 
-### 6. Update Debit Note (Full PUT)
-PUT {{baseUrl}}/api/finance/debit-notes/1/
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "vendor": 1,
-  "bill": 1,
-  "issue_date": "2026-04-29",
-  "reason": "defective_items",
-  "notes": "Revised debit note for defective items",
-  "debit_amount": "5000.00",
-  "applied_amount": "1000.00"
-}
-
-###
-
-### 7. Partial Update Debit Note Applied Amount (PATCH)
-PATCH {{baseUrl}}/api/finance/debit-notes/1/
+### 7. Issue Debit Note (Draft -> Open)
+# Expected: journal entry created automatically.
+PATCH {{baseUrl}}/api/finance/debit-notes/{{debitNoteId}}/
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "applied_amount": "5000.00"
+  "status": "open"
 }
 
 ###
 
-### 8. Export Debit Notes CSV
+### 8. Verify Debit Note Journal Entry
+# Replace the source_id with the actual debit note ID.
+GET {{baseUrl}}/api/finance/journal-entries/?source_module=debit_note&source_id={{debitNoteId}}
+Authorization: Bearer {{token}}
+
+###
+
+### 9. Update Debit Note Applied Amount
+# Use an amount within the debit note's outstanding balance.
+# The status should update to partially_applied or closed.
+PATCH {{baseUrl}}/api/finance/debit-notes/{{debitNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "applied_amount": "500.00"
+}
+
+###
+
+### 10. Update Debit Note Notes
+PATCH {{baseUrl}}/api/finance/debit-notes/{{debitNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "notes": "Updated debit note remarks"
+}
+
+###
+
+### 11. Export Debit Notes CSV
 GET {{baseUrl}}/api/finance/debit-notes/export/
 Authorization: Bearer {{token}}
 
 ###
 
-### 9. Delete Debit Note
-DELETE {{baseUrl}}/api/finance/debit-notes/1/
+### 12. Delete Debit Note
+# Allowed only if no journal entry has been posted.
+DELETE {{baseUrl}}/api/finance/debit-notes/{{debitNoteId}}/
 Authorization: Bearer {{token}}
+```

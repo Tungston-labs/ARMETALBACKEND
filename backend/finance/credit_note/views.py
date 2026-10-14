@@ -13,7 +13,13 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParamet
 from .models import CreditNote
 from .serializers import CreditNoteSerializer
 from shared.pagination import CustomPagination
+from django.db import transaction
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from finance.journal.journal_services.credit_note_journal import (
+    create_credit_note_journal_entry,
+)
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 class CreditNoteKPICardView(APIView):
     """
@@ -116,7 +122,28 @@ class CreditNoteListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+
+        if not company:
+            raise DRFValidationError({
+                "detail": "Your user account is not associated with a company."
+            })
+
+        with transaction.atomic():
+            credit_note = serializer.save(
+                company=company,
+                created_by=user,
+            )
+
+            if credit_note.status == "open":
+                try:
+                    create_credit_note_journal_entry(
+                        credit_note,
+                        created_by=user,
+                    )
+                except DjangoValidationError as exc:
+                    raise DRFValidationError({
+                        "detail": exc.messages
+                    })
 
     @extend_schema(
         summary="List Credit Notes",
@@ -238,6 +265,35 @@ class CreditNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        previous_status = instance.status
+
+        # Save the credit note using your existing serializer.
+        response = super().update(
+            request,
+            partial=partial,
+            **kwargs,
+        )
+
+        instance.refresh_from_db()
+
+        # Post the journal only when a draft is issued.
+        if previous_status == "draft" and instance.status == "open":
+            try:
+                create_credit_note_journal_entry(
+                    instance,
+                    created_by=request.user,
+                )
+            except DjangoValidationError as exc:
+                raise DRFValidationError({
+                    "detail": exc.messages
+                })
+
+        return response
 
 
 class InvoiceCreditNoteDetailsView(APIView):
