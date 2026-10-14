@@ -1,0 +1,124 @@
+### Journal Entries API — REST Client
+
+```http
+@baseUrl = http://127.0.0.1:8000/api/finance/journal
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
+
+### 1. List Journal Entries
+GET {{baseUrl}}/
+Authorization: Bearer {{token}}
+
+### 2. List Entries with Date Range
+GET {{baseUrl}}/?date_from=2026-01-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### 3. Filter Manual Entries
+GET {{baseUrl}}/?source=manual
+Authorization: Bearer {{token}}
+
+### 4. Filter Automatic Entries
+GET {{baseUrl}}/?source=auto
+Authorization: Bearer {{token}}
+
+### 5. Filter Draft Entries
+GET {{baseUrl}}/?status=draft
+Authorization: Bearer {{token}}
+
+### 6. Filter Posted Entries
+GET {{baseUrl}}/?status=posted
+Authorization: Bearer {{token}}
+
+### 7. Search Journal Entries
+GET {{baseUrl}}/?search=depreciation
+Authorization: Bearer {{token}}
+
+### 8. Create a Manual Journal Entry (Draft)
+POST {{baseUrl}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entry_date": "2026-10-09",
+  "reference_number": "REF-001",
+  "description": "Monthly depreciation",
+  "lines": [
+    {
+      "account_id": 1,
+      "account_name": "Depreciation Expense",
+      "description": "Monthly depreciation expense",
+      "debit_amount": "5000.00",
+      "credit_amount": "0.00"
+    },
+    {
+      "account_id": 2,
+      "account_name": "Fixed Asset - Equipment",
+      "description": "Accumulated depreciation",
+      "debit_amount": "0.00",
+      "credit_amount": "5000.00"
+    }
+  ]
+}
+
+### 9. Retrieve a Journal Entry
+GET {{baseUrl}}/{{entryId}}/
+Authorization: Bearer {{token}}
+
+### 10. Update a Draft Journal Entry
+PATCH {{baseUrl}}/{{entryId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entry_date": "2026-10-09",
+  "reference_number": "REF-001-UPDATED",
+  "description": "Updated monthly depreciation"
+}
+
+### 11. Update Draft Entry Lines
+PATCH {{baseUrl}}/{{entryId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "lines": [
+    {
+      "account_id": 1,
+      "account_name": "Depreciation Expense",
+      "description": "Monthly depreciation expense",
+      "debit_amount": "6000.00",
+      "credit_amount": "0.00"
+    },
+    {
+      "account_id": 2,
+      "account_name": "Fixed Asset - Equipment",
+      "description": "Accumulated depreciation",
+      "debit_amount": "0.00",
+      "credit_amount": "6000.00"
+    }
+  ]
+}
+
+### 12. Post a Journal Entry
+POST {{baseUrl}}/{{entryId}}/post/
+Authorization: Bearer {{token}}
+
+### 13. Void a Posted Journal Entry
+POST {{baseUrl}}/{{entryId}}/void/
+Authorization: Bearer {{token}}
+
+### 14. Delete a Draft Journal Entry
+DELETE {{baseUrl}}/{{entryId}}/
+Authorization: Bearer {{token}}
+
+### 15. Order by Entry Date
+GET {{baseUrl}}/?ordering=-entry_date
+Authorization: Bearer {{token}}
+
+### 16. Pagination
+GET {{baseUrl}}/?page=1
+Authorization: Bearer {{token}}
+
+### 17. Superadmin — Filter by Company
+GET {{baseUrl}}/?company=1
+Authorization: Bearer {{token}}
+```

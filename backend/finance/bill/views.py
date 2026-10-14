@@ -19,6 +19,17 @@ from finance.vendorledger.services import (
     sync_bill_ledger,
     delete_bill_ledger,
 )
+from django.db import transaction
+from finance.journal.models import JournalEntry
+from finance.journal.journal_services.bill_journal import (
+    create_bill_journal_entry,
+)
+
+from django.db import transaction
+from rest_framework.exceptions import ValidationError
+
+
+
 def get_user_company(user):
     return getattr(user, "company", None)
 
@@ -148,28 +159,68 @@ class BillListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         company = getattr(user, "company", None)
 
-        bill = serializer.save(
-            company=company,
-            created_by=user,
-        )
+        with transaction.atomic():
+            bill = serializer.save(
+                company=company,
+                created_by=user,
+            )
 
-        sync_bill_ledger(
-            bill,
-            created_by=user,
-        )
+            # Preserve existing vendor ledger functionality.
+            sync_bill_ledger(bill, created_by=user)
+
+            # Handle a bill created directly with paid status as well.
+            if bill.status == "paid":
+                create_bill_journal_entry(
+                    bill=bill,
+                    created_by=user,
+                )
+
+
     def perform_update(self, serializer):
+        user = self.request.user
 
-        bill = serializer.save()
+        # Capture the old status before saving.
+        previous_status = serializer.instance.status
 
-        sync_bill_ledger(
-            bill,
-            created_by=self.request.user,
-        )
+        with transaction.atomic():
+            bill = serializer.save()
+
+            # Preserve existing vendor ledger functionality.
+            sync_bill_ledger(bill, created_by=user)
+
+            # Create the journal only on a transition to paid.
+            if previous_status != "paid" and bill.status == "paid":
+                create_bill_journal_entry(
+                    bill=bill,
+                    created_by=user,
+                )
+    
+
+
     def perform_destroy(self, instance):
+        with transaction.atomic():
+            # Prevent deletion if the bill has a posted journal entry.
+            has_posted_journal = JournalEntry.objects.filter(
+                company=instance.company,
+                source="auto",
+                source_module="bill",
+                source_id=str(instance.pk),
+                status="posted",
+            ).exists()
 
-        delete_bill_ledger(instance)
+            if has_posted_journal:
+                raise ValidationError({
+                    "detail": (
+                        "This bill has a posted journal entry and cannot be "
+                        "deleted. Please reverse the journal entry first."
+                    )
+                })
 
-        instance.delete()
+            # Preserve existing vendor ledger functionality.
+            delete_bill_ledger(instance)
+
+            instance.delete()
+
 
     @extend_schema(
         summary="List Purchase Bills",
@@ -299,3 +350,21 @@ class BillDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    
+    def perform_update(self, serializer):
+        user = self.request.user
+
+        with transaction.atomic():
+            bill = serializer.save()
+
+            # Sync vendor ledger
+            sync_bill_ledger(bill, created_by=user)
+
+            # Create journal entry when the bill is fully paid
+            if bill.status == "paid":
+                create_bill_journal_entry(
+                    bill=bill,
+                    created_by=user,
+                )
+

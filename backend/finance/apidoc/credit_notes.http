@@ -1,0 +1,193 @@
+# ============================================================
+# CREDIT NOTE API - REST CLIENT
+# ============================================================
+
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxODkzMjU4LCJpYXQiOjE3OTE4NjQ0NTgsImp0aSI6ImRlYjlhNWY0Yjg0OTQ0ZWVhYmEyZTlmZmUyMWViMWIzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.z4lxLMhh8Bxy1sJJ0oG811GbaOLoVhnHCQ8JsKjLHsU
+@creditNoteId = 1
+@customerId = 1
+@invoiceId = 1
+
+### 1. Create Credit Note (Draft - No Journal Entry)
+POST {{baseUrl}}/api/finance/credit-notes/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "issue_date": "2026-10-13",
+  "reason": "sales_return",
+  "status": "draft",
+  "sub_total": "1000.00",
+  "total_vat": "150.00",
+  "discount": "0.00",
+  "credit_amount": "1150.00",
+  "notes": "Returned damaged goods",
+  "items": [
+    {
+      "invoice_item": 1,
+      "item_name": "Product A",
+      "quantity": "2.00",
+      "rate": "500.00",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+### 2. Create Credit Note (Open - Journal Entry Created)
+POST {{baseUrl}}/api/finance/credit-notes/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "issue_date": "2026-10-13",
+  "reason": "sales_return",
+  "status": "open",
+  "sub_total": "1000.00",
+  "total_vat": "150.00",
+  "discount": "0.00",
+  "credit_amount": "1150.00",
+  "notes": "Sales return credit note",
+  "items": [
+    {
+      "invoice_item": 1,
+      "item_name": "Product A",
+      "quantity": "2.00",
+      "rate": "500.00",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+### 3. List Credit Notes (Paginated)
+GET {{baseUrl}}/api/finance/credit-notes/
+Authorization: Bearer {{token}}
+
+### 4. Retrieve Credit Note by ID
+GET {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+
+### 5. Update Credit Note (PUT - Full Update)
+PUT {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer": {{customerId}},
+  "invoice": {{invoiceId}},
+  "issue_date": "2026-10-13",
+  "reason": "price_adjustment",
+  "status": "draft",
+  "sub_total": "800.00",
+  "total_vat": "120.00",
+  "discount": "0.00",
+  "credit_amount": "920.00",
+  "notes": "Updated credit note",
+  "items": [
+    {
+      "invoice_item": 1,
+      "item_name": "Product A",
+      "quantity": "2.00",
+      "rate": "400.00",
+      "vat_percentage": "15.00"
+    }
+  ]
+}
+
+### 6. Update Credit Note Notes (PATCH)
+PATCH {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "notes": "Updated notes"
+}
+
+### 7. Issue Draft Credit Note (PATCH - Create Journal Entry)
+PATCH {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "open"
+}
+
+### 8. Change Credit Note to Partially Applied
+PATCH {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "applied_amount": "500.00"
+}
+
+### 9. Change Credit Note to Closed
+PATCH {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "applied_amount": "1150.00"
+}
+
+### 10. Cancel Credit Note
+# Use only if your cancellation/reversal workflow permits it.
+PATCH {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "cancelled"
+}
+
+### 11. Filter by Status
+GET {{baseUrl}}/api/finance/credit-notes/?status=open
+Authorization: Bearer {{token}}
+
+### 12. Filter by Reason
+GET {{baseUrl}}/api/finance/credit-notes/?reason=sales_return
+Authorization: Bearer {{token}}
+
+### 13. Filter by Customer
+GET {{baseUrl}}/api/finance/credit-notes/?customer={{customerId}}
+Authorization: Bearer {{token}}
+
+### 14. Filter by Issue Date
+GET {{baseUrl}}/api/finance/credit-notes/?issue_date=2026-10-13
+Authorization: Bearer {{token}}
+
+### 15. Search Credit Notes
+GET {{baseUrl}}/api/finance/credit-notes/?search=damaged
+Authorization: Bearer {{token}}
+
+### 16. Ordering
+GET {{baseUrl}}/api/finance/credit-notes/?ordering=-created_at
+Authorization: Bearer {{token}}
+
+### 17. Filter and Search Together
+GET {{baseUrl}}/api/finance/credit-notes/?status=open&customer={{customerId}}&search=return
+Authorization: Bearer {{token}}
+
+### 18. Credit Note KPI Statistics
+GET {{baseUrl}}/api/finance/credit-notes/kpi/
+Authorization: Bearer {{token}}
+
+### 19. Credit Note KPI by Customer
+GET {{baseUrl}}/api/finance/credit-notes/kpi/?customer={{customerId}}
+Authorization: Bearer {{token}}
+
+### 20. Get Invoice Details for Credit Note
+GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice={{invoiceId}}
+Authorization: Bearer {{token}}
+
+### 21. Get Invoice Details by Invoice Number
+GET {{baseUrl}}/api/finance/credit-notes/invoice-details/?invoice_number=INV0001
+Authorization: Bearer {{token}}
+
+### 22. Delete Credit Note
+# Use only for an unposted/draft credit note.
+DELETE {{baseUrl}}/api/finance/credit-notes/{{creditNoteId}}/
+Authorization: Bearer {{token}}

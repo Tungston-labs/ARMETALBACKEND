@@ -16,7 +16,14 @@ from .models import DebitNote, DebitNoteItem
 from .serializers import DebitNoteSerializer, DebitNoteListSerializer, DebitNoteKPISerializer
 from .filters import DebitNoteFilter
 from shared.pagination import CustomPagination
+from django.db import transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from finance.journal.models import JournalEntry
+from finance.journal.journal_services.debit_note_journal import (
+    create_debit_note_journal_entry,
+)
 
 class DebitNoteKPICardView(APIView):
     """
@@ -120,7 +127,28 @@ class DebitNoteListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+
+        if not company:
+            raise DRFValidationError({
+                "detail": "Your user account is not associated with a company."
+            })
+
+        with transaction.atomic():
+            debit_note = serializer.save(
+                company=company,
+                created_by=user,
+            )
+
+            if debit_note.status not in ("draft", "cancelled"):
+                try:
+                    create_debit_note_journal_entry(
+                        debit_note,
+                        created_by=user,
+                    )
+                except DjangoValidationError as exc:
+                    raise DRFValidationError({
+                        "detail": exc.messages
+                    })
 
     @extend_schema(
         summary="List Debit Notes",
@@ -231,6 +259,84 @@ class DebitNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    def has_journal_entry(self, debit_note):
+        return JournalEntry.objects.filter(
+            company=debit_note.company,
+            source="auto",
+            source_module="debit_note",
+            source_id=str(debit_note.pk),
+        ).exists()
+
+
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        previous_status = instance.status
+        already_posted = self.has_journal_entry(instance)
+
+        if already_posted:
+            # Once posted, financial details must not be changed.
+            if request.method == "PUT":
+                raise DRFValidationError({
+                    "detail": (
+                        "This debit note already has a posted journal entry. "
+                        "Financial details cannot be replaced."
+                    )
+                })
+
+            allowed_fields = {"notes", "applied_amount"}
+            submitted_fields = set(request.data.keys())
+            forbidden_fields = submitted_fields - allowed_fields
+
+            if forbidden_fields:
+                raise DRFValidationError({
+                    "detail": (
+                        "This debit note is already posted. Only notes and "
+                        "applied_amount can be updated."
+                    ),
+                    "restricted_fields": sorted(forbidden_fields),
+                })
+
+        
+        response = super().update(request, *args, **kwargs)
+
+        instance.refresh_from_db()
+
+        print(
+            f"Debit Note {instance.pk}: "
+            f"previous_status={previous_status}, "
+            f"current_status={instance.status}"
+        )
+
+        if previous_status == "draft" and instance.status == "open":
+            try:
+                entry = create_debit_note_journal_entry(
+                    instance,
+                    created_by=request.user,
+                )
+                print("Journal entry created:", entry.pk if entry else None)
+
+            except DjangoValidationError as exc:
+                print("Journal validation error:", exc.messages)
+                raise DRFValidationError({"detail": exc.messages})
+
+        return response
+
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if self.has_journal_entry(instance):
+            raise DRFValidationError({
+                "detail": (
+                    "This debit note has a posted journal entry and cannot "
+                    "be deleted. Implement a journal reversal workflow "
+                    "before allowing cancellation or deletion."
+                )
+            })
+
+        return super().destroy(request, *args, **kwargs)
 
 
 class BillDebitNoteDetailsView(APIView):

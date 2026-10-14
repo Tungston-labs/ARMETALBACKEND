@@ -27,7 +27,13 @@ from .serializers import (
     PaymentListSerializer,
     PaymentSerializer,
 )
+from finance.journal.journal_services.payment_journal import (
+    create_payment_journal_entry,
+)
 
+from django.db import models, transaction
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError
 
 @extend_schema_view(
     list=extend_schema(
@@ -101,11 +107,23 @@ class PaymentViewSet(viewsets.ModelViewSet):
             .select_related("company", "customer", "invoice", "created_by")
         )
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
         payment = serializer.save()
+
+        try:
+            create_payment_journal_entry(
+                payment,
+                created_by=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({"detail": exc.messages})
+
         response_serializer = self.get_serializer(payment)
+
         return Response(
             {
                 "message": "Payment recorded successfully.",
@@ -139,17 +157,59 @@ class PaymentViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+
         serializer = self.get_serializer(
             instance,
             data=request.data,
             partial=partial,
         )
         serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+
+        # Do not modify an already-posted payment's accounting details
+        # until journal reversal and reposting are implemented.
+        if instance.status == "completed":
+            protected_fields = [
+                "amount_received",
+                "payment_method",
+                "payment_date",
+                "status",
+            ]
+
+            changed_fields = [
+                field
+                for field in protected_fields
+                if field in validated_data
+                and validated_data[field] != getattr(instance, field)
+            ]
+
+            if changed_fields:
+                raise ValidationError({
+                    "detail": (
+                        "This payment already has a posted journal entry. "
+                        "Changing its amount, payment method, date, or status "
+                        "requires a journal reversal workflow."
+                    ),
+                    "fields": changed_fields,
+                })
+
         payment = serializer.save()
+
+        try:
+            create_payment_journal_entry(
+                payment,
+                created_by=request.user,
+            )
+        except DjangoValidationError as exc:
+            raise ValidationError({"detail": exc.messages})
+
         response_serializer = self.get_serializer(payment)
+
         return Response(
             {
                 "message": "Payment updated successfully.",
@@ -158,9 +218,23 @@ class PaymentViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        if instance.status == "completed":
+            return Response(
+                {
+                    "message": (
+                        "Completed payments cannot be deleted directly. "
+                        "Reverse the journal entry first."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         instance.delete()
+
         return Response(
             {
                 "message": "Payment deleted successfully.",

@@ -187,17 +187,22 @@ class Bill(TimeStampedModel):
         bal = self.total_amount - self.amount_paid
         return bal if bal > Decimal("0.00") else Decimal("0.00")
 
+    
     def update_status(self):
+        # Preserve statuses that should not be recalculated.
         if self.status in ["draft", "cancelled"]:
             return
 
-        bal = self.balance
-        if bal == Decimal("0.00") and self.total_amount > Decimal("0.00"):
+        total = self.total_amount or Decimal("0.00")
+        paid = self.amount_paid or Decimal("0.00")
+
+        if total > Decimal("0.00") and paid >= total:
             self.status = "paid"
-        elif self.amount_paid > Decimal("0.00") and bal > Decimal("0.00"):
+        elif paid > Decimal("0.00"):
             self.status = "partially_paid"
         else:
             self.status = "unpaid"
+
 
     def save(self, *args, **kwargs):
         if not self.bill_number:

@@ -196,3 +196,4 @@ class BillSerializer(serializers.ModelSerializer):
         instance.update_status()
         instance.save()
         return instance
+    
