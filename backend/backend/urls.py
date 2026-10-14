@@ -61,6 +61,7 @@ urlpatterns = [
     path('api/finance/accounting/', include('finance.accounting.urls')),
     path('api/finance/journal/', include('finance.journal.urls')),
     path('api/finance/general-ledger/', include('finance.general_ledger.urls')),
+    path('api/finance/account-receivable/', include('finance.account_receivable.urls')),
 
 
 
