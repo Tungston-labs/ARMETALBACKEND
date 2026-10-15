@@ -1,0 +1,41 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMTIxOTg0LCJpYXQiOjE3OTIwOTMxODQsImp0aSI6IjlmYjI0MGZlMWU5ODQxMGU4NDBlNTg0YmU1NDBjMTliIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.-iYf2rQU2kT-gcfehbATqRzSOaykbUHfitbKOzmOL6o
+### Accounts Payable - All bills
+GET {{baseUrl}}/api/finance/accounts-payable/
+Authorization: Bearer {{token}}
+
+### Filter by bill date range
+GET {{baseUrl}}/api/finance/accounts-payable/?date_from=2026-10-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### Search bill number or vendor
+GET {{baseUrl}}/api/finance/accounts-payable/?search=ABC
+Authorization: Bearer {{token}}
+
+### Filter by vendor
+GET {{baseUrl}}/api/finance/accounts-payable/?vendor_id=1
+Authorization: Bearer {{token}}
+
+### Filter overdue bills
+GET {{baseUrl}}/api/finance/accounts-payable/?status=overdue
+Authorization: Bearer {{token}}
+
+### Filter paid bills
+GET {{baseUrl}}/api/finance/accounts-payable/?status=paid
+Authorization: Bearer {{token}}
+
+### Filter partially paid bills
+GET {{baseUrl}}/api/finance/accounts-payable/?status=partially_paid
+Authorization: Bearer {{token}}
+
+### Filter unpaid bills
+GET {{baseUrl}}/api/finance/accounts-payable/?status=unpaid
+Authorization: Bearer {{token}}
+
+### Pagination
+GET {{baseUrl}}/api/finance/accounts-payable/?page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Combine filters
+GET {{baseUrl}}/api/finance/accounts-payable/?date_from=2026-10-01&date_to=2026-10-31&vendor_id=1&status=overdue&search=ABC&page=1&page_size=10
+Authorization: Bearer {{token}}
