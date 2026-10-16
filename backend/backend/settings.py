@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'finance.account_receivable',
     'finance.account_payable',
     'finance.banking',
+    'finance.expense',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,82 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMTc1MTE0LCJpYXQiOjE3OTIxNDYzMTQsImp0aSI6IjBkNjVkN2ExYTg3ODRhOGFiNzVkOGY4MjE4ZjNjNTgzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Z7KJeZ6dUIpZgz0uuofE3J68GSWiviKI_2uiBpKmHBw
+@expenseId = 1
+
+### 1. List all expenses and KPI cards
+GET {{baseUrl}}/api/finance/expenses/
+Authorization: Bearer {{token}}
+
+### 2. Search, filter and paginate
+GET {{baseUrl}}/api/finance/expenses/?search=rent&category=rent&status=paid&date_from=2026-10-01&date_to=2026-10-31&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### 3. Filter by category
+GET {{baseUrl}}/api/finance/expenses/?category=utilities
+Authorization: Bearer {{token}}
+
+### 4. Filter unpaid expenses
+GET {{baseUrl}}/api/finance/expenses/?status=unpaid
+Authorization: Bearer {{token}}
+
+### 5. Create an expense
+POST {{baseUrl}}/api/finance/expenses/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "expense_date": "2026-10-16",
+  "category": "rent",
+  "paid_to": "ABC Building Owner",
+  "paid_method": "bank_transfer",
+  "paid_from_account_id": 1,
+  "amount": "25000.00",
+  "status": "paid",
+  "description": "Office rent for October"
+}
+
+### 6. Get expense details
+GET {{baseUrl}}/api/finance/expenses/{{expenseId}}/
+Authorization: Bearer {{token}}
+
+### 7. Update expense
+PUT {{baseUrl}}/api/finance/expenses/{{expenseId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "expense_date": "2026-10-16",
+  "category": "utilities",
+  "paid_to": "ABC Electricity Board",
+  "paid_method": "bank_transfer",
+  "paid_from_account_id": 1,
+  "amount": "3500.00",
+  "status": "paid",
+  "description": "Monthly electricity bill"
+}
+
+### 8. Partially update expense
+PATCH {{baseUrl}}/api/finance/expenses/{{expenseId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": "4000.00",
+  "description": "Updated electricity bill"
+}
+
+### 9. Mark expense as unpaid
+PATCH {{baseUrl}}/api/finance/expenses/{{expenseId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "unpaid"
+}
+
+### 10. Delete expense
+DELETE {{baseUrl}}/api/finance/expenses/{{expenseId}}/
+Authorization: Bearer {{token}}
+
+### 11. Dropdown: active bank accounts
+GET {{baseUrl}}/api/finance/banking/accounts/?status=active&page_size=100
+Authorization: Bearer {{token}}
