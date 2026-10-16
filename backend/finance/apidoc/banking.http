@@ -1,0 +1,193 @@
+
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMTc1MTE0LCJpYXQiOjE3OTIxNDYzMTQsImp0aSI6IjBkNjVkN2ExYTg3ODRhOGFiNzVkOGY4MjE4ZjNjNTgzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Z7KJeZ6dUIpZgz0uuofE3J68GSWiviKI_2uiBpKmHBw
+@bankId = 1
+@transactionId = 1
+@loanId = 1
+
+### ==================================================
+### 1. BANK ACCOUNTS
+### ==================================================
+
+### List bank accounts + dashboard + pagination
+GET {{baseUrl}}/api/finance/banking/accounts/
+Authorization: Bearer {{token}}
+
+### List bank accounts with all filters
+GET {{baseUrl}}/api/finance/banking/accounts/?date_from=2026-10-01&date_to=2026-10-31&search=HDFC&status=active&type=bank&account_type=current&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Create bank account
+POST {{baseUrl}}/api/finance/banking/accounts/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bank_name": "HDFC Bank",
+  "account_holder_name": "ABC Company",
+  "account_type": "current",
+  "account_number": "HDFC100002",
+  "iban": "",
+  "bank_type": "bank",
+  "branch": "Kochi Main Branch",
+  "opening_balance": "50000.00",
+  "note": "Primary business account"
+}
+
+### Retrieve bank account
+GET {{baseUrl}}/api/finance/banking/accounts/{{bankId}}/
+Authorization: Bearer {{token}}
+
+### Update bank account (PUT)
+PUT {{baseUrl}}/api/finance/banking/accounts/{{bankId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bank_name": "HDFC Bank",
+  "account_holder_name": "ABC Company",
+  "account_type": "current",
+  "account_number": "HDFC100001",
+  "iban": "",
+  "bank_type": "bank",
+  "branch": "Kochi Main Branch",
+  "opening_balance": "60000.00",
+  "note": "Updated account details",
+  "status": "active"
+}
+
+### Partially update / deactivate bank account
+PATCH {{baseUrl}}/api/finance/banking/accounts/{{bankId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+### Delete bank account
+DELETE {{baseUrl}}/api/finance/banking/accounts/{{bankId}}/
+Authorization: Bearer {{token}}
+
+
+### ==================================================
+### 2. BANK TRANSACTIONS
+### ==================================================
+
+### List transactions + dashboard
+GET {{baseUrl}}/api/finance/banking/transactions/
+Authorization: Bearer {{token}}
+
+### List transactions with all filters
+GET {{baseUrl}}/api/finance/banking/transactions/?date_from=2026-10-01&date_to=2026-10-31&search=REF-100&status=pending&type=customer_receipt&bank_account_id=1&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Create customer receipt (money in)
+POST {{baseUrl}}/api/finance/banking/transactions/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bank_account_id": 1,
+  "transaction_date": "2026-10-16",
+  "reference_number": "REF-1001",
+  "transaction_type": "customer_receipt",
+  "money_in": "10000.00",
+  "money_out": "0.00",
+  "balance_after": "60000.00",
+  "status": "pending",
+  "description": "Customer payment received"
+}
+
+### Create vendor payment (money out)
+POST {{baseUrl}}/api/finance/banking/transactions/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bank_account_id": 1,
+  "transaction_date": "2026-10-16",
+  "reference_number": "REF-1002",
+  "transaction_type": "vendor_payment",
+  "money_in": "0.00",
+  "money_out": "2500.00",
+  "balance_after": "57500.00",
+  "status": "pending",
+  "description": "Vendor payment"
+}
+
+### Retrieve transaction
+GET {{baseUrl}}/api/finance/banking/transactions/{{transactionId}}/
+Authorization: Bearer {{token}}
+
+### Update transaction status
+PATCH {{baseUrl}}/api/finance/banking/transactions/{{transactionId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "reconciled"
+}
+
+### Delete transaction
+DELETE {{baseUrl}}/api/finance/banking/transactions/{{transactionId}}/
+Authorization: Bearer {{token}}
+
+
+### ==================================================
+### 3. LOAN ACCOUNTS
+### ==================================================
+
+### List loan accounts + dashboard
+GET {{baseUrl}}/api/finance/banking/loans/
+Authorization: Bearer {{token}}
+
+### List loans with all filters
+GET {{baseUrl}}/api/finance/banking/loans/?date_from=2026-10-01&date_to=2026-10-31&search=HDFC&status=active&type=business_loan&bank_account_id=1&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Create loan account
+POST {{baseUrl}}/api/finance/banking/loans/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "bank_account_id": 1,
+  "loan_account_number": "LOAN1002",
+  "loan_type": "business_loan",
+  "loan_amount": "500000.00",
+  "interest_rate": "8.500",
+  "tenure_months": 48,
+  "start_date": "2026-10-01",
+  "next_due_date": "2026-11-05",
+  "monthly_installment": "15000.00",
+  "outstanding_balance": "420000.00"
+}
+
+### Retrieve loan account
+GET {{baseUrl}}/api/finance/banking/loans/{{loanId}}/
+Authorization: Bearer {{token}}
+
+### Update loan account
+PATCH {{baseUrl}}/api/finance/banking/loans/{{loanId}}/
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "outstanding_balance": "405000.00",
+  "monthly_installment": "15000.00",
+  "next_due_date": "2026-12-05"
+}
+
+### Delete loan account
+DELETE {{baseUrl}}/api/finance/banking/loans/{{loanId}}/
+Authorization: Bearer {{token}}
+
+
+### ==================================================
+### 4. BANK DROPDOWN FOR LOAN FORM
+### ==================================================
+
+### Get active bank accounts for dropdown
+GET {{baseUrl}}/api/finance/banking/accounts/?status=active&page=1&page_size=100
+Authorization: Bearer {{token}}
