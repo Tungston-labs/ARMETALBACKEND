@@ -1,0 +1,40 @@
+
+
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMTc1MTE0LCJpYXQiOjE3OTIxNDYzMTQsImp0aSI6IjBkNjVkN2ExYTg3ODRhOGFiNzVkOGY4MjE4ZjNjNTgzIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.Z7KJeZ6dUIpZgz0uuofE3J68GSWiviKI_2uiBpKmHBw
+
+### 1. Dashboard - current year by default
+GET {{baseUrl}}/api/finance/trial-balance/dashboard/
+Authorization: Bearer {{token}}
+
+### 2. Dashboard - selected date range
+GET {{baseUrl}}/api/finance/trial-balance/dashboard/?date_from=2026-01-01&date_to=2026-10-16
+Authorization: Bearer {{token}}
+
+### 3. Complete trial balance list
+GET {{baseUrl}}/api/finance/trial-balance/
+Authorization: Bearer {{token}}
+
+### 4. Search accounts
+GET {{baseUrl}}/api/finance/trial-balance/?search=cash
+Authorization: Bearer {{token}}
+
+### 5. Filter assets only
+GET {{baseUrl}}/api/finance/trial-balance/?type=asset
+Authorization: Bearer {{token}}
+
+### 6. Filter liabilities
+GET {{baseUrl}}/api/finance/trial-balance/?type=liability
+Authorization: Bearer {{token}}
+
+### 7. Search and filter by date
+GET {{baseUrl}}/api/finance/trial-balance/?search=bank&type=asset&date_from=2026-01-01&date_to=2026-10-16
+Authorization: Bearer {{token}}
+
+### 8. Pagination
+GET {{baseUrl}}/api/finance/trial-balance/?page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### 9. Invalid date test
+GET {{baseUrl}}/api/finance/trial-balance/dashboard/?date_from=invalid
+Authorization: Bearer {{token}}

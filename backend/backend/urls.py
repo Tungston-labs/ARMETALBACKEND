@@ -65,6 +65,8 @@ urlpatterns = [
     path('api/finance/accounts-payable/', include('finance.account_payable.urls')),
     path('api/finance/banking/', include('finance.banking.urls')),
     path('api/finance/expenses/', include('finance.expense.urls')),
+    path('api/finance/trial-balance/', include('finance.trail_balance.urls')),
+
 
 
 
