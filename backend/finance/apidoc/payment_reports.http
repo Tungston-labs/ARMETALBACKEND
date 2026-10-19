@@ -1,0 +1,42 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNDIzMzUyLCJpYXQiOjE3OTIzOTQ1NTIsImp0aSI6ImNlMWVjYjhkMDk5MjRhN2E5M2VkNmNmY2E1MzczNTM5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.nrNYck90huXjao4C_4WmUuflz6kFpyLWwY1XrfvRzvI
+
+### Payment Report - All
+GET {{baseUrl}}/api/finance/reports/payment/
+Authorization: Bearer {{token}}
+
+### Payment Report - Date Range
+GET {{baseUrl}}/api/finance/reports/payment/?date_from=2026-01-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### Customer Receipts Only
+GET {{baseUrl}}/api/finance/reports/payment/?payment_type=customer_receipt
+Authorization: Bearer {{token}}
+
+### Vendor Payments Only
+GET {{baseUrl}}/api/finance/reports/payment/?payment_type=vendor_payment
+Authorization: Bearer {{token}}
+
+### Filter by Method
+GET {{baseUrl}}/api/finance/reports/payment/?payment_method=bank_transfer
+Authorization: Bearer {{token}}
+
+### Filter by Status
+GET {{baseUrl}}/api/finance/reports/payment/?status=pending
+Authorization: Bearer {{token}}
+
+### Filter by Bank Account
+GET {{baseUrl}}/api/finance/reports/payment/?bank_account=1
+Authorization: Bearer {{token}}
+
+### Monthly Graphs
+GET {{baseUrl}}/api/finance/reports/payment/?chart_year=2026&graph_year=2026&graph_month=10
+Authorization: Bearer {{token}}
+
+### Pagination
+GET {{baseUrl}}/api/finance/reports/payment/?page=1&page_size=20
+Authorization: Bearer {{token}}
+
+### Combined Filters
+GET {{baseUrl}}/api/finance/reports/payment/?date_from=2026-01-01&date_to=2026-10-31&payment_type=vendor_payment&payment_method=bank_transfer&status=completed&bank_account=1&chart_year=2026&graph_year=2026&page=1&page_size=10
+Authorization: Bearer {{token}}
