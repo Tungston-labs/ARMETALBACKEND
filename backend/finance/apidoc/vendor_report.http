@@ -1,0 +1,34 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNDIzMzUyLCJpYXQiOjE3OTIzOTQ1NTIsImp0aSI6ImNlMWVjYjhkMDk5MjRhN2E5M2VkNmNmY2E1MzczNTM5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.nrNYck90huXjao4C_4WmUuflz6kFpyLWwY1XrfvRzvI
+
+### Vendor Report - All Data
+GET {{baseUrl}}/api/finance/reports/vendor/
+Authorization: Bearer {{token}}
+
+### Vendor Report - Date Range
+GET {{baseUrl}}/api/finance/reports/vendor/?date_from=2026-01-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### Vendor Report - Specific Vendor
+GET {{baseUrl}}/api/finance/reports/vendor/?vendor=1
+Authorization: Bearer {{token}}
+
+### Vendor Report - Payment Status
+GET {{baseUrl}}/api/finance/reports/vendor/?payment_status=overdue
+Authorization: Bearer {{token}}
+
+### Vendor Report - Payment Term
+GET {{baseUrl}}/api/finance/reports/vendor/?payment_term=30
+Authorization: Bearer {{token}}
+
+### Vendor Report - Graph Filters
+GET {{baseUrl}}/api/finance/reports/vendor/?chart_year=2025&graph_year=2026&graph_month=10
+Authorization: Bearer {{token}}
+
+### Vendor Report - Pagination
+GET {{baseUrl}}/api/finance/reports/vendor/?page=1&page_size=20
+Authorization: Bearer {{token}}
+
+### Vendor Report - Combined Filters
+GET {{baseUrl}}/api/finance/reports/vendor/?date_from=2026-01-01&date_to=2026-10-31&vendor=1&payment_status=paid&chart_year=2026&graph_year=2026&graph_month=10&page=1&page_size=10
+Authorization: Bearer {{token}}

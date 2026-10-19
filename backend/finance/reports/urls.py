@@ -5,9 +5,12 @@ from django.urls import path
 from finance.reports.sales import SalesReportView
 from finance.reports.customer import CustomerReportView
 from finance.reports.purchase import PurchaseReportView
+from finance.reports.vendor import VendorReportView
+
 
 urlpatterns = [
     path("sales/", SalesReportView.as_view(), name="sales-report"),
     path("purchase/", PurchaseReportView.as_view(), name="purchase-report"),
     path("customer/", CustomerReportView.as_view(), name="customer-report"),
+    path("vendor/", VendorReportView.as_view(), name="vendor-report"),
 ]
