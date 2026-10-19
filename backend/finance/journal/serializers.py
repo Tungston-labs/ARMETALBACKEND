@@ -56,10 +56,10 @@ class JournalEntryLineSerializer(serializers.ModelSerializer):
                 "Enter either a debit or a credit amount."
             )
 
-        if not attrs.get("account_name"):
-            raise serializers.ValidationError(
-                {"account_name": "Account name is required."}
-            )
+        # if not attrs.get("account_name"):
+        #     raise serializers.ValidationError(
+        #         {"account_name": "Account name is required."}
+        #     )
 
         return attrs
 
