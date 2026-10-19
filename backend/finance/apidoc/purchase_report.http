@@ -1,10 +1,10 @@
 @baseUrl = http://127.0.0.1:8000
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNDIzMzUyLCJpYXQiOjE3OTIzOTQ1NTIsImp0aSI6ImNlMWVjYjhkMDk5MjRhN2E5M2VkNmNmY2E1MzczNTM5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.nrNYck90huXjao4C_4WmUuflz6kFpyLWwY1XrfvRzvI
 
-### Purchase Report - All
-GET {{baseUrl}}/api/finance/reports/purchase/
+
+### Purchase report with graph year filter
+GET {{baseUrl}}/api/finance/reports/purchase/?date_from=2026-01-01&date_to=2026-10-31&chart_year=2025
 Authorization: Bearer {{token}}
-Accept: application/json
 
 ### Purchase Report - Date Range
 GET {{baseUrl}}/api/finance/reports/purchase/?date_from=2026-01-01&date_to=2026-10-19

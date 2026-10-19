@@ -437,8 +437,10 @@ class PurchaseReportView(APIView):
         # 6. Monthly chart
         # --------------------------------------------------
         current_year = timezone.localdate().year
-        year_value = request.query_params.get("year", str(current_year))
-
+        year_value = request.query_params.get(
+            "chart_year",
+            str(current_year),
+        )
         try:
             chart_year = int(year_value)
             if chart_year < 1900 or chart_year > 9999:
