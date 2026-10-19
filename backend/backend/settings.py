@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'finance.general_ledger',
     'finance.account_receivable',
     'finance.account_payable',
+    'finance.reports',
     'finance.banking',
     'finance.expense',
     'finance.trail_balance',

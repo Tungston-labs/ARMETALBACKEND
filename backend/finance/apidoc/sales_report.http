@@ -1,0 +1,30 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNDIzMzUyLCJpYXQiOjE3OTIzOTQ1NTIsImp0aSI6ImNlMWVjYjhkMDk5MjRhN2E5M2VkNmNmY2E1MzczNTM5IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.nrNYck90huXjao4C_4WmUuflz6kFpyLWwY1XrfvRzvI
+
+### Sales report - default current year
+GET {{baseUrl}}/api/finance/reports/sales/
+Authorization: Bearer {{token}}
+
+### Filter by date range
+GET {{baseUrl}}/api/reports/sales/?date_from=2026-01-01&date_to=2026-10-19
+Authorization: Bearer {{token}}
+
+### Filter by customer and category
+GET {{baseUrl}}/api/reports/sales/?customer=1&category=2
+Authorization: Bearer {{token}}
+
+### Filter by payment status
+GET {{baseUrl}}/api/reports/sales/?status=paid
+Authorization: Bearer {{token}}
+
+### Monthly chart for 2025
+GET {{baseUrl}}/api/reports/sales/?year=2025
+Authorization: Bearer {{token}}
+
+### Pagination
+GET {{baseUrl}}/api/reports/sales/?page=2&page_size=20
+Authorization: Bearer {{token}}
+
+### Export filtered report to CSV
+GET {{baseUrl}}/api/reports/sales/?date_from=2026-01-01&export=csv
+Authorization: Bearer {{token}}
