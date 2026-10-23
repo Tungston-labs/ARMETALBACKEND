@@ -12,6 +12,8 @@ from finance.reports.cash_flow import CashFlowReportView
 from finance.reports.expense import ExpenseReportView
 from finance.reports.inventory import InventoryReportView
 from finance.reports.tax import TaxReportView
+from finance.reports.balance_sheet_views import BalanceSheetView
+from finance.reports.changes_in_equity_views import ChangesInEquityView
 
 
 
@@ -27,7 +29,9 @@ urlpatterns = [
     path("cash-flow/", CashFlowReportView.as_view(), name="cash-flow-report"),
     path("expense/", ExpenseReportView.as_view(), name="expense-report"),
     path("inventory/", InventoryReportView.as_view(), name="inventory-report"),
-    path("tax/", TaxReportView.as_view(), name="tax-report")
+    path("tax/", TaxReportView.as_view(), name="tax-report"),
+    path("balance-sheet/",BalanceSheetView.as_view(),name="balance-sheet",),
+    path("changes-in-equity/",ChangesInEquityView.as_view(),name="changes-in-equity",),
 
 
 ]

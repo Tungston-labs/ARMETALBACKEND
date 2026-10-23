@@ -1,0 +1,15 @@
+
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzgzODkxLCJpYXQiOjE3OTI3NTUwOTEsImp0aSI6IjVjZGY5NjIxYWViNTQwOTA5ZDg2YzYyZmU5MDc0YjY3IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.uinq4m3O5UswdRjc2JVSxL43D9oGMrZi6VpyxKKWqqA
+
+@companyPk = 1
+
+### Changes in Equity - April 2026
+GET {{baseUrl}}/api/finance/reports/changes-in-equity/?start_date=2026-04-01&end_date=2026-04-30
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Superadmin - specific company
+GET {{baseUrl}}/api/finance/reports/changes-in-equity/?company_pk={{companyPk}}&start_date=2026-04-01&end_date=2026-04-30
+Authorization: Bearer {{token}}
+Accept: application/json
