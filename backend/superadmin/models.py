@@ -277,7 +277,7 @@ class CompanySubscription(TimeStampedModel):
 
         if not is_new:
             previous_status = CompanySubscription.objects.get(pk=self.pk).status
-        from finance.models import FinanceRecord,FinanceCategory
+        from hr.finance.models import FinanceRecord, FinanceCategory
 
         with transaction.atomic():
 
