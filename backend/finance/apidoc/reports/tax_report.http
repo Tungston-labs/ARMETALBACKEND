@@ -1,0 +1,50 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzU4MjI5LCJpYXQiOjE3OTI3Mjk0MjksImp0aSI6IjVkMjY5Nzk1ZGRhZDQzYTVhNWFmMWMyNTQzOWFjM2JmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.kvyPpmr8bi6Zw7cXZtG6m1HYqS_YMqdkhtdA-WoHsEs
+
+### 1. Default tax report
+GET {{baseUrl}}/api/finance/reports/tax/
+Authorization: Bearer {{token}}
+
+### 2. Date range
+GET {{baseUrl}}/api/finance/reports/tax/?start_date=2026-01-01&end_date=2026-10-23
+Authorization: Bearer {{token}}
+
+### 3. Monthly graph year
+GET {{baseUrl}}/api/finance/reports/tax/?chart_year=2026
+Authorization: Bearer {{token}}
+
+### 4. Sales invoices only
+GET {{baseUrl}}/api/finance/reports/tax/?invoice_type=sales
+Authorization: Bearer {{token}}
+
+### 5. Purchase bills only
+GET {{baseUrl}}/api/finance/reports/tax/?invoice_type=purchase
+Authorization: Bearer {{token}}
+
+### 6. Customer filter
+GET {{baseUrl}}/api/finance/reports/tax/?customer=1
+Authorization: Bearer {{token}}
+
+### 7. Vendor filter
+GET {{baseUrl}}/api/finance/reports/tax/?vendor=1
+Authorization: Bearer {{token}}
+
+### 8. Document status filter
+GET {{baseUrl}}/api/finance/reports/tax/?tax_status=paid
+Authorization: Bearer {{token}}
+
+### 9. Pagination
+GET {{baseUrl}}/api/finance/reports/tax/?page=2&page_size=20
+Authorization: Bearer {{token}}
+
+### 10. Combined filters
+GET {{baseUrl}}/api/finance/reports/tax/?start_date=2026-01-01&end_date=2026-10-23&invoice_type=sales&customer=1&chart_year=2026&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### 11. GST filter (not supported by current models)
+GET {{baseUrl}}/api/finance/reports/tax/?tax_type=gst
+Authorization: Bearer {{token}}
+
+### 12. Invalid date
+GET {{baseUrl}}/api/finance/reports/tax/?start_date=invalid-date
+Authorization: Bearer {{token}}

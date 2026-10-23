@@ -1,0 +1,42 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzU4MjI5LCJpYXQiOjE3OTI3Mjk0MjksImp0aSI6IjVkMjY5Nzk1ZGRhZDQzYTVhNWFmMWMyNTQzOWFjM2JmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.kvyPpmr8bi6Zw7cXZtG6m1HYqS_YMqdkhtdA-WoHsEs
+
+### 1. Inventory report - default filters and pagination
+GET {{baseUrl}}/api/finance/reports/inventory/
+Authorization: Bearer {{token}}
+
+### 2. Filter by date range and chart year
+GET {{baseUrl}}/api/finance/reports/inventory/?start_date=2026-01-01&end_date=2026-10-23&chart_year=2026
+Authorization: Bearer {{token}}
+
+### 3. Filter by warehouse
+GET {{baseUrl}}/api/finance/reports/inventory/?warehouse=1
+Authorization: Bearer {{token}}
+
+### 4. Filter by category
+GET {{baseUrl}}/api/finance/reports/inventory/?category=1
+Authorization: Bearer {{token}}
+
+### 5. Filter by product
+GET {{baseUrl}}/api/finance/reports/inventory/?product=1
+Authorization: Bearer {{token}}
+
+### 6. Filter by product type
+GET {{baseUrl}}/api/finance/reports/inventory/?product_type=product
+Authorization: Bearer {{token}}
+
+### 7. Search by code, SKU, or product name
+GET {{baseUrl}}/api/finance/reports/inventory/?search=PROD
+Authorization: Bearer {{token}}
+
+### 8. Pagination
+GET {{baseUrl}}/api/finance/reports/inventory/?page=2&page_size=20
+Authorization: Bearer {{token}}
+
+### 9. Combine filters
+GET {{baseUrl}}/api/finance/reports/inventory/?warehouse=1&category=1&product_type=product&chart_year=2026&page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### 10. Invalid date test
+GET {{baseUrl}}/api/finance/reports/inventory/?start_date=invalid-date
+Authorization: Bearer {{token}}

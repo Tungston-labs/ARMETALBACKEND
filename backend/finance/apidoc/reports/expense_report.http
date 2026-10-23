@@ -1,0 +1,42 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzU4MjI5LCJpYXQiOjE3OTI3Mjk0MjksImp0aSI6IjVkMjY5Nzk1ZGRhZDQzYTVhNWFmMWMyNTQzOWFjM2JmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.kvyPpmr8bi6Zw7cXZtG6m1HYqS_YMqdkhtdA-WoHsEs
+
+### Expense Report - All
+GET {{baseUrl}}/api/finance/reports/expense/
+Authorization: Bearer {{token}}
+
+### Date Range
+GET {{baseUrl}}/api/reports/expense/?date_from=2026-01-01&date_to=2026-10-31
+Authorization: Bearer {{token}}
+
+### Department Filter
+GET {{baseUrl}}/api/reports/expense/?department=1
+Authorization: Bearer {{token}}
+
+### Employee Filter
+GET {{baseUrl}}/api/reports/expense/?employee=1
+Authorization: Bearer {{token}}
+
+### Expense Category Filter
+GET {{baseUrl}}/api/reports/expense/?expense_category=TRAVEL
+Authorization: Bearer {{token}}
+
+### Approval Status - Approved
+GET {{baseUrl}}/api/reports/expense/?approval_status=Approve
+Authorization: Bearer {{token}}
+
+### Approval Status - Pending Verification
+GET {{baseUrl}}/api/reports/expense/?approval_status=In%20Verification
+Authorization: Bearer {{token}}
+
+### Graph Year Filters
+GET {{baseUrl}}/api/reports/expense/?chart_year=2025&graph_year=2026
+Authorization: Bearer {{token}}
+
+### Pagination
+GET {{baseUrl}}/api/reports/expense/?page=1&page_size=10
+Authorization: Bearer {{token}}
+
+### Combined Filters
+GET {{baseUrl}}/api/reports/expense/?date_from=2026-01-01&date_to=2026-10-31&department=1&employee=1&expense_category=TRAVEL&approval_status=Approve&chart_year=2026&graph_year=2026&page=1&page_size=10
+Authorization: Bearer {{token}}
