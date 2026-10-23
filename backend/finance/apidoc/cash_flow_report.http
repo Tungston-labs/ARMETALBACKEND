@@ -1,0 +1,18 @@
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzU4MjI5LCJpYXQiOjE3OTI3Mjk0MjksImp0aSI6IjVkMjY5Nzk1ZGRhZDQzYTVhNWFmMWMyNTQzOWFjM2JmIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.kvyPpmr8bi6Zw7cXZtG6m1HYqS_YMqdkhtdA-WoHsEs
+
+### Cash flow report - default current month to date
+GET {{baseUrl}}/api/finance/reports/cash-flow/
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Cash flow report - selected period
+GET {{baseUrl}}/api/finance/reports/cash-flow/?date_from=2026-04-01&date_to=2026-04-30
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Search/select bank account
+GET {{baseUrl}}/api/finance/reports/cash-flow/?date_from=2026-04-01&date_to=2026-04-30&search=Main&bank_account_id=1
+Authorization: Bearer {{token}}
+Accept: application/json
+
