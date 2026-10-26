@@ -1,4 +1,3 @@
-
 from django.db import models
 from django.core.validators import MinValueValidator
 from shared.models import TimeStampedModel
@@ -51,10 +50,14 @@ class Expense(TimeStampedModel):
         choices=PAYMENT_METHOD_CHOICES,
     )
 
+    # Optional: cash payments come from cash on hand, not a bank account.
+    # The serializer requires it for every method except cash.
     paid_from_account = models.ForeignKey(
         "banking.BankAccount",
         on_delete=models.PROTECT,
         related_name="expenses",
+        null=True,
+        blank=True,
     )
 
     amount = models.DecimalField(
@@ -97,3 +100,4 @@ class Expense(TimeStampedModel):
 
     def __str__(self):
         return self.expense_id or f"Expense {self.pk}"
+

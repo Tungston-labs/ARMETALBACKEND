@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 from .models import Expense
@@ -7,26 +6,26 @@ from finance.banking.models import BankAccount
 
 class ExpenseSerializer(serializers.ModelSerializer):
 
+    # Optional: required for every payment method except cash (see validate())
     paid_from_account_id = serializers.PrimaryKeyRelatedField(
         source="paid_from_account",
         queryset=BankAccount.objects.none(),
-        required=True,
+        required=False,
+        allow_null=True,
         error_messages={
-            "required": (
-                "Please select a bank account in the Paid From Account field."
-            ),
             "does_not_exist": (
                 "The selected bank account does not exist, is inactive, "
                 "or does not belong to your company."
             ),
             "incorrect_type": "Invalid bank account ID.",
-            "null": "Please select a valid bank account.",
         },
     )
 
+    # null for cash expenses
     paid_from_account_name = serializers.CharField(
         source="paid_from_account.bank_name",
         read_only=True,
+        allow_null=True,
     )
 
     class Meta:
@@ -189,14 +188,31 @@ class ExpenseSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        method = attrs.get(
+            "paid_method",
+            getattr(self.instance, "paid_method", None),
+        )
         bank_account = attrs.get(
             "paid_from_account",
             getattr(self.instance, "paid_from_account", None),
         )
 
+        # Cash comes out of cash on hand, not a bank account
+        if method == "cash":
+            attrs["paid_from_account"] = None
+            return attrs
+
+        if not bank_account:
+            raise serializers.ValidationError({
+                "paid_from_account_id": (
+                    "Please select a bank account in the Paid From Account "
+                    "field, unless the payment method is cash."
+                )
+            })
+
         request = self.context.get("request")
 
-        if bank_account and request and request.user.is_authenticated:
+        if request and request.user.is_authenticated:
             company_id = getattr(request.user, "company_id", None)
 
             if bank_account.company_id != company_id:
