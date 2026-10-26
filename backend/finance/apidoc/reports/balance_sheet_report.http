@@ -1,0 +1,24 @@
+
+@baseUrl = http://127.0.0.1:8000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyNzgzODkxLCJpYXQiOjE3OTI3NTUwOTEsImp0aSI6IjVjZGY5NjIxYWViNTQwOTA5ZDg2YzYyZmU5MDc0YjY3IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.uinq4m3O5UswdRjc2JVSxL43D9oGMrZi6VpyxKKWqqA
+@companyPk = 1
+
+### Balance Sheet - Default date (today)
+GET {{baseUrl}}/api/finance/reports/balance-sheet/
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Balance Sheet - Specific date
+GET {{baseUrl}}/api/finance/reports/balance-sheet/?as_of_date=2026-10-23
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Balance Sheet - Superadmin and specific company
+GET {{baseUrl}}/api/finance/reports/balance-sheet/?company_pk={{companyPk}}&as_of_date=2026-10-23
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Invalid date - should return HTTP 400
+GET {{baseUrl}}/api/finance/reports/balance-sheet/?as_of_date=23-10-2026
+Authorization: Bearer {{token}}
+Accept: application/json
