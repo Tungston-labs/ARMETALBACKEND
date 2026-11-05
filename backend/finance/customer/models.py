@@ -4,6 +4,16 @@ from django.conf import settings
 from shared.models import TimeStampedModel
 
 
+class ActiveCustomerManager(models.Manager):
+    """
+    Default manager: archived customers are invisible everywhere
+    (dropdowns, serializer validation, other modules, admin).
+    """
+
+    def get_queryset(self):
+        return super().get_queryset().exclude(client_status="archived")
+
+
 class Customer(TimeStampedModel):
 
     INDUSTRY_CHOICES = (
@@ -45,7 +55,12 @@ class Customer(TimeStampedModel):
     CLIENT_STATUS_CHOICES = (
         ("active", "Active"),
         ("inactive", "Inactive"),
+        ("archived", "Archived"),
     )
+
+    # The first manager defined becomes the default one, so order matters.
+    objects = ActiveCustomerManager()   # excludes archived
+    all_objects = models.Manager()      # includes archived; use only where needed
 
     id = models.BigAutoField(primary_key=True)
 
@@ -205,12 +220,23 @@ class Customer(TimeStampedModel):
         blank=True,
         related_name="created_customers"
     )
-
+    archived_at = models.DateTimeField(null=True, blank=True)
+        
+    archived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="archived_customers",
+    )
     def save(self, *args, **kwargs):
 
         if not self.customer_id:
+            # IMPORTANT: use all_objects so archived customers are counted,
+            # otherwise a new customer could reuse an archived customer's
+            # number and violate unique_customer_id_per_company.
             last_customer = (
-                Customer.objects
+                Customer.all_objects
                 .filter(company=self.company)
                 .order_by("-id")
                 .first()

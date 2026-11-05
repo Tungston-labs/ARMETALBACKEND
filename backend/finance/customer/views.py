@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.shortcuts import render
-from django.db.models import Count, Sum, Q
+from django.db.models import Count, Sum, Q, ProtectedError
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -21,7 +21,7 @@ from finance.invoice.models import Invoice
 from finance.ledger.models import CustomerLedger
 from finance.ledger.serializers import CustomerLedgerSerializer
 from finance.ledger.services import recalculate_customer_ledger
-
+from django.db import transaction
 from .models import (
     Customer,
     CustomerDocument
@@ -92,8 +92,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if not user.company:
             return Customer.objects.none()
 
-        return (
-            Customer.objects
+        # This module must reach archived customers (to list them under the
+        # Archived filter, restore them and delete them permanently), so it
+        # uses all_objects. Every other module uses Customer.objects, which
+        # hides archived customers.
+        queryset = (
+            Customer.all_objects
             .filter(company=user.company)
             .select_related(
                 "company",
@@ -103,6 +107,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "documents"
             )
         )
+
+        # Hide archived customers from the main list unless the caller
+        # explicitly filters by client_status (e.g. ?client_status=archived).
+        # Detail routes (retrieve, PATCH, overview, ledger, delete ...) still
+        # reach archived customers, so restore and permanent delete work.
+        if (
+            self.action == "list"
+            and not self.request.query_params.get("client_status")
+        ):
+            queryset = queryset.exclude(client_status="archived")
+
+        return queryset
 
     def get_object(self):
         if self.action in ["overview", "upload_document", "delete_document", "quotations", "payments", "credit_notes", "credit_notes_alt", "ledger"]:
@@ -119,30 +135,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
     # CREATE
     # ---------------------------------------------------------
 
-    def create(
-        self,
-        request,
-        *args,
-        **kwargs
-    ):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        serializer = self.get_serializer(
-            data=request.data
-        )
+        with transaction.atomic():
+            invoice = serializer.save()
+            create_invoice_journal_entry(invoice, created_by=request.user)
 
-        if not serializer.is_valid():
+        try:
+            self.generate_and_save_pdf(invoice)
+        except Exception as e:
+            print("PDF error:", e)
 
-            return Response(
-                {
-                    "message": "Customer creation failed.",
-                    "errors": serializer.errors
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        customer = serializer.save(
-            company=request.user.company,
-            created_by=request.user
+        return Response(
+            {
+                "message": "Invoice created successfully.",
+                "data": self.get_serializer(invoice).data,
+            },
+            status=status.HTTP_201_CREATED,
         )
 
         # ---------------------------------------------
@@ -326,7 +337,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
 
     # ---------------------------------------------------------
-    # DELETE
+    # DELETE (PERMANENT - ARCHIVED CUSTOMERS ONLY)
     # ---------------------------------------------------------
 
     def destroy(
@@ -338,15 +349,44 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         instance = self.get_object()
 
+        if instance.client_status != "archived":
+            return Response(
+                {
+                    "message": (
+                        "Archive this customer before "
+                        "deleting it permanently."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         customer_name = instance.customer_name
 
-        instance.delete()
+        try:
+            # Remove uploaded files from storage along with the rows
+            for doc in instance.documents.all():
+                if doc.document:
+                    doc.document.delete(save=False)
+
+            instance.delete()
+
+        except ProtectedError:
+            return Response(
+                {
+                    "message": (
+                        f"'{customer_name}' has invoices, payments or "
+                        "other records and can't be deleted. "
+                        "Keep it archived instead."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT
+            )
 
         return Response(
             {
                 "message": (
                     f"Customer '{customer_name}' "
-                    "deleted successfully."
+                    "deleted permanently."
                 )
             },
             status=status.HTTP_200_OK
@@ -366,7 +406,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
         request
     ):
 
-        queryset = self.get_queryset()
+        company = request.user.company
+
+        # Archived customers are excluded from every count except
+        # archived_customers below.
+        queryset = self.get_queryset().exclude(
+            client_status="archived"
+        )
 
         total_customers = queryset.count()
 
@@ -378,23 +424,47 @@ class CustomerViewSet(viewsets.ModelViewSet):
             client_status="inactive"
         ).count()
 
+        archived_customers = (
+            Customer.all_objects
+            .filter(
+                company=company,
+                client_status="archived"
+            )
+            .count()
+        )
+
         # ---------------------------------------------
         # NEW CUSTOMERS THIS MONTH
         # ---------------------------------------------
 
         today = timezone.localdate()
 
-        new_customers_this_month = queryset.filter(
+        new_customers = queryset.filter(
             created_at__year=today.year,
             created_at__month=today.month
         ).count()
 
         # ---------------------------------------------
-        # PAYMENT RECEIVED
+        # PAYMENTS RECEIVED
         # ---------------------------------------------
 
-        payment_received = 0
+        payments_received = (
+            Payment.objects
+            .filter(
+                company=company,
+                status="completed"
+            )
+            .exclude(customer__client_status="archived")
+            .aggregate(
+                total=Coalesce(
+                    Sum("amount_received"),
+                    Decimal("0.00")
+                )
+            )["total"]
+        )
 
+        # Keys match what the frontend reads:
+        # summary.new_customers and summary.payments_received
         return Response(
             {
                 "message": (
@@ -404,13 +474,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 "data": {
                     "total_customers": total_customers,
                     "active_customers": active_customers,
-                    "new_customers_this_month": (
-                        new_customers_this_month
-                    ),
-                    "inactive_customers": (
-                        inactive_customers
-                    ),
-                    "payment_received": payment_received,
+                    "inactive_customers": inactive_customers,
+                    "archived_customers": archived_customers,
+                    "new_customers": new_customers,
+                    "payments_received": payments_received,
                 }
             },
             status=status.HTTP_200_OK

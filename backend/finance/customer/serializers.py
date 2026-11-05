@@ -39,7 +39,16 @@ class CustomerSerializer(
         source="created_by.username",
         read_only=True
     )
+    created_by_name = serializers.CharField(
+        source="created_by.username",
+        read_only=True
+    )
 
+    archived_by_name = serializers.CharField(
+        source="archived_by.username",
+        read_only=True,
+        default=None,
+    )
     documents = CustomerDocumentSerializer(
         many=True,
         read_only=True
@@ -115,6 +124,10 @@ class CustomerSerializer(
 
             "client_status",
             "client_status_name",
+            # Archive info
+            "archived_at",
+            "archived_by",
+            "archived_by_name",
 
             # Financial
             "credit_limit",
@@ -148,7 +161,10 @@ class CustomerSerializer(
             "payment_term_name",
             "client_status_name",
             "documents",
-
+ # Archive info (set by the viewset, never by the client)
+            "archived_at",
+            "archived_by",
+            "archived_by_name",
             # Customer financial summary
             "total_invoice",
             "total_payments_received",
