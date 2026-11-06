@@ -112,6 +112,7 @@ class CompanySubscriptionListCreateView(APIView):
                     "amount": 0,
                     "employee_count": 0,
                     "amount_per_employee": company.amount_per_employee,
+                      "currency": company.currency,
                 }
             )
 
@@ -119,7 +120,7 @@ class CompanySubscriptionListCreateView(APIView):
             # Update only unpaid subscriptions
             # -----------------------------------------
             if obj.status == "unpaid":
-
+                obj.currency = company.currency
                 employee_count = get_billable_employee_count(
                     company,
                     m,
@@ -171,15 +172,13 @@ class CompanySubscriptionListCreateView(APIView):
                 "country": company.country,
                 "contact_number": company.contact_number,
                 "email": company.email,
-
+                "currency": company.currency,
                 "employee_count": Employee_db.objects.filter(
                     department__company=company,
                     is_deleted=False
                 ).count(),
 
                 "amount_per_employee": company.amount_per_employee,
-
-                "currency": subs[0].currency if subs else "AED",
 
                 "today": now().date(),
             },

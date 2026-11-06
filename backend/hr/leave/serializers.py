@@ -7,7 +7,8 @@ class EmployeeBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employee_db
-        fields = '__all__'
+        fields = ["id", "name", "employee_id", "employee_code", "email",
+                  "profile_pic", "department"]
 
 # class LeaveRequestSerializer(serializers.ModelSerializer):
 #     employee = EmployeeBasicSerializer(read_only=True)
@@ -29,7 +30,7 @@ class LeaveRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveRequest
         fields = '__all__'
-        read_only_fields = ['employee']
+        read_only_fields = ["employee", "status"] 
 
     def get_department_id(self, obj):
         return (

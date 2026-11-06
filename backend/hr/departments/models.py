@@ -5,7 +5,7 @@ from superadmin.models import Company
 class Department(TimeStampedModel):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='departments')
     name = models.CharField(max_length=100)
-    department_code = models.CharField(max_length=10, unique=True)
+    department_code = models.CharField(max_length=10)
     department_head = models.ForeignKey(
         'employee.Employee_db',  
         on_delete=models.SET_NULL,
@@ -18,4 +18,10 @@ class Department(TimeStampedModel):
         return f"{self.name} ({self.department_code})"
 
     class Meta:
-        ordering = ['name']  
+        ordering = ['name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['company', 'department_code'],
+                name='unique_department_code_per_company',
+            ),
+        ]

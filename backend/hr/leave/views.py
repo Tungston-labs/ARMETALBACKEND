@@ -126,12 +126,10 @@ class LeaveRequestCreateListView(generics.ListCreateAPIView):
         # OVERLAPPING CHECK
         # ==========================================
         overlapping = LeaveRequest.objects.filter(
-            employee=employee
-        ).filter(
-            Q(from_date__lte=to_date)
-            &
-            Q(to_date__gte=from_date)
-        )
+         employee=employee,
+         from_date__lte=to_date,
+         to_date__gte=from_date,
+        ).exclude(status="rejected")
 
         if overlapping.exists():
 

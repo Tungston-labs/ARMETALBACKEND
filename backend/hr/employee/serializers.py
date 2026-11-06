@@ -312,7 +312,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         email = value.strip().lower()
-
+        company = getattr(self.context["request"].user, "company", None)
+        
         emp_qs = Employee_db.objects.filter(email__iexact=email)
         user_qs = User.objects.filter(email__iexact=email)
 
