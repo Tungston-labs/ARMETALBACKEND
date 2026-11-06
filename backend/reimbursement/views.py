@@ -10,7 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from .utils import send_reimbursement_email
 from django.db import transaction
 from finance.models import FinanceRecord,FinanceCategory
-
+from rest_framework.exceptions import ValidationError
+from employee.models import Employee_db
 # --- List & Create for Employee ---
 
 class ReimbursementListCreateView(generics.ListCreateAPIView):
@@ -36,9 +37,17 @@ class ReimbursementListCreateView(generics.ListCreateAPIView):
         return ReimbursementDetailSerializer
 
     def perform_create(self, serializer):
-        reimbursement = serializer.save(
-            employee=self.request.user.employee_db
+     employee = Employee_db.objects.filter(
+        user=self.request.user,
+        is_deleted=False,
+     ).first()
+
+     if employee is None:
+        raise ValidationError(
+            {"detail": "No active employee profile is linked to this user."}
         )
+
+     serializer.save(employee=employee)
 
 from django.db import transaction
 

@@ -51,6 +51,31 @@ from attendance.models import Attendance
 from leave.models import LeaveRequest
 from employee.models import Employee_db
 from .serializers import EmployeeSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from django.db.models import Sum
+from datetime import date, timedelta, datetime
+import calendar
+
+from employee.models import Employee_db
+from attendance.models import Attendance
+from holidays.models import PublicHoliday
+
+# Attendance model
+from decimal import Decimal
+import calendar
+from datetime import date, timedelta
+
+from rest_framework import generics, filters
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
+
+from .models import Employee_db
+from .serializers import DeletedEmployeeSerializer
+
+
 
 
 
@@ -403,6 +428,10 @@ class EmployeeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsHRAdmin]
     lookup_field = 'pk'
 
+    def get_queryset(self):
+        return Employee_db.objects.filter(
+            department__company=self.request.user.company
+        )
     def perform_update(self, serializer):
         instance = self.get_object()
         old_department = instance.department
@@ -457,17 +486,22 @@ class EmpBankPaymentCreateListView(generics.ListCreateAPIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        employee_id = self.kwargs.get('employee_id')
-        return EmpBankPaymentModel.objects.filter(employee__id=employee_id)
+        return EmpBankPaymentModel.objects.filter(
+            employee__id=self.kwargs.get('employee_id'),
+            employee__department__company=self.request.user.company,
+        )
 
-    def perform_create(self, serializer):  # ✅ Move this method **inside** the class
-        employee_id = self.kwargs.get('employee_id')
-        employee = get_object_or_404(Employee_db, id=employee_id)
 
+    def perform_create(self, serializer):
+        employee = get_object_or_404(
+            Employee_db,
+            id=self.kwargs.get('employee_id'),
+            department__company=self.request.user.company,
+        )
         if EmpBankPaymentModel.objects.filter(employee=employee).exists():
             raise serializers.ValidationError("Bank payment record already exists for this employee.")
-
         serializer.save(employee=employee)
+
 
 # ------------------------detail view,update,delete employee bank details  by admin
 
@@ -475,9 +509,12 @@ class EmpBankPaymentEmployeeScopedDetailView(generics.RetrieveUpdateDestroyAPIVi
     serializer_class = EmpBankPaymentSerializer
     permission_classes = [permissions.IsAuthenticated, IsHRAdmin]
     parser_classes = [MultiPartParser, FormParser]
+
     def get_queryset(self):
-        employee_id = self.kwargs.get('employee_id')
-        return EmpBankPaymentModel.objects.filter(employee_id=employee_id)
+        return EmpBankPaymentModel.objects.filter(
+            employee_id=self.kwargs.get('employee_id'),
+            employee__department__company=self.request.user.company,
+        )
 
 
 
@@ -500,7 +537,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 class UpcomingExpiryEmployeeListView(generics.ListAPIView):
     serializer_class = EmployeeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
     pagination_class = StandardResultsSetPagination 
 
     def get_queryset(self):
@@ -575,17 +612,17 @@ class UploadImageDetailView(APIView):
 
 
 class EmployeeDocumentsView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsHRAdmin]
     parser_classes = (MultiPartParser, FormParser,JSONParser)
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee_db, id=employee_id)
+        employee = get_object_or_404(Employee_db, id=employee_id, department__company=request.user.company,)
         emp_doc, created = EmpDocument.objects.get_or_create(employee=employee)
         serializer = EmpDocumentSerializer(emp_doc)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, employee_id):
-        employee = get_object_or_404(Employee_db, id=employee_id)
+        employee = get_object_or_404(Employee_db, id=employee_id, department__company=request.user.company,)
 
         try:
             emp_doc = EmpDocument.objects.get(employee=employee)
@@ -599,7 +636,7 @@ class EmployeeDocumentsView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request, employee_id):  # ✅ Inside class now
-        employee = get_object_or_404(Employee_db, id=employee_id)
+        employee = get_object_or_404(Employee_db, id=employee_id, department__company=request.user.company,)
 
         try:
             emp_doc = EmpDocument.objects.get(employee=employee)
@@ -636,18 +673,24 @@ class EmpDocumentDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated,IsHRAdmin]
     lookup_field = 'employee_id' 
 
-
+    def get_queryset(self):
+        return EmpDocument.objects.filter(
+            employee__department__company=self.request.user.company
+        )
 
 
 # employee dashboard in web application
 
 
 class EmployeeDashboardAPIView(APIView):
-    permission_classes = [IsHRAdmin]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def get(self, request, id):
         try:
-            employee = Employee_db.objects.get(id=id)
+            employee = Employee_db.objects.get(
+                id=id,
+                department__company=request.user.company,
+            )
         except Employee_db.DoesNotExist:
             return Response({'detail': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -655,7 +698,7 @@ class EmployeeDashboardAPIView(APIView):
         return Response(serializer.data)
 
 class SendEmailAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def post(self, request):
         to_email = request.data.get("to")
@@ -719,7 +762,7 @@ class DashboardSummaryView(APIView):
             for emp in employees
         ]
 
-        total_employees_count = employees.count()
+        # total_employees_count = employees.count()
 
         # 2. Upcoming visa expiries
         upcoming_visa_expiry_qs = employees_qs.filter(
@@ -1127,23 +1170,6 @@ class ReminderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from django.db.models import Sum
-from datetime import date, timedelta, datetime
-import calendar
-
-from employee.models import Employee_db
-from attendance.models import Attendance
-from holidays.models import PublicHoliday
-
-# Attendance model
-from decimal import Decimal
-import calendar
-from datetime import date, timedelta
-
 
 
 
@@ -1151,15 +1177,21 @@ class EmployeeMonthlySummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        employee = (
+            Employee_db.objects
+            .select_related("department__company")
+            .filter(user=request.user, is_deleted=False)
+            .first()
+        )
+        if employee is None:
+            return Response({"error": "Employee not found"}, status=404)
 
-        try:
-            employee = request.user.employee_db
-            department = employee.department
-            company = department.company if department else None
-        except Employee_db.DoesNotExist:
+        department = employee.department
+        company = department.company if department else None
+        if not company:
             return Response(
-                {"error": "Employee not found"},
-                status=404
+                {"error": "Employee not assigned to a department or company"},
+                status=400,
             )
 
         if not department or not company:
@@ -1347,64 +1379,55 @@ class EmployeeMonthlySummaryView(APIView):
 
 class SalaryIncrementListCreateView(generics.ListCreateAPIView):
     serializer_class = SalaryIncrementSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def get_queryset(self):
-        employee_id = self.kwargs["employee_id"]
-        return SalaryIncrement.objects.filter(employee_id=employee_id)
+        return SalaryIncrement.objects.filter(
+            employee_id=self.kwargs["employee_id"],
+            employee__department__company=self.request.user.company,
+        )
+
 
     def perform_create(self, serializer):
-        serializer.save()
+        employee = get_object_or_404(
+            Employee_db,
+            id=self.kwargs["employee_id"],
+            department__company=self.request.user.company,
+        )
+        serializer.save(employee=employee)
 
 
 
 # archieved employee list
 
-from rest_framework import generics, filters
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
-
-from .models import Employee_db
-from .serializers import DeletedEmployeeSerializer
-
-
 class DeletedEmployeeListView(generics.ListAPIView):
     serializer_class = DeletedEmployeeSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
     pagination_class = CustomPagination
-
-    filter_backends = [
-        filters.SearchFilter,
-    ]
-
-    # Search by name, employee code, or email
-    search_fields = [
-        "name",
-        "employee_code",
-        "email",
-    ]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name", "employee_code", "email"]
 
     def get_queryset(self):
+        company = getattr(self.request.user, "company", None)
+
+        if not company:
+            return Employee_db.objects.none()
+
         queryset = Employee_db.objects.filter(
-            is_deleted=True
+            is_deleted=True,
+            department__company=company,
         ).select_related("department")
 
         # Department filter
         department = self.request.query_params.get("department")
-
         if department:
-            queryset = queryset.filter(
-                department__name=department
-            )
+            queryset = queryset.filter(department__name=department)
 
-        # Exit month filter
-        # Example: 2026-08
+        # Exit month filter, e.g. 2026-08
         deleted_date = self.request.query_params.get("deleted_date")
-
         if deleted_date:
             try:
                 year, month = deleted_date.split("-")
-
                 year = int(year)
                 month = int(month)
 
@@ -1415,7 +1438,6 @@ class DeletedEmployeeListView(generics.ListAPIView):
                     deleted_at__year=year,
                     deleted_at__month=month,
                 )
-
             except (ValueError, TypeError):
                 raise ValidationError({
                     "deleted_date": [
@@ -1424,17 +1446,15 @@ class DeletedEmployeeListView(generics.ListAPIView):
                 })
 
         return queryset.order_by("-deleted_at")
-    
-
-
 class EmployeeRehireView(APIView):
     permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def post(self, request, id):
         try:
             employee = Employee_db.objects.select_related("user").get(
-                id=id
-            )
+    id=id,
+    department__company=request.user.company,
+)
 
             if not employee.is_deleted:
                 return Response(

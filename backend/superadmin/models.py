@@ -118,7 +118,8 @@ class Company(TimeStampedModel):
     location = models.CharField(max_length=100)
     latitude = models.FloatField(help_text="Latitude of the company location",null=True,blank=True)
     longitude = models.FloatField(help_text="Longitude of the company location",null=True,blank=True)
-    country = models.CharField(max_length=300, choices=COUNTRY_CHOICES, blank=True, null=True)
+    country = models.CharField(max_length=300, blank=True, null=True)
+    currency = models.CharField(max_length=10, default="AED")  
     contact_number = EncryptedCharField(max_length=300)
     email = models.EmailField(unique=True)
     modules = models.JSONField(default=dict)  # e.g. {"attendance": True, "leave": True}
@@ -277,7 +278,7 @@ class CompanySubscription(TimeStampedModel):
 
         if not is_new:
             previous_status = CompanySubscription.objects.get(pk=self.pk).status
-        from finance.models import FinanceRecord,FinanceCategory
+        from finance.models import FinanceRecord, FinanceCategory
 
         with transaction.atomic():
 
@@ -342,7 +343,3 @@ class ImpersonationRequest(models.Model):
 
     class Meta:
         unique_together = ('super_admin', 'company')
-
-
-
-

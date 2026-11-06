@@ -38,7 +38,7 @@ def get_currency_for_country(country):
 
 class CompanyCreateSerializer(serializers.ModelSerializer):
     number_of_employees = serializers.SerializerMethodField()
-    currency = serializers.SerializerMethodField()
+    # currency = serializers.SerializerMethodField()
     plan_name = serializers.CharField(
         source="plan.name",
         read_only=True
@@ -200,6 +200,10 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
         if isinstance(modules, str):
             validated_data["modules"] = json.loads(modules)
 
+        if not validated_data.get("currency"):
+         validated_data["currency"] = get_currency_for_country(
+            validated_data.get("country")
+        )
         company = Company.objects.create(**validated_data)
 
         # -------------------------------------------------
@@ -458,7 +462,7 @@ class CompanyListSerializer(serializers.ModelSerializer):
 
 
 class CompanySelfUpdateSerializer(serializers.ModelSerializer):
-    currency = serializers.SerializerMethodField()
+    # currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Company

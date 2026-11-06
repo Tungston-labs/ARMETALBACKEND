@@ -16,6 +16,22 @@ from holidays.models import PublicHoliday
 from django.core.mail import EmailMessage
 from rest_framework.views import APIView
 from rest_framework import status
+
+from employee.models import Employee_db
+from employee.serializers import EmpBankPaymentSerializer
+from rest_framework import serializers
+from datetime import date, timedelta,datetime
+from payroll.models import EmployeePayrollRecord
+from attendance.models import Attendance
+from leave.models import LeaveRequest
+from holidays.models import PublicHoliday
+import calendar
+from django.db.models import Count
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+
 def error(message, code=status.HTTP_400_BAD_REQUEST):
     return Response({"error": message}, status=code)
 
@@ -110,12 +126,10 @@ class LeaveRequestCreateListView(generics.ListCreateAPIView):
         # OVERLAPPING CHECK
         # ==========================================
         overlapping = LeaveRequest.objects.filter(
-            employee=employee
-        ).filter(
-            Q(from_date__lte=to_date)
-            &
-            Q(to_date__gte=from_date)
-        )
+         employee=employee,
+         from_date__lte=to_date,
+         to_date__gte=from_date,
+        ).exclude(status="rejected")
 
         if overlapping.exists():
 
@@ -462,15 +476,8 @@ class LeaveByStatusView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=500)
 
-from employee.models import Employee_db
-from employee.serializers import EmpBankPaymentSerializer
-from rest_framework import serializers
-from datetime import date, timedelta,datetime
-from payroll.models import EmployeePayrollRecord
-from attendance.models import Attendance
-from leave.models import LeaveRequest
-from holidays.models import PublicHoliday
-import calendar
+
+
 class LeaveSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -587,12 +594,6 @@ class LeaveRequestEmpDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticated, IsEmployee]
     lookup_field = 'pk'
 
-
-from django.db.models import Count
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
 
 
 class LeaveStatusCountsView(APIView):
