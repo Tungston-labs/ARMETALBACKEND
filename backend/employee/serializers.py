@@ -358,15 +358,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     def validate_employee_code(self, value):
         value = self._clean(value)
-        if value is None:
-            return None
 
-        if not EMP_CODE_RE.match(value):
-            raise serializers.ValidationError(
-                "Employee code may contain only letters, numbers, - _ / and be at most 50 characters."
-            )
-        if self._is_taken("employee_code", value):
-            raise serializers.ValidationError(UNIQUE_FIELDS["employee_code"])
+        if value and self._is_taken("employee_code", value):
+             raise serializers.ValidationError("Employee code already exists.")
+
         return value
 
     def validate_aadar_number(self, value):
