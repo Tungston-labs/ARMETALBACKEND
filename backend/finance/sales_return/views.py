@@ -12,6 +12,13 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
+    
+from django.db import transaction
+
+from finance.journal.journal_services.sales_return_journal import (
+        create_sales_return_journal_entry,
+    )
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
@@ -113,10 +120,40 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
             .prefetch_related("items")
         )
 
+
+
+    @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
         company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+
+        sales_return = serializer.save(
+            company=company,
+            created_by=user
+        )
+
+        if sales_return.status == "approved":
+            create_sales_return_journal_entry(
+                sales_return=sales_return,
+                created_by=user
+            )
+
+
+    @transaction.atomic
+    def perform_update(self, serializer):
+        old_status = serializer.instance.status
+
+        sales_return = serializer.save()
+
+        if (
+            old_status != "approved"
+            and sales_return.status == "approved"
+        ):
+            create_sales_return_journal_entry(
+                sales_return=sales_return,
+                created_by=self.request.user
+            )
+
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

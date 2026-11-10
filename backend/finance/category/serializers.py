@@ -20,6 +20,12 @@ class CategorySerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    inventory_total_value = serializers.DecimalField(
+    max_digits=20,
+    decimal_places=2,
+    read_only=True
+)
+
     class Meta:
         model = Category
 
@@ -33,6 +39,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "parent_category_name",
             "category_type",
             "status",
+            "inventory_total_value",
             "created_by",
             "created_by_name",
             "created_at",
@@ -46,6 +53,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "created_by",
             "created_by_name",
             "parent_category_name",
+            "inventory_total_value",
             "created_at",
             "updated_at",
         ]

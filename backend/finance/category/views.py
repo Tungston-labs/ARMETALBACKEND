@@ -10,8 +10,10 @@ from user.permissions import IsHRAdmin, IsCompanyActive
 from django.db.models import Count
 from .models import Category
 from .serializers import CategorySerializer
-
-
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+from decimal import Decimal
+from django.db.models import Q
 class CategoryViewSet(viewsets.ModelViewSet):
 
     serializer_class = CategorySerializer
@@ -61,12 +63,35 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if not user.company:
             return Category.objects.none()
 
-        return Category.objects.filter(
-            company=user.company
-        ).select_related(
-            "company",
-            "created_by",
-            "parent_category"
+        inventory_expression = ExpressionWrapper(
+            F("products__current_stock") * F("products__selling_price"),
+            output_field=DecimalField(
+                max_digits=20,
+                decimal_places=2
+            )
+        )
+
+        return (
+            Category.objects
+            .filter(company=user.company)
+            .annotate(
+                inventory_total_value=Coalesce(
+                    Sum(
+                        inventory_expression,
+                        filter=Q(products__product_type="product")
+                    ),
+                    Decimal("0.00"),
+                    output_field=DecimalField(
+                        max_digits=20,
+                        decimal_places=2
+                    )
+                )
+            )
+            .select_related(
+                "company",
+                "created_by",
+                "parent_category"
+            )
         )
 
     # ---------------------------------------------------------
