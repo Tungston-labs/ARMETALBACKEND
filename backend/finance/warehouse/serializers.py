@@ -9,6 +9,17 @@ class WarehouseSerializer(serializers.ModelSerializer):
     manager_name = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     company_name = serializers.SerializerMethodField()
+    total_units = serializers.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        read_only=True
+    )
+
+    stock_value = serializers.DecimalField(
+        max_digits=32,
+        decimal_places=4,
+        read_only=True
+    )
 
     class Meta:
         model = Warehouse
@@ -36,6 +47,8 @@ class WarehouseSerializer(serializers.ModelSerializer):
             "created_by_name",
             "created_at",
             "updated_at",
+            "total_units",
+            "stock_value",
         ]
         read_only_fields = [
             "id",

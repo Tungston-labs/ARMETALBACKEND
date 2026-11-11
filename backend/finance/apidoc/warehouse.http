@@ -14,8 +14,7 @@ Content-Type: application/json
 ###
 
 # Set variable for JWT access token
-@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxMjk2MjgxLCJpYXQiOjE3OTEyNjc0ODEsImp0aSI6IjEzMzZmMjA0MDVjYjRjZWM4NTY0OTk3ZmI5NjM4ZThjIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.3A4ZHOw1Rjc1g9qkf_gQYvyw7h0AZXSd-IXsp6L5Ipg
-
+@authToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzk0Mzk5NjAxLCJpYXQiOjE3OTQzNzA4MDEsImp0aSI6IjdhOThmNmIxMDFkNzQwOTBhYjViMjdiZWM3ODA4NDYyIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.2CcrkNGcPCPobbPginb00EXncEt4UfJpNc6SzrsG8bY
 
 # ------------------------------------------------------------------------------
 # 2. CREATE WAREHOUSE (Add New Warehouse)
@@ -26,22 +25,22 @@ Authorization: {{authToken}}
 Content-Type: application/json
 
 {
-  "code": "WH-002",
-  "warehouse_name": "Riyadh Central Warehouse",
-  "warehouse_type": "main",
-  "status": "active",
-  "operating_since": "2024-01-15",
-  "country": "Saudi Arabia",
-  "city": "Riyadh",
-  "address_line_1": "King Fahd Road, Sector 4",
-  "address_line_2": "Building 12",
-  "postal_code": "12211",
-  "phone_number": "+966500000000",
-  "email": "riyadh.wh@company.com",
-  "storage_capacity": "50000 SQFT",
-  "notes": "Main distribution hub for central region."
+    "code": "",
+    "warehouse_name": "Main Warehouse",
+    "warehouse_type": "main",
+    "manager": "John Smith",
+    "status": "active",
+    "operating_since": "2024-01-15",
+    "country": "India",
+    "city": "Kochi",
+    "address_line_1": "MG Road",
+    "address_line_2": "Near Metro Station",
+    "postal_code": "682001",
+    "phone_number": "+919876543210",
+    "email": "warehouse@example.com",
+    "storage_capacity": "10000 Sq Ft",
+    "notes": "Main storage and distribution facility"
 }
-
 
 # ------------------------------------------------------------------------------
 # 3. LIST WAREHOUSES (With Pagination, Summary Counts, & Filters)
@@ -55,7 +54,7 @@ GET http://127.0.0.1:8000/api/finance/warehouse/?search=Riyadh
 Authorization: {{authToken}}
 
 ### Filter warehouses by status and type
-GET http://127.0.0.1:8000/api/finance/warehouse/?status=active&warehouse_type=main
+GET http://127.0.0.1:8000/api/finance/warehouse/?status=active
 Authorization: {{authToken}}
 
 

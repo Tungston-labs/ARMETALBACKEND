@@ -8,7 +8,11 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import Warehouse
 from .serializers import WarehouseSerializer
 from shared.pagination import CustomPagination
-
+from django.db.models import (
+    Sum, F, Value, DecimalField, Q, ExpressionWrapper
+)
+from django.db.models.functions import Coalesce
+from decimal import Decimal
 
 class WarehouseKPICardView(APIView):
     """
@@ -61,18 +65,55 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
+
         if getattr(user, "is_superadmin", False):
             company_id = self.request.query_params.get("company")
+
             if company_id:
                 qs = Warehouse.objects.filter(company_id=company_id)
             else:
                 qs = Warehouse.objects.all()
+
         elif hasattr(user, "company") and user.company:
             qs = Warehouse.objects.filter(company=user.company)
+
         else:
             qs = Warehouse.objects.none()
 
-        return qs.select_related("created_by", "company")
+        return qs.select_related(
+            "created_by", "company"
+        ).annotate(
+            total_units=Coalesce(
+                Sum(
+                    "products__current_stock",
+                    filter=Q(products__product_type="product")
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(
+                    max_digits=20,
+                    decimal_places=2
+                )
+            ),
+
+            stock_value=Coalesce(
+                Sum(
+                    ExpressionWrapper(
+                        F("products__current_stock") *
+                        F("products__cost_price"),
+                        output_field=DecimalField(
+                            max_digits=24,
+                            decimal_places=4
+                        )
+                    ),
+                    filter=Q(products__product_type="product")
+                ),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(
+                    max_digits=32,
+                    decimal_places=4
+                )
+            )
+        )
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -100,23 +141,35 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
         return super().post(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+
         base_qs = self.get_queryset()
+        queryset = self.filter_queryset(base_qs)
 
         total_warehouses = base_qs.count()
-        active_warehouses = base_qs.filter(status="active").count()
-        inactive_warehouses = base_qs.filter(status="inactive").count()
+
+        active_warehouses = base_qs.filter(
+            status="active"
+        ).count()
+
+        inactive_warehouses = base_qs.filter(
+            status="inactive"
+        ).count()
 
         page = self.paginate_queryset(queryset)
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
+
             response = self.get_paginated_response(serializer.data)
+
             response.data["total_warehouses"] = total_warehouses
             response.data["active_warehouses"] = active_warehouses
             response.data["inactive_warehouses"] = inactive_warehouses
+
             return response
 
         serializer = self.get_serializer(queryset, many=True)
+
         return Response({
             "results": serializer.data,
             "total_warehouses": total_warehouses,
