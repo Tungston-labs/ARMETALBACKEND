@@ -43,9 +43,16 @@ Content-Type: application/json
 }
 
 # ------------------------------------------------------------------------------
-# 3. LIST WAREHOUSES (With Pagination, Summary Counts, & Filters)
+# 2B. WAREHOUSE KPI SUMMARY CARDS
 # ------------------------------------------------------------------------------
-### List all warehouses for user's company
+### Get Warehouse KPI Summary Cards
+GET http://127.0.0.1:8000/api/finance/warehouse/kpi/
+Authorization: {{authToken}}
+
+# ------------------------------------------------------------------------------
+# 3. LIST WAREHOUSES (With Pagination, Summary Counts, Filters & Export)
+# ------------------------------------------------------------------------------
+### List all warehouses for user's company (includes KPI summary counts)
 GET http://127.0.0.1:8000/api/finance/warehouse/
 Authorization: {{authToken}}
 
@@ -53,8 +60,20 @@ Authorization: {{authToken}}
 GET http://127.0.0.1:8000/api/finance/warehouse/?search=Riyadh
 Authorization: {{authToken}}
 
-### Filter warehouses by status and type
-GET http://127.0.0.1:8000/api/finance/warehouse/?status=active
+### Filter warehouses by status and type (case-insensitive, supports "all")
+GET http://127.0.0.1:8000/api/finance/warehouse/?status=Active&warehouse_type=Main
+Authorization: {{authToken}}
+
+### Filter near-full capacity warehouses (>= 80% used) & sort by stock_value
+GET http://127.0.0.1:8000/api/finance/warehouse/?near_full=true&ordering=-stock_value
+Authorization: {{authToken}}
+
+### Export filtered warehouses as CSV (or xlsx via ?export=xlsx)
+GET http://127.0.0.1:8000/api/finance/warehouse/?export=csv&status=active
+Authorization: {{authToken}}
+
+### Export warehouses via dedicated export endpoint (CSV / XLSX)
+GET http://127.0.0.1:8000/api/finance/warehouse/export/?export=xlsx
 Authorization: {{authToken}}
 
 
