@@ -1,129 +1,127 @@
-from rest_framework import generics, filters, status
-from rest_framework.views import APIView
+from django.db.models.deletion import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+)
+from rest_framework import filters, generics, status
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from rest_framework.views import APIView
 
-from .models import Warehouse
-from .serializers import WarehouseSerializer
 from shared.pagination import CustomPagination
-from django.db.models import (
-    Sum, F, Value, DecimalField, Q, ExpressionWrapper
+
+from .filters import WarehouseFilter
+from .serializers import WarehouseSerializer
+from .utils import (
+    ZERO_DECIMAL,
+    annotate_warehouse_queryset,
+    build_warehouse_export_response,
+    calculate_warehouse_kpis,
+    get_scoped_warehouse_queryset,
+    resolve_request_company,
 )
-from django.db.models.functions import Coalesce
-from decimal import Decimal
+
 
 class WarehouseKPICardView(APIView):
     """
-    API view to retrieve KPI card counts for Warehouses (Total, Active, Inactive).
+    API view to retrieve KPI card metrics for Warehouses:
+    Total Warehouses, Total Stock Value, Active Warehouses, Inactive Warehouses,
+    Average Capacity Used (%), and Near Full Capacity count.
     """
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         summary="Get Warehouse KPI Card Metrics",
         description="Returns KPI card statistics for warehouses under the authenticated user's company.",
-        responses={200: OpenApiResponse(description="Warehouse KPI Statistics")}
+        responses={200: OpenApiResponse(description="Warehouse KPI Statistics")},
     )
     def get(self, request, *args, **kwargs):
-        user = request.user
-        if getattr(user, "is_superadmin", False):
-            company_id = request.query_params.get("company")
-            if company_id:
-                base_qs = Warehouse.objects.filter(company_id=company_id)
-            else:
-                base_qs = Warehouse.objects.all()
-        elif hasattr(user, "company") and user.company:
-            base_qs = Warehouse.objects.filter(company=user.company)
-        else:
-            base_qs = Warehouse.objects.none()
-
-        total_warehouses = base_qs.count()
-        active_warehouses = base_qs.filter(status="active").count()
-        inactive_warehouses = base_qs.filter(status="inactive").count()
-
-        return Response({
-            "total_warehouses": total_warehouses,
-            "active_warehouses": active_warehouses,
-            "inactive_warehouses": inactive_warehouses,
-        })
+        scoped_qs = get_scoped_warehouse_queryset(request)
+        company = resolve_request_company(request)
+        return Response(calculate_warehouse_kpis(scoped_qs, company=company))
 
 
-class WarehouseListCreateView(generics.ListCreateAPIView):
+class WarehouseQueryMixin:
     """
-    API view to list all warehouses or create a new warehouse for the authenticated user's company.
+    Shared queryset, filtering, searching, and ordering configuration for
+    warehouse list and export endpoints.
     """
+
     serializer_class = WarehouseSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = CustomPagination
-
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["status", "warehouse_type", "city", "country"]
-    search_fields = ["warehouse_name", "code", "manager", "city", "country", "phone_number", "email"]
-    ordering_fields = ["warehouse_name", "code", "created_at", "status"]
+    filterset_class = WarehouseFilter
+    search_fields = [
+        "warehouse_name",
+        "code",
+        "manager",
+        "city",
+        "country",
+        "phone_number",
+        "email",
+    ]
+    ordering_fields = [
+        "warehouse_name",
+        "code",
+        "created_at",
+        "status",
+        "city",
+        "manager",
+        "total_units",
+        "stock_value",
+    ]
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        user = self.request.user
+        return annotate_warehouse_queryset(get_scoped_warehouse_queryset(self.request))
 
-        if getattr(user, "is_superadmin", False):
-            company_id = self.request.query_params.get("company")
 
-            if company_id:
-                qs = Warehouse.objects.filter(company_id=company_id)
-            else:
-                qs = Warehouse.objects.all()
+class WarehouseListCreateView(WarehouseQueryMixin, generics.ListCreateAPIView):
+    """
+    API view to list all warehouses or create a new warehouse for the authenticated user's company.
+    Supports `?export=csv` / `?export=xlsx` for exporting filtered rows.
+    """
 
-        elif hasattr(user, "company") and user.company:
-            qs = Warehouse.objects.filter(company=user.company)
-
-        else:
-            qs = Warehouse.objects.none()
-
-        return qs.select_related(
-            "created_by", "company"
-        ).annotate(
-            total_units=Coalesce(
-                Sum(
-                    "products__current_stock",
-                    filter=Q(products__product_type="product")
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(
-                    max_digits=20,
-                    decimal_places=2
-                )
-            ),
-
-            stock_value=Coalesce(
-                Sum(
-                    ExpressionWrapper(
-                        F("products__current_stock") *
-                        F("products__cost_price"),
-                        output_field=DecimalField(
-                            max_digits=24,
-                            decimal_places=4
-                        )
-                    ),
-                    filter=Q(products__product_type="product")
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(
-                    max_digits=32,
-                    decimal_places=4
-                )
-            )
-        )
+    pagination_class = CustomPagination
 
     def perform_create(self, serializer):
-        user = self.request.user
-        company = getattr(user, "company", None)
-        serializer.save(company=company, created_by=user)
+        company = resolve_request_company(self.request)
+        if not company:
+            raise DRFValidationError({"company": "User is not associated with a company."})
+        instance = serializer.save(company=company, created_by=self.request.user)
+        instance.total_units = ZERO_DECIMAL
+        instance.stock_value = ZERO_DECIMAL
+        instance.total_products = 0
+        instance.low_stock_products = 0
+        instance.out_of_stock_products = 0
 
     @extend_schema(
         summary="List Warehouses",
-        description="Retrieves a paginated list of warehouses for the authenticated company, along with overall statistics (total, active, inactive count).",
-        responses={200: WarehouseSerializer(many=True)}
+        description=(
+            "Retrieves a paginated list of warehouses for the authenticated company, "
+            "along with overall KPI statistics. Pass `?export=csv` or `?export=xlsx` to download."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="export",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Set to 'csv' or 'xlsx' to export matching warehouses.",
+                enum=["csv", "xlsx", "excel", "true", "1"],
+            ),
+            OpenApiParameter(
+                name="near_full",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description="Filter warehouses near full capacity (>= 80%).",
+            ),
+        ],
+        responses={200: WarehouseSerializer(many=True)},
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -134,72 +132,85 @@ class WarehouseListCreateView(generics.ListCreateAPIView):
         request=WarehouseSerializer,
         responses={
             201: WarehouseSerializer,
-            400: OpenApiResponse(description="Validation Error (e.g. duplicate warehouse code)")
-        }
+            400: OpenApiResponse(description="Validation Error (e.g. duplicate warehouse code)"),
+        },
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
     def list(self, request, *args, **kwargs):
+        export_param = (request.query_params.get("export") or "").lower().strip()
+        queryset = self.filter_queryset(self.get_queryset())
 
-        base_qs = self.get_queryset()
-        queryset = self.filter_queryset(base_qs)
+        if export_param in ("1", "true", "csv", "excel", "xlsx"):
+            fmt = "xlsx" if export_param == "xlsx" else "csv"
+            return build_warehouse_export_response(queryset, export_format=fmt)
 
-        total_warehouses = base_qs.count()
-
-        active_warehouses = base_qs.filter(
-            status="active"
-        ).count()
-
-        inactive_warehouses = base_qs.filter(
-            status="inactive"
-        ).count()
+        kpis = calculate_warehouse_kpis(
+            get_scoped_warehouse_queryset(request),
+            company=resolve_request_company(request),
+        )
 
         page = self.paginate_queryset(queryset)
-
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-
             response = self.get_paginated_response(serializer.data)
-
-            response.data["total_warehouses"] = total_warehouses
-            response.data["active_warehouses"] = active_warehouses
-            response.data["inactive_warehouses"] = inactive_warehouses
-
+            response.data.update(kpis)
             return response
 
         serializer = self.get_serializer(queryset, many=True)
-
         return Response({
             "results": serializer.data,
-            "total_warehouses": total_warehouses,
-            "active_warehouses": active_warehouses,
-            "inactive_warehouses": inactive_warehouses,
+            **kpis,
         })
+
+
+class WarehouseExportView(WarehouseQueryMixin, generics.GenericAPIView):
+    """
+    API view to export filtered warehouses as CSV (default) or XLSX.
+    """
+
+    @extend_schema(
+        summary="Export Warehouses",
+        description="Exports filtered warehouse rows as a downloadable CSV or XLSX file.",
+        parameters=[
+            OpenApiParameter(
+                name="export",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Export file format: 'csv' (default) or 'xlsx'.",
+                enum=["csv", "xlsx"],
+            ),
+        ],
+        responses={200: OpenApiResponse(description="Downloadable CSV/XLSX file")},
+    )
+    def get(self, request, *args, **kwargs):
+        fmt = (
+            request.query_params.get("export")
+            or request.query_params.get("file_format")
+            or "csv"
+        ).lower().strip()
+        if fmt not in ("csv", "xlsx"):
+            fmt = "csv"
+        queryset = self.filter_queryset(self.get_queryset())
+        return build_warehouse_export_response(queryset, export_format=fmt)
 
 
 class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     API view to retrieve, edit (PUT/PATCH), or delete a warehouse by ID.
     """
+
     serializer_class = WarehouseSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        if getattr(user, "is_superadmin", False):
-            qs = Warehouse.objects.all()
-        elif hasattr(user, "company") and user.company:
-            qs = Warehouse.objects.filter(company=user.company)
-        else:
-            qs = Warehouse.objects.none()
-
-        return qs.select_related("created_by", "company")
+        return annotate_warehouse_queryset(get_scoped_warehouse_queryset(self.request))
 
     @extend_schema(
         summary="Get Warehouse Details",
         description="Retrieves the detailed information of a specific warehouse by ID.",
-        responses={200: WarehouseSerializer, 404: OpenApiResponse(description="Warehouse Not Found")}
+        responses={200: WarehouseSerializer, 404: OpenApiResponse(description="Warehouse Not Found")},
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
@@ -208,7 +219,11 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
         summary="Edit/Update Warehouse (Full)",
         description="Updates all fields of an existing warehouse.",
         request=WarehouseSerializer,
-        responses={200: WarehouseSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Warehouse Not Found")}
+        responses={
+            200: WarehouseSerializer,
+            400: OpenApiResponse(description="Validation Error"),
+            404: OpenApiResponse(description="Warehouse Not Found"),
+        },
     )
     def put(self, request, *args, **kwargs):
         return super().put(request, *args, **kwargs)
@@ -217,7 +232,11 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
         summary="Edit/Update Warehouse (Partial)",
         description="Partially updates fields of an existing warehouse.",
         request=WarehouseSerializer,
-        responses={200: WarehouseSerializer, 400: OpenApiResponse(description="Validation Error"), 404: OpenApiResponse(description="Warehouse Not Found")}
+        responses={
+            200: WarehouseSerializer,
+            400: OpenApiResponse(description="Validation Error"),
+            404: OpenApiResponse(description="Warehouse Not Found"),
+        },
     )
     def patch(self, request, *args, **kwargs):
         return super().patch(request, *args, **kwargs)
@@ -225,7 +244,24 @@ class WarehouseDetailView(generics.RetrieveUpdateDestroyAPIView):
     @extend_schema(
         summary="Delete Warehouse",
         description="Deletes a warehouse by ID.",
-        responses={204: OpenApiResponse(description="No Content"), 404: OpenApiResponse(description="Warehouse Not Found")}
+        responses={
+            204: OpenApiResponse(description="No Content"),
+            400: OpenApiResponse(description="Cannot delete referenced warehouse"),
+            404: OpenApiResponse(description="Warehouse Not Found"),
+        },
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "Cannot delete this warehouse because it is referenced by existing records."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
