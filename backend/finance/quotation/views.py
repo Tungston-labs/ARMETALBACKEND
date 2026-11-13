@@ -1,4 +1,5 @@
 from django.db.models import Sum
+from django.db.models.deletion import ProtectedError
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal
@@ -15,7 +16,39 @@ from .serializers import (
     QuotationSerializer,
     QuotationConversionSerializer,
 )
+from .utils import build_quotation_export_response
 from shared.pagination import CustomPagination
+
+
+def _apply_quotation_query_filters(qs, request):
+    from_date = request.query_params.get("from_date") or request.query_params.get("start_date")
+    to_date = request.query_params.get("to_date") or request.query_params.get("end_date")
+    if from_date:
+        qs = qs.filter(issue_date__gte=from_date)
+    if to_date:
+        qs = qs.filter(issue_date__lte=to_date)
+
+    status_param = (request.query_params.get("status") or "").strip()
+    if status_param and status_param.lower() != "all":
+        qs = qs.filter(status__iexact=status_param)
+
+    return qs
+
+
+def _resolve_quotation_currency(request, qs):
+    user = request.user
+    company = getattr(user, "company", None)
+    if getattr(user, "is_superadmin", False):
+        company_id = request.query_params.get("company")
+        if company_id:
+            from superadmin.models import Company
+            company = Company.objects.filter(id=company_id).first()
+    if company and getattr(company, "currency", None):
+        return company.currency
+    first_row = qs.select_related("company").first()
+    if first_row and first_row.company and getattr(first_row.company, "currency", None):
+        return first_row.company.currency
+    return "SAR"
 
 
 class QuotationKPICardView(APIView):
@@ -43,6 +76,11 @@ class QuotationKPICardView(APIView):
         else:
             base_qs = Quotation.objects.none()
 
+        base_qs = _apply_quotation_query_filters(base_qs, request)
+        customer_param = request.query_params.get("customer")
+        if customer_param:
+            base_qs = base_qs.filter(customer_id=customer_param)
+
         stats = base_qs.aggregate(
             total_value=Coalesce(Sum("quote_amount"), Decimal("0.00")),
             total_negotiation=Coalesce(Sum("negotiation_amount"), Decimal("0.00"))
@@ -51,13 +89,18 @@ class QuotationKPICardView(APIView):
         approved_quotes = base_qs.filter(status="approved").count()
         rejected_quotes = base_qs.filter(status="rejected").count()
         pending_quotes = base_qs.filter(status="pending").count()
+        draft_quotes = base_qs.filter(status="draft").count()
+        sent_quotes = base_qs.filter(status="sent").count()
 
         return Response({
+            "currency": _resolve_quotation_currency(request, base_qs),
             "total_quotation_value": stats["total_value"],
             "negotiation_amount": stats["total_negotiation"],
             "approved_quotes": approved_quotes,
             "rejected_quotes": rejected_quotes,
             "pending_quotes": pending_quotes,
+            "draft_quotes": draft_quotes,
+            "sent_quotes": sent_quotes,
         })
 
 
@@ -70,7 +113,7 @@ class QuotationListCreateView(generics.ListCreateAPIView):
     pagination_class = CustomPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["status", "customer", "issue_date", "valid_till"]
+    filterset_fields = ["customer", "issue_date", "valid_till"]
     search_fields = [
         "quote_number",
         "customer__customer_name",
@@ -102,6 +145,7 @@ class QuotationListCreateView(generics.ListCreateAPIView):
         else:
             qs = Quotation.objects.none()
 
+        qs = _apply_quotation_query_filters(qs, self.request)
         return qs.select_related("company", "customer", "created_by").prefetch_related("items", "conversions")
 
     def perform_create(self, serializer):
@@ -131,7 +175,11 @@ class QuotationListCreateView(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        
+        export_param = (request.query_params.get("export") or "").lower().strip()
+        if export_param in ("1", "true", "csv", "excel", "xlsx"):
+            fmt = "xlsx" if export_param == "xlsx" else "csv"
+            return build_quotation_export_response(queryset, export_format=fmt)
+
         customer_param = request.query_params.get("customer")
         if customer_param:
             base_qs = self.get_queryset().filter(customer_id=customer_param)
@@ -146,29 +194,55 @@ class QuotationListCreateView(generics.ListCreateAPIView):
         approved_quotes = base_qs.filter(status="approved").count()
         rejected_quotes = base_qs.filter(status="rejected").count()
         pending_quotes = base_qs.filter(status="pending").count()
+        draft_quotes = base_qs.filter(status="draft").count()
+        sent_quotes = base_qs.filter(status="sent").count()
+        currency = _resolve_quotation_currency(request, base_qs)
 
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             response = self.get_paginated_response(serializer.data)
+            response.data["currency"] = currency
             response.data["total_quotations"] = total_quotations
             response.data["total_quotation_value"] = stats["total_value"]
             response.data["negotiation_amount"] = stats["total_negotiation"]
             response.data["approved_quotes"] = approved_quotes
             response.data["rejected_quotes"] = rejected_quotes
             response.data["pending_quotes"] = pending_quotes
+            response.data["draft_quotes"] = draft_quotes
+            response.data["sent_quotes"] = sent_quotes
             return response
 
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "results": serializer.data,
+            "currency": currency,
             "total_quotations": total_quotations,
             "total_quotation_value": stats["total_value"],
             "negotiation_amount": stats["total_negotiation"],
             "approved_quotes": approved_quotes,
             "rejected_quotes": rejected_quotes,
             "pending_quotes": pending_quotes,
+            "draft_quotes": draft_quotes,
+            "sent_quotes": sent_quotes,
         })
+
+
+class QuotationExportView(QuotationListCreateView):
+    """
+    API view to export filtered quotations as CSV (default) or XLSX.
+    """
+
+    def get(self, request, *args, **kwargs):
+        fmt = (
+            request.query_params.get("export")
+            or request.query_params.get("file_format")
+            or "csv"
+        ).lower().strip()
+        if fmt not in ("csv", "xlsx"):
+            fmt = "csv"
+        queryset = self.filter_queryset(self.get_queryset())
+        return build_quotation_export_response(queryset, export_format=fmt)
 
 
 class QuotationDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -187,6 +261,7 @@ class QuotationDetailView(generics.RetrieveUpdateDestroyAPIView):
         else:
             qs = Quotation.objects.none()
 
+        qs = _apply_quotation_query_filters(qs, self.request)
         return qs.select_related("company", "customer", "created_by").prefetch_related("items", "conversions")
 
     @extend_schema(
@@ -222,6 +297,17 @@ class QuotationDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def delete(self, request, *args, **kwargs):
         return super().delete(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": "Cannot delete this quotation because it is referenced by existing records."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class QuotationConvertSOView(APIView):

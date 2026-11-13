@@ -664,9 +664,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if valid_till_param:
             quotations_qs = quotations_qs.filter(valid_till=valid_till_param)
 
-        status_param = request.query_params.get("status")
-        if status_param:
-            quotations_qs = quotations_qs.filter(status=status_param)
+        status_param = (request.query_params.get("status") or "").strip()
+        if status_param and status_param.lower() != "all":
+            quotations_qs = quotations_qs.filter(status__iexact=status_param)
 
         search_query = request.query_params.get("search", "").strip()
         if search_query:
@@ -688,6 +688,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         pending_quotes = quotations_qs.filter(status="pending").count()
 
         kpi_cards = {
+            "currency": getattr(customer, "currency", None) or getattr(request.user.company, "currency", None) or "SAR",
             "total_quotations": total_quotations,
             "total_amount": kpi_stats["total_value"],
             "negotiation_amount": kpi_stats["total_negotiation"],

@@ -6,6 +6,8 @@ from shared.models import TimeStampedModel
 class Quotation(TimeStampedModel):
 
     STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("sent", "Sent"),
         ("pending", "Pending"),
         ("approved", "Approved"),
         ("rejected", "Rejected"),
@@ -119,6 +121,14 @@ class Quotation(TimeStampedModel):
         max_digits=15,
         decimal_places=2,
         default=0.00
+    )
+
+    old_quote_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None
     )
 
     negotiation_amount = models.DecimalField(
