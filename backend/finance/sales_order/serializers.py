@@ -61,31 +61,10 @@ def get_user_role(user):
 
 
 # =========================================================
-# QUOTATION ITEM FLEXIBLE FIELD
-# =========================================================
-
-class QuotationItemFlexibleField(serializers.PrimaryKeyRelatedField):
-    def to_internal_value(self, data):
-        if data is None or data == "" or data == 0:
-            return None
-        try:
-            return super().to_internal_value(data)
-        except serializers.ValidationError:
-            # Handle stale / non-existent PK gracefully instead of crashing
-            return None
-
-
-# =========================================================
 # SALES ORDER ITEM SERIALIZER
 # =========================================================
 
 class SalesOrderItemSerializer(serializers.ModelSerializer):
-
-    quotation_item = QuotationItemFlexibleField(
-        queryset=QuotationItem.objects.all(),
-        required=False,
-        allow_null=True,
-    )
 
     product_name = serializers.SerializerMethodField()
 
@@ -702,18 +681,15 @@ class SalesOrderSerializer(serializers.ModelSerializer):
 
                 if quotation_item:
 
-                    if quotation and quotation_item.quotation_id != quotation.id:
-                        matched = quotation.items.filter(
-                            product=item_data.get("product")
-                        ).first()
-                        item_data["quotation_item"] = matched
+                    if (
+                        quotation_item.quotation_id
+                        != quotation.id
+                    ):
 
-                elif quotation:
-                    matched = quotation.items.filter(
-                        product=item_data.get("product")
-                    ).first()
-                    if matched:
-                        item_data["quotation_item"] = matched
+                        raise serializers.ValidationError({
+                            "items":
+                                "Quotation item does not belong to selected quotation."
+                        })
 
                 SalesOrderItem.objects.create(
                     sales_order=sales_order,
@@ -817,22 +793,14 @@ class SalesOrderSerializer(serializers.ModelSerializer):
                 if quotation_item:
 
                     if (
-                        instance.quotation_id
-                        and quotation_item.quotation_id != instance.quotation_id
+                        quotation_item.quotation_id
+                        != instance.quotation_id
                     ):
-                        matched = QuotationItem.objects.filter(
-                            quotation_id=instance.quotation_id,
-                            product=item_data.get("product")
-                        ).first()
-                        item_data["quotation_item"] = matched
 
-                elif instance.quotation_id:
-                    matched = QuotationItem.objects.filter(
-                        quotation_id=instance.quotation_id,
-                        product=item_data.get("product")
-                    ).first()
-                    if matched:
-                        item_data["quotation_item"] = matched
+                        raise serializers.ValidationError({
+                            "items":
+                                "Quotation item does not belong to this quotation."
+                        })
 
                 SalesOrderItem.objects.create(
                     sales_order=instance,
@@ -876,8 +844,6 @@ class SalesOrderListSerializer(
             "id",
 
             "so_number",
-
-            "customer",
 
             "customer_name",
 
