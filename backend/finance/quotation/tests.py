@@ -256,3 +256,54 @@ class QuotationAPITestCase(APITestCase):
         # Convert SO should return 404
         res_convert = self.client.post(f"/api/finance/quotation/{quote.id}/convert_so/", {}, format="json")
         self.assertEqual(res_convert.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_draft_sent_old_quote_amount_date_filter_and_export(self):
+        # Create draft quote with UI status label and DD-MM-YYYY date
+        create_res = self.client.post("/api/finance/quotation/", {
+            "customer": self.customer.id,
+            "issue_date": "17-04-2026",
+            "valid_till": "27-04-2026",
+            "status": "Draft",
+            "items": [
+                {
+                    "product": self.product.id,
+                    "service_name": "App Design",
+                    "description": "15mm Steel Pipe",
+                    "quantity": "1.00",
+                    "hs_code": "56322",
+                    "rate": "1970.00",
+                    "vat_percentage": "15.00",
+                }
+            ],
+        }, format="json")
+        self.assertEqual(create_res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_res.data["status"], "draft")
+        self.assertEqual(create_res.data["issue_date"], "2026-04-17")
+        self.assertIsNone(create_res.data["old_quote_amount"])
+        quote_id = create_res.data["id"]
+
+        # Updating quote_amount preserves previous quote_amount in old_quote_amount
+        patch_res = self.client.patch(f"/api/finance/quotation/{quote_id}/", {
+            "status": "Sent",
+            "quote_amount": "2500.00",
+            "negotiation_amount": "2300.00",
+        }, format="json")
+        self.assertEqual(patch_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_res.data["status"], "sent")
+        self.assertEqual(Decimal(str(patch_res.data["old_quote_amount"])), Decimal("2265.50"))
+
+        # Date range & status filter
+        list_res = self.client.get("/api/finance/quotation/?from_date=2026-04-01&to_date=2026-04-30&status=sent")
+        self.assertEqual(list_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_res.data["results"]), 1)
+        self.assertEqual(list_res.data["currency"], self.company.currency)
+
+        # Export CSV & XLSX
+        csv_res = self.client.get("/api/finance/quotation/export/?export=csv&status=sent")
+        self.assertEqual(csv_res.status_code, status.HTTP_200_OK)
+        self.assertIn("text/csv", csv_res["Content-Type"])
+        self.assertIn("2265.50", csv_res.content.decode("utf-8"))
+
+        xlsx_res = self.client.get("/api/finance/quotation/?export=xlsx")
+        self.assertEqual(xlsx_res.status_code, status.HTTP_200_OK)
+        self.assertIn("spreadsheetml.sheet", xlsx_res["Content-Type"])
