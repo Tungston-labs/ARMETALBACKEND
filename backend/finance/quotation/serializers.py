@@ -28,6 +28,7 @@ def _normalize_quotation_input(data):
 
 
 class QuotationItemSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
     product_name = serializers.ReadOnlyField(source="product.product_name")
 
     class Meta:
@@ -45,7 +46,6 @@ class QuotationItemSerializer(serializers.ModelSerializer):
             "vat_amount",
             "amount",
         ]
-        read_only_fields = ["id"]
 
 
 class QuotationConversionSerializer(serializers.ModelSerializer):
@@ -183,6 +183,7 @@ class QuotationSerializer(serializers.ModelSerializer):
         calculated_vat = Decimal("0.00")
 
         for item_data in items_data:
+            item_data.pop("id", None)
             qty = Decimal(str(item_data.get("quantity", 1)))
             rate = Decimal(str(item_data.get("rate", 0)))
             vat_pct = Decimal(str(item_data.get("vat_percentage", 15)))
@@ -191,51 +192,49 @@ class QuotationSerializer(serializers.ModelSerializer):
             line_vat = line_base * (vat_pct / Decimal("100"))
             line_amount = line_base + line_vat
 
-            if "vat_amount" not in item_data or item_data["vat_amount"] is None:
-                item_data["vat_amount"] = line_vat
-            if "amount" not in item_data or item_data["amount"] is None:
-                item_data["amount"] = line_amount
+            item_data["vat_amount"] = line_vat
+            item_data["amount"] = line_amount
 
             QuotationItem.objects.create(quotation=quotation, **item_data)
             calculated_subtotal += line_base
             calculated_vat += line_vat
 
-        needs_save = False
         if not quotation.sub_total or quotation.sub_total == Decimal("0.00"):
             quotation.sub_total = calculated_subtotal
-            needs_save = True
 
         if not quotation.total_vat or quotation.total_vat == Decimal("0.00"):
             quotation.total_vat = calculated_vat
-            needs_save = True
 
-        if not quotation.quote_amount or quotation.quote_amount == Decimal("0.00"):
-            discount = quotation.discount or Decimal("0.00")
-            round_off = quotation.round_off or Decimal("0.00")
-            quotation.quote_amount = (
-                quotation.sub_total + quotation.total_vat - discount + round_off
-            )
-            needs_save = True
+        discount = quotation.discount or Decimal("0.00")
+        round_off = quotation.round_off or Decimal("0.00")
+        base_total = quotation.sub_total + quotation.total_vat - discount + round_off
 
-        if needs_save:
-            quotation.save()
+        negotiation = quotation.negotiation_amount or Decimal("0.00")
+        if negotiation > Decimal("0.00"):
+            quotation.old_quote_amount = base_total
+            quotation.quote_amount = max(Decimal("0.00"), base_total - negotiation)
+        else:
+            quotation.old_quote_amount = None
+            quotation.quote_amount = base_total
 
+        quotation.save()
         return quotation
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop("items", None)
-        previous_quote_amount = instance.quote_amount
         explicit_old_quote_amount = "old_quote_amount" in validated_data
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         if items_data is not None:
-            instance.items.all().delete()
+            existing_items = {item.id: item for item in instance.items.all()}
+            kept_item_ids = set()
             calculated_subtotal = Decimal("0.00")
             calculated_vat = Decimal("0.00")
 
             for item_data in items_data:
+                item_id = item_data.pop("id", None)
                 qty = Decimal(str(item_data.get("quantity", 1)))
                 rate = Decimal(str(item_data.get("rate", 0)))
                 vat_pct = Decimal(str(item_data.get("vat_percentage", 15)))
@@ -244,33 +243,43 @@ class QuotationSerializer(serializers.ModelSerializer):
                 line_vat = line_base * (vat_pct / Decimal("100"))
                 line_amount = line_base + line_vat
 
-                if "vat_amount" not in item_data or item_data["vat_amount"] is None:
-                    item_data["vat_amount"] = line_vat
-                if "amount" not in item_data or item_data["amount"] is None:
-                    item_data["amount"] = line_amount
+                item_data["vat_amount"] = line_vat
+                item_data["amount"] = line_amount
 
-                QuotationItem.objects.create(quotation=instance, **item_data)
+                if item_id and item_id in existing_items:
+                    item_obj = existing_items[item_id]
+                    for k, v in item_data.items():
+                        setattr(item_obj, k, v)
+                    item_obj.save()
+                    kept_item_ids.add(item_id)
+                else:
+                    new_item = QuotationItem.objects.create(quotation=instance, **item_data)
+                    kept_item_ids.add(new_item.id)
+
                 calculated_subtotal += line_base
                 calculated_vat += line_vat
+
+            for old_id, old_obj in existing_items.items():
+                if old_id not in kept_item_ids:
+                    old_obj.delete()
 
             if "sub_total" not in validated_data:
                 instance.sub_total = calculated_subtotal
             if "total_vat" not in validated_data:
                 instance.total_vat = calculated_vat
-            if "quote_amount" not in validated_data:
-                discount = instance.discount or Decimal("0.00")
-                round_off = instance.round_off or Decimal("0.00")
-                instance.quote_amount = (
-                    instance.sub_total + instance.total_vat - discount + round_off
-                )
 
-        if (
-            not explicit_old_quote_amount
-            and previous_quote_amount is not None
-            and instance.quote_amount is not None
-            and instance.quote_amount != previous_quote_amount
-        ):
-            instance.old_quote_amount = previous_quote_amount
+        discount = instance.discount or Decimal("0.00")
+        round_off = instance.round_off or Decimal("0.00")
+        base_total = instance.sub_total + instance.total_vat - discount + round_off
+
+        negotiation = instance.negotiation_amount or Decimal("0.00")
+        if negotiation > Decimal("0.00"):
+            instance.old_quote_amount = base_total
+            instance.quote_amount = max(Decimal("0.00"), base_total - negotiation)
+        else:
+            if not explicit_old_quote_amount:
+                instance.old_quote_amount = None
+            instance.quote_amount = base_total
 
         instance.save()
         return instance

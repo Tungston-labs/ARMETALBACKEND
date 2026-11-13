@@ -6,7 +6,9 @@ from shared.models import TimeStampedModel
 class DeliveryNote(TimeStampedModel):
 
     DELIVERY_STATUS_CHOICES = (
+        ("draft", "Draft"),
         ("pending", "Pending"),
+        ("in_transit", "In Transit"),
         ("dispatched", "Dispatched"),
         ("partially_delivered", "Partially Delivered"),
         ("partial", "Partial"),
@@ -53,7 +55,20 @@ class DeliveryNote(TimeStampedModel):
         related_name="delivery_notes"
     )
 
-    delivery_date = models.DateField()
+    delivery_date = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    dispatch_date = models.DateField(
+        null=True,
+        blank=True
+    )
+
+    expected_delivery_date = models.DateField(
+        null=True,
+        blank=True
+    )
 
     warehouse = models.ForeignKey(
         "warehouse.Warehouse",
@@ -165,6 +180,13 @@ class DeliveryNote(TimeStampedModel):
         if not self.dn_number or not str(self.dn_number).strip():
             from .utils import generate_next_dn_number
             self.dn_number = generate_next_dn_number(self.company)
+
+        if not self.delivery_date and self.expected_delivery_date:
+            self.delivery_date = self.expected_delivery_date
+        elif not self.expected_delivery_date and self.delivery_date:
+            self.expected_delivery_date = self.delivery_date
+        if not self.dispatch_date and self.delivery_date:
+            self.dispatch_date = self.delivery_date
 
         super().save(*args, **kwargs)
 
