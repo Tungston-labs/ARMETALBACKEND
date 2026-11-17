@@ -30,16 +30,11 @@ def create_payment_journal_entry(payment, created_by=None):
     if payment.status != "completed":
         return None
 
-    if payment.payment_method == "cash":
-        raise ValidationError(
-            "Cash payments cannot be posted because a Cash account "
-            "has not been configured in the Chart of Accounts."
-        )
-
     if payment.payment_method not in {
         "bank_transfer",
         "online_payment",
         "cheque",
+        "cash",
     }:
         raise ValidationError(
             f"Unsupported payment method: {payment.payment_method}"
@@ -64,12 +59,20 @@ def create_payment_journal_entry(payment, created_by=None):
             "Cannot create a journal entry for a zero or negative payment."
         )
 
-    bank_account = ChartOfAccount.objects.filter(
-        company=payment.company,
-        account_code=BANK_ACCOUNT_CODE,
-        account_type="asset",
-        status="active",
-    ).first()
+    if payment.payment_method == "cash":
+        bank_account = ChartOfAccount.objects.filter(
+            company=payment.company,
+            account_code__in=["1100", "1000", BANK_ACCOUNT_CODE],
+            account_type="asset",
+            status="active",
+        ).first()
+    else:
+        bank_account = ChartOfAccount.objects.filter(
+            company=payment.company,
+            account_code=BANK_ACCOUNT_CODE,
+            account_type="asset",
+            status="active",
+        ).first()
 
     receivable_account = ChartOfAccount.objects.filter(
         company=payment.company,
@@ -80,7 +83,7 @@ def create_payment_journal_entry(payment, created_by=None):
 
     if not bank_account:
         raise ValidationError(
-            "Active Bank account (1200) was not found for this company."
+            "Active Bank (1200) or Cash account was not found for this company."
         )
 
     if not receivable_account:
