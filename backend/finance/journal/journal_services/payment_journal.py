@@ -48,6 +48,13 @@ def create_payment_journal_entry(payment, created_by=None):
     ).first()
 
     if existing_entry:
+        for line in existing_entry.lines.all():
+            if line.debit_amount > Decimal("0.00"):
+                line.debit_amount = amount
+                line.save(update_fields=["debit_amount"])
+            if line.credit_amount > Decimal("0.00"):
+                line.credit_amount = amount
+                line.save(update_fields=["credit_amount"])
         return existing_entry
 
     amount = Decimal(
