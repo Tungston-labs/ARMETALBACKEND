@@ -57,6 +57,9 @@ class DeliveryNoteKPICardView(APIView):
         )
 
         total_deliveries = base_qs.count()
+        in_transit = base_qs.filter(
+            Q(delivery_status="in_transit") | Q(delivery_status="dispatched")
+        ).count()
         pending_deliveries = base_qs.filter(delivery_status="pending").count()
         partially_delivered = base_qs.filter(
             Q(delivery_status="partially_delivered") | Q(delivery_status="partial")
@@ -64,7 +67,9 @@ class DeliveryNoteKPICardView(APIView):
         delivered = base_qs.filter(delivery_status="delivered").count()
 
         return Response({
+            "total_delivery_notes": total_deliveries,
             "total_deliveries": total_deliveries,
+            "in_transit": in_transit,
             "pending_deliveries": pending_deliveries,
             "partially_delivered": partially_delivered,
             "delivered": delivered,
@@ -112,6 +117,10 @@ class DeliveryNoteListCreateView(generics.ListCreateAPIView):
             qs = DeliveryNote.objects.filter(company=user.company)
         else:
             qs = DeliveryNote.objects.none()
+
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(delivery_status=status_param.lower().replace(" ", "_"))
 
         return qs.select_related("company", "customer", "warehouse", "sales_order", "created_by").prefetch_related("items")
 
@@ -184,7 +193,7 @@ class DeliveryNoteListCreateView(generics.ListCreateAPIView):
             created_by=self.request.user,
         )
 
-        if delivery_note.delivery_status == "delivered":
+        if delivery_note.delivery_status == "delivered" and delivery_note.items.exists():
             try:
                 create_delivery_note_journal_entry(
                     delivery_note,
@@ -210,6 +219,10 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
             qs = DeliveryNote.objects.filter(company=user.company)
         else:
             qs = DeliveryNote.objects.none()
+
+        status_param = self.request.query_params.get("status")
+        if status_param:
+            qs = qs.filter(delivery_status=status_param.lower().replace(" ", "_"))
 
         return qs.select_related("company", "customer", "warehouse", "sales_order", "created_by").prefetch_related("items")
 
@@ -282,6 +295,7 @@ class DeliveryNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
         if (
             previous_status != "delivered"
             and instance.delivery_status == "delivered"
+            and instance.items.exists()
         ):
             try:
                 create_delivery_note_journal_entry(

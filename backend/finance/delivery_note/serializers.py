@@ -85,6 +85,18 @@ class DeliveryNoteItemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "product_name", "ordered_qty", "already_delivered", "delivering_now", "balance", "status"]
 
+    def to_internal_value(self, data):
+        if hasattr(data, "copy"):
+            data = data.copy()
+        elif isinstance(data, dict):
+            data = dict(data)
+        if "delivering_now" in data and "quantity" not in data:
+            data["quantity"] = data["delivering_now"]
+        # Remove computed-only fields before validation
+        for field in ["ordered_qty", "already_delivered", "balance", "status", "sl_no"]:
+            data.pop(field, None)
+        return super().to_internal_value(data)
+
     def get_product_name(self, obj):
         if obj.product:
             return obj.product.product_name
@@ -134,9 +146,17 @@ class DeliveryNoteItemSerializer(serializers.ModelSerializer):
 
 class DeliveryNoteSerializer(serializers.ModelSerializer):
     dn_number = serializers.CharField(required=False, allow_blank=True)
+    delivery_note_number = serializers.CharField(source="dn_number", required=False, allow_blank=True)
+    sales_order_reference = serializers.CharField(source="so_ref", required=False, allow_blank=True)
+    status = serializers.CharField(source="delivery_status", required=False)
     customer_name = serializers.ReadOnlyField(source="customer.customer_name")
     warehouse_name = serializers.ReadOnlyField(source="warehouse.warehouse_name")
+    dispatch_location = serializers.ReadOnlyField(source="warehouse.warehouse_name")
     items = DeliveryNoteItemSerializer(many=True, required=False)
+
+    delivery_type = serializers.SerializerMethodField()
+    items_summary = serializers.SerializerMethodField()
+    items_delivered_ordered = serializers.SerializerMethodField()
 
     # Header SO metrics
     so_order_value = serializers.SerializerMethodField()
@@ -153,15 +173,24 @@ class DeliveryNoteSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "dn_number",
+            "delivery_note_number",
             "sales_order",
             "so_ref",
+            "sales_order_reference",
             "customer",
             "customer_name",
             "delivery_date",
+            "dispatch_date",
+            "expected_delivery_date",
             "warehouse",
             "warehouse_name",
+            "dispatch_location",
             "delivery_value",
             "delivery_status",
+            "status",
+            "delivery_type",
+            "items_summary",
+            "items_delivered_ordered",
             "invoice_status",
             "so_order_value",
             "so_already_delivered_value",
@@ -191,12 +220,69 @@ class DeliveryNoteSerializer(serializers.ModelSerializer):
             "created_by",
             "created_at",
             "updated_at",
+            "delivery_type",
+            "items_summary",
+            "items_delivered_ordered",
             "so_order_value",
             "so_already_delivered_value",
             "so_balance_to_deliver_value",
             "total_quantity",
             "pending_quantity",
         ]
+
+    def to_internal_value(self, data):
+        if hasattr(data, "dict"):
+            data = data.dict()
+        elif hasattr(data, "copy"):
+            data = data.copy()
+
+        if "delivery_note_number" in data and not data.get("dn_number"):
+            data["dn_number"] = data["delivery_note_number"]
+        if "sales_order_reference" in data and not data.get("so_ref"):
+            data["so_ref"] = data["sales_order_reference"]
+        if "status" in data and not data.get("delivery_status"):
+            stat = str(data["status"]).lower().replace(" ", "_")
+            data["delivery_status"] = stat
+        if "expected_delivery_date" in data and not data.get("delivery_date"):
+            data["delivery_date"] = data["expected_delivery_date"]
+        if "dispatch_date" in data and not data.get("delivery_date"):
+            data["delivery_date"] = data["dispatch_date"]
+
+        return super().to_internal_value(data)
+
+    def get_delivery_type(self, obj):
+        stat = str(obj.delivery_status or "").lower()
+        if stat in ["delivered", "fully_delivered"]:
+            return "Full"
+        elif stat in ["partial", "partially_delivered"]:
+            return "Partial"
+        elif stat in ["cancelled", "canceled"]:
+            return "--"
+        total_ordered = sum(
+            Decimal(str(item.sales_order_item.quantity if item.sales_order_item else item.quantity))
+            for item in obj.items.all()
+        )
+        total_delivered = sum(Decimal(str(item.quantity)) for item in obj.items.all())
+        if total_delivered >= total_ordered and total_ordered > 0:
+            return "Full"
+        elif total_delivered > 0:
+            return "Partial"
+        return "--"
+
+    def get_items_summary(self, obj):
+        total_ordered = 0
+        total_delivered = 0
+        for item in obj.items.all():
+            if item.sales_order_item:
+                total_ordered += int(item.sales_order_item.quantity)
+                total_delivered += int(item.quantity)
+            else:
+                total_ordered += int(item.quantity)
+                total_delivered += int(item.quantity)
+        return f"{total_delivered}/{total_ordered}"
+
+    def get_items_delivered_ordered(self, obj):
+        return self.get_items_summary(obj)
 
     def get_so_order_value(self, obj):
         if obj.sales_order:
@@ -355,6 +441,10 @@ class DeliveryNoteSerializer(serializers.ModelSerializer):
                 )
 
         instance.save()
+        if "delivery_status" in validated_data:
+            for item in instance.items.all():
+                if item.sales_order_item:
+                    update_so_item_delivered_qty(item.sales_order_item)
         if instance.sales_order:
             instance.sales_order.update_delivery_status()
 

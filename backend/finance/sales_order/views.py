@@ -382,6 +382,7 @@ class SalesOrderQuotationListView(
 
         queryset = queryset.filter(
             status__in=[
+                "draft",
                 "pending",
                 "approved",
             ]

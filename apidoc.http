@@ -7,8 +7,8 @@ POST http://localhost:8000/api/token/
 Content-Type: application/json
 
 {
-  "username": "Admin",
-  "password": "Admin@123"
+  "username": "kind",
+  "password": "CMPIDTFTOOGTP"
 }
 
 ###
