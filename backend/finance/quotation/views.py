@@ -32,6 +32,10 @@ def _apply_quotation_query_filters(qs, request):
     if status_param and status_param.lower() != "all":
         qs = qs.filter(status__iexact=status_param)
 
+    unassigned_so = request.query_params.get("unassigned_so")
+    if unassigned_so and unassigned_so.lower() in ("true", "1"):
+        qs = qs.filter(sales_orders__isnull=True)
+
     return qs
 
 

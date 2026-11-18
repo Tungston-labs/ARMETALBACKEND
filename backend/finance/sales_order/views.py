@@ -385,6 +385,7 @@ class SalesOrderQuotationListView(
                 "draft",
                 "pending",
                 "approved",
+                "converted",
             ]
         )
 

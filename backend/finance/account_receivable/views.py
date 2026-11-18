@@ -184,7 +184,8 @@ class AccountsReceivableView(APIView):
                 continue
 
             customer_name = (
-                getattr(invoice.customer, "name", None)
+                getattr(invoice.customer, "customer_name", None)
+                or getattr(invoice.customer, "name", None)
                 or str(invoice.customer)
             )
 

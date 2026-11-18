@@ -116,6 +116,24 @@ class Payment(TimeStampedModel):
         default=""
     )
 
+    bank_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default=""
+    )
+
+    account_holder = models.CharField(
+        max_length=150,
+        blank=True,
+        default=""
+    )
+
+    iban = models.CharField(
+        max_length=60,
+        blank=True,
+        default=""
+    )
+
     notes = models.TextField(
         blank=True,
         default=""
