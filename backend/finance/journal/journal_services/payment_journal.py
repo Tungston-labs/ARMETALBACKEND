@@ -40,23 +40,6 @@ def create_payment_journal_entry(payment, created_by=None):
             f"Unsupported payment method: {payment.payment_method}"
         )
 
-    existing_entry = JournalEntry.objects.filter(
-        company=payment.company,
-        source="auto",
-        source_module="payment",
-        source_id=str(payment.pk),
-    ).first()
-
-    if existing_entry:
-        for line in existing_entry.lines.all():
-            if line.debit_amount > Decimal("0.00"):
-                line.debit_amount = amount
-                line.save(update_fields=["debit_amount"])
-            if line.credit_amount > Decimal("0.00"):
-                line.credit_amount = amount
-                line.save(update_fields=["credit_amount"])
-        return existing_entry
-
     amount = Decimal(
         str(payment.amount_received or "0.00")
     ).quantize(Decimal("0.01"))
@@ -98,6 +81,31 @@ def create_payment_journal_entry(payment, created_by=None):
             "Active Accounts Receivable account (1300) was not found "
             "for this company."
         )
+
+    existing_entry = JournalEntry.objects.filter(
+        company=payment.company,
+        source="auto",
+        source_module="payment",
+        source_id=str(payment.pk),
+    ).first()
+
+    if existing_entry:
+        for line in existing_entry.lines.all():
+            if line.debit_amount > Decimal("0.00"):
+                line.debit_amount = amount
+                if bank_account and line.account_id != bank_account.id:
+                    line.account = bank_account
+                    line.save(update_fields=["debit_amount", "account"])
+                else:
+                    line.save(update_fields=["debit_amount"])
+            if line.credit_amount > Decimal("0.00"):
+                line.credit_amount = amount
+                if receivable_account and line.account_id != receivable_account.id:
+                    line.account = receivable_account
+                    line.save(update_fields=["credit_amount", "account"])
+                else:
+                    line.save(update_fields=["credit_amount"])
+        return existing_entry
 
     entry = JournalEntry.objects.create(
         company=payment.company,
