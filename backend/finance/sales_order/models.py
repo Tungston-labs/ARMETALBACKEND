@@ -11,10 +11,10 @@ from shared.models import TimeStampedModel
 class SalesOrder(TimeStampedModel):
 
     ORDER_STATUS_CHOICES = (
-        ("pending", "Pending"),
-        ("confirmed", "Confirmed"),
-        ("rejected", "Rejected"),
-        ("processing", "Processing"),
+    ("draft", "Draft"),
+    ("pending", "Pending"),
+    ("confirmed", "Confirmed"),
+    ("processing", "Processing"),
     )
 
     DELIVERY_STATUS_CHOICES = (
