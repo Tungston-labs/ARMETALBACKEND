@@ -8,6 +8,7 @@ from finance.product.models import Product
 
 class CreditNoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source="product.product_name")
+    invoiced_qty = serializers.ReadOnlyField(source="invoice_item.quantity")
 
     class Meta:
         model = CreditNoteItem
@@ -20,12 +21,13 @@ class CreditNoteItemSerializer(serializers.ModelSerializer):
             "service_name",
             "description",
             "quantity",
+            "invoiced_qty",
             "rate",
             "vat_percentage",
             "vat_amount",
             "amount",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "invoiced_qty"]
 
 
 class CreditNoteListSerializer(serializers.ModelSerializer):
@@ -150,6 +152,31 @@ class CreditNoteSerializer(serializers.ModelSerializer):
         rem = inv_amt - already - (obj.credit_amount or Decimal("0.00"))
         return rem if rem > Decimal("0.00") else Decimal("0.00")
 
+    def validate(self, attrs):
+        items = attrs.get("items")
+        invoice = attrs.get("invoice") or getattr(self.instance, "invoice", None)
+
+        if items is not None:
+            for item in items:
+                qty = Decimal(str(item.get("quantity", 0)))
+                if qty <= Decimal("0.00"):
+                    raise serializers.ValidationError({
+                        "items": "Credited quantity must be greater than zero."
+                    })
+                inv_item = item.get("invoice_item")
+                if not inv_item and invoice and item.get("product"):
+                    from finance.invoice.models import InvoiceItem
+                    inv_item = InvoiceItem.objects.filter(invoice=invoice, product=item["product"]).first()
+
+                if inv_item and inv_item.quantity:
+                    inv_qty = Decimal(str(inv_item.quantity))
+                    if qty > inv_qty:
+                        item_name = item.get("item_name") or inv_item.particular or "Item"
+                        raise serializers.ValidationError({
+                            "items": f"Credited quantity ({qty}) for '{item_name}' cannot exceed purchased/invoiced quantity ({inv_qty})."
+                        })
+        return attrs
+
     def create(self, validated_data):
         items_data = validated_data.pop("items", [])
 
@@ -239,6 +266,22 @@ class CreditNoteSerializer(serializers.ModelSerializer):
             calculated_vat = Decimal("0.00")
 
             for item_data in items_data:
+                inv_item = item_data.get("invoice_item")
+                if not inv_item and instance.invoice and item_data.get("product"):
+                    from finance.invoice.models import InvoiceItem
+                    inv_item = InvoiceItem.objects.filter(invoice=instance.invoice, product=item_data["product"]).first()
+                    if inv_item:
+                        item_data["invoice_item"] = inv_item
+                if inv_item:
+                    if not item_data.get("item_name"):
+                        item_data["item_name"] = inv_item.particular
+                    if not item_data.get("product") and inv_item.product:
+                        item_data["product"] = inv_item.product
+                    if "rate" not in item_data or item_data["rate"] == Decimal("0.00"):
+                        item_data["rate"] = inv_item.rate
+                    if "vat_percentage" not in item_data or item_data["vat_percentage"] == Decimal("0.00"):
+                        item_data["vat_percentage"] = inv_item.vat_percentage
+
                 qty = Decimal(str(item_data.get("quantity", 1)))
                 rate = Decimal(str(item_data.get("rate", 0)))
                 vat_pct = Decimal(str(item_data.get("vat_percentage", 15)))
