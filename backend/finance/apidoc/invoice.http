@@ -1,12 +1,13 @@
 @base_url = http://127.0.0.1:8000
 
-@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkxOTgyNTI0LCJpYXQiOjE3OTE5NTM3MjQsImp0aSI6ImYyNGZmYjczOGQ4NzRlZGQ5MzQ4NjY3ZTE2NmYwZmFkIiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.JNSuz-Mhd-Qr6Fo2c1AxvoxXRH-TGvugmDF7-m0YE5E
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzk1MDg5NTM1LCJpYXQiOjE3OTUwNjA3MzUsImp0aSI6ImVjNDAwNjhlN2EyZDQ2OTZiZTBjMjMxZWIxNDllYmU2IiwidXNlcl9pZCI6MiwiaXNfc3VwZXJhZG1pbiI6ZmFsc2UsImlzX2hyX2FkbWluIjp0cnVlLCJpc19lbXBsb3llZSI6ZmFsc2UsImlzX2hyIjpmYWxzZX0.bp73-g8WGMZw6XmkMtD5za-IyJsZd0ml64Oj4qaMtwQ
+
 
 @invoice_id = 1
 @customer_id = 1
 @product_id_1 = 1
 @product_id_2 = 2
-@sales_order_id = 1
+@sales_order_id = 3
 
 ########################################################
 
@@ -119,10 +120,30 @@ Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
-"sales_order": 4,
-"invoice_date": "2026-09-17",
-"due_date": "2026-10-17",
-"amount_paid": "0.00"
+    "sales_order": 3,
+    "invoice_date": "2026-11-19",
+    "due_date": "2026-12-04",
+    "payment_status": "unpaid",
+    "amount_paid": "0.00",
+
+    "account_holder": "TUNGSTON LABS",
+    "account_number": "12534789652135",
+    "iban": "2654559",
+
+    "discount": "0.00",
+    "round_off": "0.00",
+
+    "items": [
+        {
+            "sales_order_item": 6,
+            "product": 1,
+            "particular": "yrryryrrrryuyuy",
+            "quantity": "1.00",
+            "hs_code": "",
+            "rate": "70000.00",
+            "vat_percentage": "5.00"
+        }
+    ]
 }
 
 ########################################################

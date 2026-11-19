@@ -12,10 +12,13 @@ from finance.sales_order.models import (SalesOrder,SalesOrderItem,)
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
 
-    product_name = serializers.CharField(
-        source="product.product_name",
-        read_only=True
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        required=False,
+        allow_null=True
     )
+
+    product_name = serializers.SerializerMethodField()
 
     sales_order_item_id = serializers.IntegerField(
         source="sales_order_item.id",
@@ -23,48 +26,32 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-
         model = InvoiceItem
-
         fields = [
-
             "id",
-
             "sales_order_item",
             "sales_order_item_id",
-
             "product",
             "product_name",
-
             "particular",
-
             "quantity",
-
             "hs_code",
-
             "rate",
-
             "vat_percentage",
-
             "vat_sar",
-
             "amount",
-
         ]
 
         read_only_fields = [
-
             "id",
-
             "sales_order_item_id",
-
             "product_name",
-
             "vat_sar",
-
             "amount",
-
         ]
+
+    def get_product_name(self, obj):
+        return obj.product.product_name if obj.product else ""
 
 
 # =========================================================
@@ -445,12 +432,28 @@ class InvoiceSerializer(serializers.ModelSerializer):
             )
 
             for so_item in sales_order_items:
-                if not so_item.product:
-                    raise serializers.ValidationError({
-                        "sales_order":
-                            f"Sales order item {so_item.id} "
-                            "does not have a product."
-                    })
+                for so_item in sales_order.items.select_related("product").all():
+
+                    particular = (
+                        so_item.service_name
+                        or (
+                            so_item.product.product_name
+                            if so_item.product else ""
+                        )
+                        or so_item.description
+                        or "Item"
+                    )
+
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        sales_order_item=so_item,
+                        product=so_item.product,
+                        particular=particular,
+                        quantity=so_item.quantity,
+                        hs_code=so_item.hs_code or "",
+                        rate=so_item.rate,
+                        vat_percentage=so_item.vat_percentage,
+                    )
 
                 InvoiceItem.objects.create(
                     invoice=invoice,
@@ -756,52 +759,58 @@ class InvoiceListSerializer(
 # SALES ORDER DROPDOWN SERIALIZER
 # =========================================================
 
-class InvoiceSalesOrderSerializer(
-    serializers.ModelSerializer
-):
+
+class InvoiceSalesOrderSerializer(serializers.ModelSerializer):
 
     customer_name = serializers.CharField(
         source="customer.customer_name",
         read_only=True
     )
 
-    class Meta:
+    customer_email = serializers.EmailField(
+        source="customer.admin_email",
+        read_only=True,
+        allow_null=True
+    )
 
+    customer_phone = serializers.CharField(
+        source="customer.phno",
+        read_only=True,
+        allow_null=True
+    )
+
+    customer_address = serializers.CharField(
+        source="customer.billing_address",
+        read_only=True,
+        allow_null=True
+    )
+
+    class Meta:
         model = SalesOrder
 
         fields = [
-
             "id",
-
             "so_number",
 
             "customer",
-
             "customer_name",
+            "customer_email",
+            "customer_phone",
+            "customer_address",
 
             "order_date",
-
             "delivery_date",
-
             "due_date",
-
             "payment_terms",
-
             "order_status",
-
             "delivery_status",
-
             "subtotal",
-
             "total_vat",
-
             "discount",
-
             "round_off",
-
             "order_value",
-
         ]
+
 
 
 
