@@ -171,9 +171,9 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         validated_data = serializer.validated_data
 
-        # Do not modify an already-posted payment's accounting details
+        # Do not modify an already-posted full payment's accounting details
         # until journal reversal and reposting are implemented.
-        if instance.status == "completed":
+        if instance.status == "completed" and instance.payment_type != "partial_payment":
             protected_fields = [
                 "amount_received",
                 "payment_method",
@@ -222,7 +222,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        if instance.status == "completed":
+        if instance.status == "completed" and instance.payment_type != "partial_payment":
             return Response(
                 {
                     "message": (
@@ -232,6 +232,15 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Remove auto journal entry if any before deleting payment
+        from finance.journal.models import JournalEntry
+        JournalEntry.objects.filter(
+            company=instance.company,
+            source="auto",
+            source_module="payment",
+            source_id=str(instance.pk),
+        ).delete()
 
         instance.delete()
 

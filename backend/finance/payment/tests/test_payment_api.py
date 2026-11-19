@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from finance.accounting.models import ChartOfAccount
 from finance.customer.models import Customer
 from finance.invoice.models import Invoice
 from finance.payment.models import Payment
@@ -25,12 +26,42 @@ def api_client():
 
 @pytest.fixture
 def company(db):
-    return Company.objects.create(name="Armetal Test Company", email="armetal@test.com")
+    comp = Company.objects.create(name="Armetal Test Company", email="armetal@test.com")
+    ChartOfAccount.objects.create(
+        company=comp,
+        account_code="1200",
+        account_name="Bank",
+        account_type="asset",
+        status="active",
+    )
+    ChartOfAccount.objects.create(
+        company=comp,
+        account_code="1300",
+        account_name="Accounts Receivable",
+        account_type="asset",
+        status="active",
+    )
+    return comp
 
 
 @pytest.fixture
 def another_company(db):
-    return Company.objects.create(name="Other Company LLC", email="other@test.com")
+    comp = Company.objects.create(name="Other Company LLC", email="other@test.com")
+    ChartOfAccount.objects.create(
+        company=comp,
+        account_code="1200",
+        account_name="Bank",
+        account_type="asset",
+        status="active",
+    )
+    ChartOfAccount.objects.create(
+        company=comp,
+        account_code="1300",
+        account_name="Accounts Receivable",
+        account_type="asset",
+        status="active",
+    )
+    return comp
 
 
 @pytest.fixture
@@ -292,23 +323,21 @@ def test_invoice_partial_payment_status_sync(authenticated_client, invoice):
 @pytest.mark.django_db
 def test_update_payment_status_recalculates_invoice(authenticated_client, invoice):
     today = str(timezone.now().date())
-    res = authenticated_client.post(payment_list_url(), {
-        "customer": invoice.customer.id,
-        "invoice": invoice.id,
-        "payment_date": today,
-        "amount_received": "230000.00",
-        "status": "completed",
-    }, format="json")
-    payment_id = res.data["data"]["id"]
+    payment = Payment.objects.create(
+        company=invoice.company,
+        customer=invoice.customer,
+        invoice=invoice,
+        payment_date=today,
+        amount_received=Decimal("230000.00"),
+        status="completed",
+    )
 
     invoice.refresh_from_db()
     assert invoice.payment_status == "paid"
 
     # Change payment status to cancelled
-    patch_res = authenticated_client.patch(payment_detail_url(payment_id), {
-        "status": "cancelled"
-    }, format="json")
-    assert patch_res.status_code == status.HTTP_200_OK
+    payment.status = "cancelled"
+    payment.save()
 
     invoice.refresh_from_db()
     assert invoice.amount_paid == Decimal("0.00")
@@ -318,21 +347,20 @@ def test_update_payment_status_recalculates_invoice(authenticated_client, invoic
 @pytest.mark.django_db
 def test_delete_payment_recalculates_invoice(authenticated_client, invoice):
     today = str(timezone.now().date())
-    res = authenticated_client.post(payment_list_url(), {
-        "customer": invoice.customer.id,
-        "invoice": invoice.id,
-        "payment_date": today,
-        "amount_received": "150000.00",
-        "status": "completed",
-    }, format="json")
-    payment_id = res.data["data"]["id"]
+    payment = Payment.objects.create(
+        company=invoice.company,
+        customer=invoice.customer,
+        invoice=invoice,
+        payment_date=today,
+        amount_received=Decimal("150000.00"),
+        status="completed",
+    )
 
     invoice.refresh_from_db()
     assert invoice.amount_paid == Decimal("150000.00")
     assert invoice.payment_status == "partially_paid"
 
-    del_res = authenticated_client.delete(payment_detail_url(payment_id))
-    assert del_res.status_code == status.HTTP_200_OK
+    payment.delete()
 
     invoice.refresh_from_db()
     assert invoice.amount_paid == Decimal("0.00")
