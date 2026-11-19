@@ -390,3 +390,47 @@ class CreditNoteAPITestCase(APITestCase):
         self.assertEqual(Decimal(str(data["already_credited_amount"])), Decimal("3450.00"))
         self.assertEqual(Decimal(str(data["items"][0]["already_credited_qty"])), Decimal("3.00"))
         self.assertEqual(Decimal(str(data["items"][0]["max_creditable_qty"])), Decimal("7.00"))
+
+    def test_credit_note_quantity_exceeding_invoiced_quantity_fails(self):
+        from finance.invoice.models import Invoice, InvoiceItem
+
+        invoice = Invoice.objects.create(
+            company=self.company,
+            customer=self.customer,
+            invoice_date="2026-04-01",
+            due_date="2026-05-01",
+            subtotal=Decimal("10000.00"),
+            total_vat=Decimal("1500.00"),
+            total_amount=Decimal("11500.00"),
+            created_by=self.user
+        )
+
+        inv_item = InvoiceItem.objects.create(
+            invoice=invoice,
+            product=self.product,
+            particular="Metal Panel",
+            quantity=Decimal("10.00"),
+            rate=Decimal("1000.00"),
+            vat_percentage=Decimal("15.00")
+        )
+
+        # Attempt to credit 12 units when only 10 were purchased
+        payload = {
+            "customer": self.customer.id,
+            "invoice": invoice.id,
+            "issue_date": "2026-04-28",
+            "reason": "sales_return",
+            "items": [
+                {
+                    "invoice_item": inv_item.id,
+                    "product": self.product.id,
+                    "quantity": "12.00",
+                    "rate": "1000.00",
+                    "vat_percentage": "15.00"
+                }
+            ]
+        }
+
+        res = self.client.post("/api/finance/credit-notes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("cannot exceed purchased/invoiced quantity", str(res.data))

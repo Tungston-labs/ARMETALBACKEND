@@ -321,6 +321,49 @@ def test_invoice_partial_payment_status_sync(authenticated_client, invoice):
 
 
 @pytest.mark.django_db
+def test_update_partial_payment_amount_and_journal_entry(authenticated_client, invoice):
+    today = str(timezone.now().date())
+    res = authenticated_client.post(payment_list_url(), {
+        "customer": invoice.customer.id,
+        "invoice": invoice.id,
+        "payment_date": today,
+        "payment_type": "partial_payment",
+        "payment_method": "bank_transfer",
+        "amount_received": "50000.00",
+        "status": "completed",
+    }, format="json")
+    assert res.status_code == status.HTTP_201_CREATED
+    payment_id = res.data["data"]["id"]
+
+    # Verify journal entry was created
+    from finance.journal.models import JournalEntry
+    je = JournalEntry.objects.filter(
+        company=invoice.company,
+        source_module="payment",
+        source_id=str(payment_id),
+    ).first()
+    assert je is not None
+    assert je.total_debit == Decimal("50000.00")
+    assert je.total_credit == Decimal("50000.00")
+
+    # Update payment amount via PATCH
+    update_res = authenticated_client.patch(
+        payment_detail_url(payment_id),
+        {"amount_received": "120000.00"},
+        format="json"
+    )
+    assert update_res.status_code == status.HTTP_200_OK
+
+    # Verify journal entry lines updated with new amount
+    je.refresh_from_db()
+    assert je.total_debit == Decimal("120000.00")
+    assert je.total_credit == Decimal("120000.00")
+
+    invoice.refresh_from_db()
+    assert invoice.amount_paid == Decimal("120000.00")
+
+
+@pytest.mark.django_db
 def test_update_payment_status_recalculates_invoice(authenticated_client, invoice):
     today = str(timezone.now().date())
     payment = Payment.objects.create(

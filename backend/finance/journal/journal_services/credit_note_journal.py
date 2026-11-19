@@ -68,34 +68,56 @@ def create_credit_note_journal_entry(credit_note, created_by=None):
             "Credit amount must equal subtotal minus discount plus VAT."
         )
 
-    def get_account(account_code, account_type):
-        account = ChartOfAccount.objects.filter(
+    if not ChartOfAccount.objects.filter(company=credit_note.company).exists():
+        return None
+
+    sales_returns_account = ChartOfAccount.objects.filter(
+        company=credit_note.company,
+        account_code__in=["4200", "4100"],
+        status="active"
+    ).first()
+    if not sales_returns_account:
+        sales_returns_account = ChartOfAccount.objects.filter(
             company=credit_note.company,
-            account_code=account_code,
-            account_type=account_type,
-            status="active",
+            account_type__in=["expense", "revenue"],
+            status="active"
         ).first()
 
-        if not account:
-            raise ValidationError(
-                f"Active account {account_code} ({account_type}) "
-                f"is not configured for this company."
-            )
+    receivable_account = ChartOfAccount.objects.filter(
+        company=credit_note.company,
+        account_code__in=["1300", "1100"],
+        status="active"
+    ).first()
+    if not receivable_account:
+        receivable_account = ChartOfAccount.objects.filter(
+            company=credit_note.company,
+            account_type="asset",
+            status="active"
+        ).first()
 
-        return account
+    if not sales_returns_account:
+        raise ValidationError(
+            f"Active account 4200/4100 (sales returns or revenue) is not configured for this company."
+        )
 
-    sales_returns_account = get_account(
-        SALES_RETURNS_ACCOUNT_CODE, "expense"
-    )
-    receivable_account = get_account(
-        RECEIVABLE_ACCOUNT_CODE, "asset"
-    )
+    if not receivable_account:
+        raise ValidationError(
+            f"Active account 1300/1100 (accounts receivable) is not configured for this company."
+        )
 
     vat_account = None
     if vat_amount > Decimal("0.00"):
-        vat_account = get_account(
-            VAT_PAYABLE_ACCOUNT_CODE, "liability"
-        )
+        vat_account = ChartOfAccount.objects.filter(
+            company=credit_note.company,
+            account_code=VAT_PAYABLE_ACCOUNT_CODE,
+            status="active"
+        ).first()
+        if not vat_account:
+            vat_account = ChartOfAccount.objects.filter(
+                company=credit_note.company,
+                account_type="liability",
+                status="active"
+            ).first()
 
     entry = JournalEntry.objects.create(
         company=credit_note.company,

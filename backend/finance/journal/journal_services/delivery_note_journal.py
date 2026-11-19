@@ -2,7 +2,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from finance.accounting.models import ChartOfAccount
@@ -81,15 +81,9 @@ def create_delivery_note_journal_entry(
     total_cost = Decimal("0.00")
 
     for item in items:
-        # Service lines do not affect inventory.
-        if item.product and item.product.product_type == "service":
+        # Items without a linked catalog product or services do not affect physical inventory.
+        if not item.product or item.product.product_type == "service":
             continue
-
-        if not item.product:
-            raise ValidationError(
-                f"Delivery note item '{item.item_name or item.service_name}' "
-                "has no linked product. Inventory cost cannot be calculated."
-            )
 
         if item.quantity <= 0:
             raise ValidationError(
@@ -114,17 +108,45 @@ def create_delivery_note_journal_entry(
     if total_cost == Decimal("0.00"):
         return None
 
-    inventory_account = get_account(
-        delivery_note.company,
-        INVENTORY_ACCOUNT_CODE,
-        "asset",
+    inventory_account = (
+        ChartOfAccount.objects.filter(
+            company=delivery_note.company,
+            status="active",
+            account_type="asset",
+        )
+        .filter(
+            models.Q(account_name__icontains="Inventory")
+            | models.Q(category__icontains="inventory")
+            | models.Q(account_code__in=["1400", "1200"])
+        )
+        .first()
     )
+    if not inventory_account:
+        inventory_account = get_account(
+            delivery_note.company,
+            INVENTORY_ACCOUNT_CODE,
+            "asset",
+        )
 
-    cogs_account = get_account(
-        delivery_note.company,
-        COGS_ACCOUNT_CODE,
-        "expense",
+    cogs_account = (
+        ChartOfAccount.objects.filter(
+            company=delivery_note.company,
+            status="active",
+            account_type="expense",
+        )
+        .filter(
+            models.Q(category="cost_of_goods_sold")
+            | models.Q(account_code__in=["5100", "5200"])
+            | models.Q(account_name__icontains="Cost of Goods Sold")
+        )
+        .first()
     )
+    if not cogs_account:
+        cogs_account = get_account(
+            delivery_note.company,
+            COGS_ACCOUNT_CODE,
+            "expense",
+        )
 
     user = created_by or delivery_note.created_by
 
