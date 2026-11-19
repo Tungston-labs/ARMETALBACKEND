@@ -142,6 +142,9 @@ class SalesOrderItemSerializer(serializers.ModelSerializer):
         return obj.remaining_quantity
 
 
+
+
+
 # =========================================================
 # FULL SALES ORDER SERIALIZER
 # =========================================================

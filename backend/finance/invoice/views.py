@@ -33,6 +33,10 @@ from .serializers import CustomerInvoiceSerializer
 from finance.journal.journal_services.invoice_journal import (
     create_invoice_journal_entry,
 )
+
+from django.db.models import Prefetch
+
+from finance.delivery_note.models import DeliveryNote
 class InvoiceViewSet(
     viewsets.ModelViewSet
 ):
@@ -586,6 +590,80 @@ class InvoiceViewSet(
             }
 
         )
+    
+
+    def get_delivery_notes_data(self, sales_order, include_items=False):
+
+        delivery_notes = sales_order.delivery_notes.all()
+
+        data = []
+
+        for dn in delivery_notes:
+
+            dn_data = {
+                "id": dn.id,
+                "dn_number": dn.dn_number,
+                "sales_order": dn.sales_order_id,
+                "so_ref": dn.so_ref,
+                "customer": dn.customer_id,
+                "customer_name": dn.customer.customer_name if dn.customer else "",
+                "delivery_date": dn.delivery_date,
+                "dispatch_date": dn.dispatch_date,
+                "expected_delivery_date": dn.expected_delivery_date,
+                "warehouse": dn.warehouse_id,
+                "delivery_value": dn.delivery_value,
+                "delivery_status": dn.delivery_status,
+                "invoice_status": dn.invoice_status,
+                "shipping_address": dn.shipping_address,
+                "contact_person": dn.contact_person,
+                "contact_phone": dn.contact_phone,
+                "contact_email": dn.contact_email,
+                "sub_total": dn.sub_total,
+                "total_vat": dn.total_vat,
+                "discount": dn.discount,
+            }
+
+            if include_items:
+
+                dn_data["items"] = [
+
+                    {
+                        "id": item.id,
+
+                        "product": item.product_id,
+
+                        "product_name": (
+                            item.product.product_name
+                            if item.product else ""
+                        ),
+
+                        "sales_order_item": item.sales_order_item_id,
+
+                        "item_name": item.item_name,
+
+                        "service_name": item.service_name,
+
+                        "description": item.description,
+
+                        "quantity": item.quantity,
+
+                        "hs_code": item.hs_code,
+
+                        "rate": item.rate,
+
+                        "vat_percentage": item.vat_percentage,
+
+                        "vat_amount": item.vat_amount,
+
+                        "amount": item.amount,
+                    }
+
+                    for item in dn.items.all()
+                ]
+
+            data.append(dn_data)
+
+        return data
 
     # =====================================================
     # SALES ORDERS
@@ -596,56 +674,58 @@ class InvoiceViewSet(
         methods=["get"],
         url_path="sales-orders"
     )
-    def sales_orders(
-        self,
-        request
-    ):
+    def sales_orders(self, request):
 
         company = request.user.company
+
+        delivery_notes_queryset = (
+            DeliveryNote.objects
+            .filter(company=company)
+            .select_related("customer", "warehouse")
+        )
 
         sales_orders = (
 
             SalesOrder.objects
 
-            .filter(
-                company=company
+            .filter(company=company)
+
+            .exclude(order_status="rejected")
+
+            .select_related("customer")
+
+            .prefetch_related(
+                Prefetch(
+                    "delivery_notes",
+                    queryset=delivery_notes_queryset
+                )
             )
 
-            .exclude(
-                order_status="rejected"
-            )
-
-            .select_related(
-                "customer"
-            )
-
-            .order_by(
-                "-created_at"
-            )
+            .order_by("-created_at")
 
         )
 
         serializer = InvoiceSalesOrderSerializer(
-
             sales_orders,
-
             many=True
-
         )
 
-        return Response(
+        data = serializer.data
 
-            {
+        # Add Delivery Notes under each Sales Order
+        for index, sales_order in enumerate(sales_orders):
 
-                "message":
-                    "Sales orders retrieved successfully.",
+            data[index]["delivery_notes"] = (
+                self.get_delivery_notes_data(
+                    sales_order,
+                    include_items=False
+                )
+            )
 
-                "data":
-                    serializer.data
-
-            }
-
-        )
+        return Response({
+            "message": "Sales orders retrieved successfully.",
+            "data": data
+        })
 
     # =====================================================
     # SALES ORDER DETAILS
@@ -664,6 +744,18 @@ class InvoiceViewSet(
 
         company = request.user.company
 
+        delivery_notes_queryset = (
+            DeliveryNote.objects
+            .filter(company=company)
+            .select_related(
+                "customer",
+                "warehouse"
+            )
+            .prefetch_related(
+                "items__product"
+            )
+        )
+
         try:
 
             sales_order = (
@@ -678,15 +770,17 @@ class InvoiceViewSet(
                 )
 
                 .prefetch_related(
-                    "items__product"
+                    "items__product",
+
+                    Prefetch(
+                        "delivery_notes",
+                        queryset=delivery_notes_queryset
+                    )
                 )
 
                 .get(
-
                     id=sales_order_id,
-
                     company=company
-
                 )
 
             )
@@ -694,16 +788,10 @@ class InvoiceViewSet(
         except SalesOrder.DoesNotExist:
 
             return Response(
-
                 {
-
-                    "message":
-                        "Sales order not found."
-
+                    "message": "Sales order not found."
                 },
-
                 status=status.HTTP_404_NOT_FOUND
-
             )
 
         serializer = InvoiceSalesOrderSerializer(
@@ -713,76 +801,64 @@ class InvoiceViewSet(
         data = serializer.data
 
         # -------------------------------------------------
-        # Add item information
+        # SALES ORDER ITEMS
         # -------------------------------------------------
 
         data["items"] = [
 
             {
-
                 "id": item.id,
 
-                "product":
-                    item.product.id
-                    if item.product
-                    else None,
+                "product": item.product.id if item.product else None,
 
-                "product_name":
+                "product_name": (
                     item.product.product_name
-                    if item.product
-                    else "",
+                    if item.product else ""
+                ),
 
-                "service_name":
-                    item.service_name,
+                "service_name": item.service_name,
 
-                "description":
-                    item.description,
+                "description": item.description,
 
-                "quantity":
-                    item.quantity,
+                "quantity": item.quantity,
 
-                "delivered_quantity":
-                    item.delivered_quantity,
+                "delivered_quantity": item.delivered_quantity,
 
-                "remaining_quantity":
-                    item.remaining_quantity,
+                "remaining_quantity": item.remaining_quantity,
 
-                "hs_code":
-                    item.hs_code,
+                "hs_code": item.hs_code,
 
-                "rate":
-                    item.rate,
+                "rate": item.rate,
 
-                "vat_percentage":
-                    item.vat_percentage,
+                "vat_percentage": item.vat_percentage,
 
-                "amount_before_vat":
-                    item.amount_before_vat,
+                "amount_before_vat": item.amount_before_vat,
 
-                "vat_amount":
-                    item.vat_amount,
+                "vat_amount": item.vat_amount,
 
-                "amount":
-                    item.amount,
-
+                "amount": item.amount,
             }
 
             for item in sales_order.items.all()
 
         ]
 
+        # -------------------------------------------------
+        # DELIVERY NOTES WITH ITEMS
+        # -------------------------------------------------
+
+        data["delivery_notes"] = (
+            self.get_delivery_notes_data(
+                sales_order,
+                include_items=True
+            )
+        )
+
         return Response(
-
             {
-
-                "message":
-                    "Sales order details retrieved successfully.",
-
-                "data":
-                    data
-
+                "message": "Sales order details retrieved successfully.",
+                "data": data
             }
-
         )
 
     # =====================================================

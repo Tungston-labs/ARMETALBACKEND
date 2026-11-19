@@ -319,7 +319,9 @@ class InvoiceItem(TimeStampedModel):
     product = models.ForeignKey(
         "product.Product",
         on_delete=models.PROTECT,
-        related_name="invoice_items"
+        related_name="invoice_items",
+        null=True,
+        blank=True
     )
 
     # ---------------------------------------------------------
