@@ -31,6 +31,8 @@ class CreditNoteItemSerializer(serializers.ModelSerializer):
 class CreditNoteListSerializer(serializers.ModelSerializer):
     customer_name = serializers.ReadOnlyField(source="customer.customer_name")
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    invoice_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    invoice_value = serializers.DecimalField(source="invoice_amount", max_digits=15, decimal_places=2, read_only=True)
 
     class Meta:
         model = CreditNote
@@ -39,7 +41,10 @@ class CreditNoteListSerializer(serializers.ModelSerializer):
             "cn_number",
             "customer",
             "customer_name",
+            "invoice",
             "invoice_ref",
+            "invoice_amount",
+            "invoice_value",
             "issue_date",
             "reason",
             "credit_amount",
@@ -54,7 +59,14 @@ class CreditNoteSerializer(serializers.ModelSerializer):
     cn_number = serializers.CharField(required=False, allow_blank=True)
     customer_name = serializers.ReadOnlyField(source="customer.customer_name")
     customer_company = serializers.ReadOnlyField(source="customer.company_name")
+    customer_address = serializers.ReadOnlyField()
+    customer_phone = serializers.ReadOnlyField()
+    customer_email = serializers.ReadOnlyField()
     invoice_number = serializers.ReadOnlyField(source="invoice.invoice_number")
+    invoice_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    invoice_value = serializers.DecimalField(source="invoice_amount", max_digits=15, decimal_places=2, read_only=True)
+    already_credited = serializers.SerializerMethodField()
+    remaining_balance = serializers.SerializerMethodField()
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
     items = CreditNoteItemSerializer(many=True, required=False)
 
@@ -67,8 +79,15 @@ class CreditNoteSerializer(serializers.ModelSerializer):
             "customer",
             "customer_name",
             "customer_company",
+            "customer_address",
+            "customer_phone",
+            "customer_email",
             "invoice",
             "invoice_number",
+            "invoice_amount",
+            "invoice_value",
+            "already_credited",
+            "remaining_balance",
             "invoice_ref",
             "issue_date",
             "reason",
@@ -93,10 +112,43 @@ class CreditNoteSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "balance",
+            "invoice_amount",
+            "invoice_value",
+            "already_credited",
+            "remaining_balance",
+            "customer_address",
+            "customer_phone",
+            "customer_email",
             "created_by",
             "created_at",
             "updated_at",
         ]
+
+    def get_already_credited(self, obj):
+        from .models import CreditNote
+        from django.db.models import Sum
+        from django.db.models.functions import Coalesce
+        if obj.invoice:
+            return CreditNote.objects.filter(
+                company=obj.company,
+                invoice=obj.invoice
+            ).exclude(status="cancelled").exclude(pk=obj.pk).aggregate(
+                total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
+            )["total"]
+        elif obj.invoice_ref:
+            return CreditNote.objects.filter(
+                company=obj.company,
+                invoice_ref__iexact=str(obj.invoice_ref).strip()
+            ).exclude(status="cancelled").exclude(pk=obj.pk).aggregate(
+                total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
+            )["total"]
+        return Decimal("0.00")
+
+    def get_remaining_balance(self, obj):
+        inv_amt = obj.invoice_amount or Decimal("0.00")
+        already = self.get_already_credited(obj)
+        rem = inv_amt - already - (obj.credit_amount or Decimal("0.00"))
+        return rem if rem > Decimal("0.00") else Decimal("0.00")
 
     def create(self, validated_data):
         items_data = validated_data.pop("items", [])
@@ -164,8 +216,22 @@ class CreditNoteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         items_data = validated_data.pop("items", None)
 
+        explicit_status = validated_data.get("status")
+        if explicit_status:
+            st = str(explicit_status).lower()
+            if st in ["closed", "applied"]:
+                instance.status = "closed"
+                c_amt = validated_data.get("credit_amount", instance.credit_amount)
+                instance.applied_amount = Decimal(str(c_amt or 0.00))
+            elif st in ["open", "pending"]:
+                instance.status = "open"
+                instance.applied_amount = Decimal("0.00")
+            elif st in ["cancelled", "draft"]:
+                instance.status = st
+
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if attr != "status":
+                setattr(instance, attr, value)
 
         if items_data is not None:
             instance.items.all().delete()
@@ -200,6 +266,12 @@ class CreditNoteSerializer(serializers.ModelSerializer):
                     instance.sub_total + instance.total_vat - discount
                 )
 
-        instance.update_status_from_applied_amount()
+        if instance.status == "closed":
+            instance.applied_amount = instance.credit_amount
+        elif instance.status in ["cancelled", "draft", "open"]:
+            pass
+        else:
+            instance.update_status_from_applied_amount()
+
         instance.save()
         return instance

@@ -144,8 +144,50 @@ class CreditNote(TimeStampedModel):
         bal = c_amt - a_amt
         return bal if bal > Decimal("0.00") else Decimal("0.00")
 
+    @property
+    def invoice_amount(self):
+        if self.invoice:
+            return self.invoice.total_amount
+        if self.invoice_ref:
+            from finance.invoice.models import Invoice
+            inv = Invoice.objects.filter(
+                company=self.company,
+                invoice_number__iexact=str(self.invoice_ref).strip()
+            ).first()
+            if inv:
+                return inv.total_amount
+        return Decimal("0.00")
+
+    @property
+    def customer_address(self):
+        if self.invoice and getattr(self.invoice, "customer_address", None):
+            return self.invoice.customer_address
+        if self.customer:
+            return getattr(self.customer, "billing_address", "") or getattr(self.customer, "address", "")
+        return ""
+
+    @property
+    def customer_phone(self):
+        if self.invoice and getattr(self.invoice, "customer_phone", None):
+            return self.invoice.customer_phone
+        if self.customer:
+            return getattr(self.customer, "phno", "") or getattr(self.customer, "phone", "")
+        return ""
+
+    @property
+    def customer_email(self):
+        if self.invoice and getattr(self.invoice, "customer_email", None):
+            return self.invoice.customer_email
+        if self.customer:
+            return (
+                getattr(self.customer, "financial_email", "")
+                or getattr(self.customer, "admin_email", "")
+                or getattr(self.customer, "email", "")
+            )
+        return ""
+
     def update_status_from_applied_amount(self):
-        if self.status in ["cancelled", "draft"]:
+        if self.status in ["cancelled", "draft", "closed"]:
             return
 
         c_amt = Decimal(str(self.credit_amount or 0.00))
@@ -163,7 +205,16 @@ class CreditNote(TimeStampedModel):
             from .utils import generate_next_cn_number
             self.cn_number = generate_next_cn_number(self.company)
 
-        self.update_status_from_applied_amount()
+        if self.status in ["closed", "applied"]:
+            self.status = "closed"
+            c_amt = Decimal(str(self.credit_amount or 0.00))
+            if not self.applied_amount or self.applied_amount < c_amt:
+                self.applied_amount = c_amt
+        elif self.status in ["open", "pending"] and self.applied_amount <= Decimal("0.00"):
+            self.status = "open"
+        else:
+            self.update_status_from_applied_amount()
+
         super().save(*args, **kwargs)
 
     def __str__(self):

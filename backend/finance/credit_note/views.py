@@ -322,7 +322,11 @@ class InvoiceCreditNoteDetailsView(APIView):
         company = getattr(user, "company", None)
 
         invoice_id = request.query_params.get("invoice") or request.query_params.get("invoice_id")
-        invoice_number = request.query_params.get("invoice_number")
+        invoice_number = (
+            request.query_params.get("invoice_number")
+            or request.query_params.get("invoice_reference")
+            or request.query_params.get("invoice_ref")
+        )
 
         from finance.invoice.models import Invoice, InvoiceItem
         from .models import CreditNoteItem
@@ -332,10 +336,14 @@ class InvoiceCreditNoteDetailsView(APIView):
             invoice_qs = invoice_qs.filter(company=company)
 
         invoice = None
-        if invoice_id:
-            invoice = invoice_qs.filter(id=invoice_id).first()
-        elif invoice_number:
-            invoice = invoice_qs.filter(invoice_number__iexact=invoice_number.strip()).first()
+        if invoice_id and str(invoice_id).isdigit():
+            invoice = invoice_qs.filter(id=int(invoice_id)).first()
+
+        if not invoice and invoice_number:
+            invoice = invoice_qs.filter(invoice_number__iexact=str(invoice_number).strip()).first()
+
+        if not invoice and invoice_id:
+            invoice = invoice_qs.filter(invoice_number__iexact=str(invoice_id).strip()).first()
 
         if not invoice:
             return Response(
@@ -346,11 +354,19 @@ class InvoiceCreditNoteDetailsView(APIView):
         # Total invoice value
         invoice_value = invoice.total_amount or Decimal("0.00")
 
+        exclude_cn_id = request.query_params.get("exclude_credit_note") or request.query_params.get("credit_note_id")
+
         # Calculate already credited amount for this invoice (from non-cancelled credit notes)
-        already_credited_amount = CreditNote.objects.filter(
-            Q(invoice=invoice) | Q(invoice_ref__iexact=invoice.invoice_number),
+        cn_filter = Q(invoice=invoice) | Q(invoice_ref__iexact=invoice.invoice_number)
+        cn_qs = CreditNote.objects.filter(
+            cn_filter,
             company=company
-        ).exclude(status="cancelled").aggregate(
+        ).exclude(status="cancelled")
+
+        if exclude_cn_id and str(exclude_cn_id).isdigit():
+            cn_qs = cn_qs.exclude(id=int(exclude_cn_id))
+
+        already_credited_amount = cn_qs.aggregate(
             total=Coalesce(Sum("credit_amount"), Decimal("0.00"))
         )["total"]
 
@@ -364,10 +380,15 @@ class InvoiceCreditNoteDetailsView(APIView):
 
         for inv_item in invoice_items:
             # Already credited quantity for this specific invoice_item
-            already_credited_qty = CreditNoteItem.objects.filter(
+            cn_item_qs = CreditNoteItem.objects.filter(
                 Q(invoice_item=inv_item) | Q(credit_note__invoice=invoice, product=inv_item.product),
                 credit_note__company=company
-            ).exclude(credit_note__status="cancelled").aggregate(
+            ).exclude(credit_note__status="cancelled")
+
+            if exclude_cn_id and str(exclude_cn_id).isdigit():
+                cn_item_qs = cn_item_qs.exclude(credit_note_id=int(exclude_cn_id))
+
+            already_credited_qty = cn_item_qs.aggregate(
                 total=Coalesce(Sum("quantity"), Decimal("0.00"))
             )["total"]
 
@@ -397,8 +418,16 @@ class InvoiceCreditNoteDetailsView(APIView):
                 "customer": invoice.customer_id,
                 "customer_name": invoice.customer_name or (invoice.customer.customer_name if invoice.customer else ""),
                 "customer_company": invoice.customer.company_name if invoice.customer else "",
+                "customer_address": invoice.customer_address or (getattr(invoice.customer, "billing_address", "") or getattr(invoice.customer, "address", "") if invoice.customer else ""),
+                "customer_phone": invoice.customer_phone or (getattr(invoice.customer, "phno", "") or getattr(invoice.customer, "phone", "") if invoice.customer else ""),
+                "customer_email": invoice.customer_email or (getattr(invoice.customer, "financial_email", "") or getattr(invoice.customer, "admin_email", "") or getattr(invoice.customer, "email", "") if invoice.customer else ""),
+                "from_company_name": invoice.company_name or getattr(company, "name", ""),
+                "from_address": invoice.company_address or getattr(company, "address", ""),
+                "from_phone_number": invoice.company_phone or getattr(company, "phone", ""),
+                "from_email": invoice.company_email or getattr(company, "email", ""),
                 "invoice_date": invoice.invoice_date,
                 "invoice_value": invoice_value,
+                "already_credited": already_credited_amount,
                 "already_credited_amount": already_credited_amount,
                 "remaining_balance": remaining_balance,
                 "items": items_data,
