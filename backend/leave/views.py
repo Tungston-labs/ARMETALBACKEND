@@ -236,9 +236,14 @@ class LeaveRequestAdminListView(generics.ListAPIView):
 
 # HR: Leave Detail (Approve / Reject)
 class LeaveRequestAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = LeaveRequest.objects.all()
     permission_classes = [IsAuthenticated, IsHRAdmin]
     lookup_field = 'pk'
+
+    def get_queryset(self):
+        company = self.request.user.company
+        if not company:
+            return LeaveRequest.objects.none()
+        return LeaveRequest.objects.filter(employee__department__company=company)
 
     def get_serializer_class(self):
         # PATCH/PUT only touches `status`; GET uses the full serializer
@@ -278,6 +283,7 @@ class EmployeesOnLeaveTodayByDepartmentView(APIView):
                 from_date__lte=today,
                 to_date__gte=today,
                 employee__department_id=department_id,
+                employee__department__company=request.user.company,
             )
             employees = Employee_db.objects.filter(
                 is_deleted=False,
@@ -292,6 +298,8 @@ class EmployeesOnLeaveTodayByDepartmentView(APIView):
 
 # Department Employees on a Given Date
 class DepartmentEmployeesOnLeaveView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, employee_id):
         date_str = request.query_params.get('date')
         if not date_str:
@@ -302,7 +310,14 @@ class DepartmentEmployeesOnLeaveView(APIView):
             return Response({"error": "Invalid date format"}, status=400)
 
         try:
-            emp = Employee_db.objects.get(id=employee_id, is_deleted=False)
+            employee_qs = Employee_db.objects.filter(id=employee_id, is_deleted=False)
+            if request.user.is_hr_admin or request.user.is_hr:
+                if not request.user.company:
+                    return Response({"error": "Company not assigned to user"}, status=404)
+                employee_qs = employee_qs.filter(department__company=request.user.company)
+            else:
+                employee_qs = employee_qs.filter(user=request.user)
+            emp = employee_qs.get()
         except Employee_db.DoesNotExist:
             return Response({"error": "Employee not found"}, status=404)
 
@@ -530,3 +545,68 @@ class LeaveStatusCountsView(APIView):
 
         except Exception as e:
             return error(str(e), status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # HR: Who else in the same department is on leave during this request's dates?
+class LeaveConflictsView(APIView):
+    permission_classes = [IsAuthenticated, IsHRAdmin]
+
+    def get(self, request, pk):
+        company = getattr(request.user, "company", None)
+        if not company:
+            return error("Company not assigned to user", status.HTTP_404_NOT_FOUND)
+
+        try:
+            leave = LeaveRequest.objects.select_related(
+                "employee", "employee__department"
+            ).get(pk=pk, employee__department__company=company)
+        except LeaveRequest.DoesNotExist:
+            return error("Leave request not found", status.HTTP_404_NOT_FOUND)
+
+        department = leave.employee.department
+        if not department:
+            return error("Employee has no department assigned")
+
+        overlapping = (
+            LeaveRequest.objects.filter(
+                employee__department=department,
+                employee__is_deleted=False,
+                from_date__lte=leave.to_date,
+                to_date__gte=leave.from_date,
+                status__in=["approved", "pending"],
+            )
+            .exclude(pk=leave.pk)
+            .exclude(employee=leave.employee)
+            .select_related("employee")
+        )
+
+        def serialize(l):
+            return {
+                "leave_id": l.id,
+                "employee_id": l.employee.id,
+                "employee_name": l.employee.name,
+                "leave_type": l.leave_type,
+                "status": l.status,
+                "from_date": l.from_date,
+                "from_date_type": l.from_date_type,
+                "to_date": l.to_date,
+                "to_date_type": l.to_date_type,
+                "leave_days": l.calculate_leave_days(),
+            }
+
+        approved = [serialize(l) for l in overlapping if l.status == "approved"]
+        pending = [serialize(l) for l in overlapping if l.status == "pending"]
+
+        return Response({
+            "request": {
+                "leave_id": leave.id,
+                "employee_name": leave.employee.name,
+                "department": department.name,
+                "from_date": leave.from_date,
+                "to_date": leave.to_date,
+            },
+            "has_conflict": bool(approved),
+            "already_on_leave": approved,
+            "also_requested": pending,
+            "already_on_leave_count": len(approved),
+            "also_requested_count": len(pending),
+        })

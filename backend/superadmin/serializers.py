@@ -249,62 +249,6 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
                 )
 
         # -------------------------------------------------
-        # Create Default Mock Reimbursement Data (HR Module)
-        # -------------------------------------------------
-        try:
-            from departments.models import Department
-            from employee.models import Employee_db
-            from reimbursement.models import Reimbursement
-            from datetime import date
-
-            # 1. Create a default department
-            dept = Department.objects.create(
-                company=company,
-                name="HR Department"
-            )
-
-            # 2. Create a mock employee
-            emp = Employee_db.objects.create(
-                name="Jane Doe",
-                email=f"jane.doe.{company.company_id}@example.com",
-                address="Dubai, UAE",
-                dob=date(1995, 5, 15),
-                gender="Female",
-                designation="Senior HR Executive",
-                department=dept,
-                employment_type="Full-time",
-            )
-
-            # 3. Create mock reimbursements
-            Reimbursement.objects.create(
-                employee=emp,
-                expense_category="TRAVEL",
-                date=date.today(),
-                amount=250.00,
-                note="Travel allowance for client meeting",
-                status="On Hold"
-            )
-            Reimbursement.objects.create(
-                employee=emp,
-                expense_category="MEALS",
-                date=date.today(),
-                amount=75.50,
-                note="Client dinner meal reimbursement",
-                status="In Verification"
-            )
-            Reimbursement.objects.create(
-                employee=emp,
-                expense_category="BILLS",
-                date=date.today(),
-                amount=120.00,
-                note="Office internet connectivity bill",
-                status="Approve"
-            )
-
-        except Exception as ex:
-            print("Error creating default mock reimbursement data:", str(ex))
-
-        # -------------------------------------------------
         # Send Mail
         # -------------------------------------------------
         try:

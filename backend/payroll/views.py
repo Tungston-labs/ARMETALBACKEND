@@ -216,7 +216,8 @@ class PayrollVerifyView(APIView):
             EmployeePayrollRecord,
             employee__id=employee_id,
             month=month,
-            year=year
+            year=year,
+            employee__department__company=request.user.company,
         )
 
         user = request.user
@@ -266,7 +267,7 @@ from rest_framework.response import Response
 from django.db import transaction
 
 class PayrollStatusUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     @transaction.atomic
     def patch(self, request, employee_id):
@@ -292,7 +293,8 @@ class PayrollStatusUpdateView(APIView):
             EmployeePayrollRecord,
             employee__id=employee_id,
             month=month,
-            year=year
+            year=year,
+            employee__department__company=request.user.company,
         )
 
         # Block update unless fully verified
@@ -410,10 +412,21 @@ class PayrollStatusUpdateView(APIView):
 
 
 class PayrollRecordDetailView(RetrieveAPIView):
-    queryset = EmployeePayrollRecord.objects.all()
     serializer_class = EmployeePayrollRecordSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'id'
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superadmin:
+            return EmployeePayrollRecord.objects.all()
+        if user.is_hr_admin or user.is_hr:
+            if not user.company:
+                return EmployeePayrollRecord.objects.none()
+            return EmployeePayrollRecord.objects.filter(
+                employee__department__company=user.company
+            )
+        return EmployeePayrollRecord.objects.filter(employee__user=user)
 
 
 
@@ -513,7 +526,7 @@ from .serializers import EmployeePayrollRecordSerializer
 
 class PayrollIncentiveUpdateView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def patch(self, request, employee_id):
 
@@ -546,7 +559,8 @@ class PayrollIncentiveUpdateView(APIView):
             EmployeePayrollRecord,
             employee__id=employee_id,
             month=month,
-            year=year
+            year=year,
+            employee__department__company=request.user.company,
         )
 
         # =====================================================
@@ -607,7 +621,7 @@ class PayrollIncentiveUpdateView(APIView):
 
 class PayrollDeductionUpdateView(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsHRAdmin]
 
     def patch(self, request, employee_id):
 
@@ -640,7 +654,8 @@ class PayrollDeductionUpdateView(APIView):
             EmployeePayrollRecord,
             employee__id=employee_id,
             month=month,
-            year=year
+            year=year,
+            employee__department__company=request.user.company,
         )
 
         if payroll.is_fully_verified():

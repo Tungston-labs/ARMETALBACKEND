@@ -1,12 +1,14 @@
+import calendar
+from datetime import datetime, timedelta
+
 from rest_framework import generics, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from datetime import datetime, timedelta
-from django.db.models import Sum
-from django.db.models import Count, Q
+from django.db.models import Sum, Count, Q
 
 from .models import Project
 from employee.models import Employee_db
@@ -19,8 +21,43 @@ from project.serialzers import (
     ProjectSerializer,
     EmployeeAttendanceDetailSerializer
 )
-from datetime import timedelta
-import calendar
+
+
+# ============================================================
+#  Company-scoping helpers
+# ============================================================
+
+def company_projects(user):
+    """Only projects that belong to the user's company."""
+    return Project.objects.filter(company=user.company)
+
+
+def company_employees(user):
+    """Only (non-deleted) employees that belong to the user's company."""
+    return Employee_db.objects.filter(
+        department__company=user.company,
+        is_deleted=False,
+    )
+
+
+def ensure_employees_in_company(user, employee_ids):
+    """
+    Raise a 400 if any id is not an employee of the user's company.
+    Prevents attaching another company's employees to a project.
+    """
+    ids = {getattr(e, "id", e) for e in (employee_ids or [])}
+    if not ids:
+        return
+    found = set(
+        company_employees(user)
+        .filter(id__in=ids)
+        .values_list("id", flat=True)
+    )
+    # compare as strings so "5" and 5 both work
+    if {str(i) for i in ids} != {str(i) for i in found}:
+        raise ValidationError(
+            {"employees": "One or more employees do not belong to your company."}
+        )
 
 
 # ============================================================
@@ -35,54 +72,23 @@ class ProjectListCreateView(generics.ListCreateAPIView):
     search_fields = ['name']
 
     def get_queryset(self):
-        user = self.request.user
+        queryset = company_projects(self.request.user).prefetch_related('employees')
 
-        queryset = Project.objects.filter(
-            company=user.company
-        ).prefetch_related('employees')
+        # ?status=in_progress | completed | on_hold | cancelled
+        project_status = self.request.query_params.get('status')
+        if project_status:
+            queryset = queryset.filter(status=project_status)
 
-        # ----------------------------------------------------
-        # Search by project name
-        # Example:
-        # ?search=website
-        # ----------------------------------------------------
-
-        # ----------------------------------------------------
-        # Filter by status
-        # Example:
-        # ?status=in_progress
-        # ?status=completed
-        # ?status=on_hold
-        # ?status=cancelled
-        # ----------------------------------------------------
-
-        status = self.request.query_params.get('status')
-
-        if status:
-            queryset = queryset.filter(status=status)
-
-        # ----------------------------------------------------
-        # Filter by exact created date
-        # Example:
-        # ?date=2026-08-31
-        # ----------------------------------------------------
-
+        # ?date=2026-08  (year-month)
         date = self.request.query_params.get('date')
-
         if date:
-            year, month = date.split("-")
-
+            year, month = date.split("-")[:2]
             queryset = queryset.filter(
                 created_at__year=int(year),
                 created_at__month=int(month)
             )
 
-        # ----------------------------------------------------
-        # Filter by date range
-        # Example:
         # ?start_date=2026-08-01&end_date=2026-08-31
-        # ----------------------------------------------------
-
         start_date = self.request.query_params.get('start_date')
         end_date = self.request.query_params.get('end_date')
 
@@ -95,109 +101,95 @@ class ProjectListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(
-            company=self.request.user.company
-        )
-
+        user = self.request.user
+        ensure_employees_in_company(user, serializer.validated_data.get("employees"))
+        ensure_employees_in_company(user, serializer.validated_data.get("team_leads"))
+        serializer.save(company=user.company)
 
 
 # ============================================================
 #  Project Retrieve/Update/Delete
 # ============================================================
 class ProjectRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Project.objects.all().prefetch_related(
-    'employees',
-    'team_leads'
-)
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Other companies' projects -> 404
+        return company_projects(self.request.user).prefetch_related(
+            'employees',
+            'team_leads'
+        )
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
             return ProjectWriteSerializer
         return ProjectReadSerializer
 
+    def perform_update(self, serializer):
+        # PUT path
+        user = self.request.user
+        ensure_employees_in_company(user, serializer.validated_data.get("employees"))
+        ensure_employees_in_company(user, serializer.validated_data.get("team_leads"))
+        serializer.save()
+
     def patch(self, request, *args, **kwargs):
 
-        project = self.get_object()
+        project = self.get_object()  # already company-scoped
 
         data = request.data.copy()
 
-        # Convert "" → None for latitude & longitude
+        # Convert "" -> None for latitude & longitude
         if data.get("latitude") in ["", None]:
             data["latitude"] = None
 
         if data.get("longitude") in ["", None]:
             data["longitude"] = None
 
-        # -----------------------------------------
-        # Add employees
-        # -----------------------------------------
         employee_ids = data.pop("employees", None)
+        team_lead_ids = data.pop("team_leads", None)
 
+        # -----------------------------------------
+        # Validate everything BEFORE writing anything
+        # -----------------------------------------
+        ensure_employees_in_company(request.user, employee_ids)
+        ensure_employees_in_company(request.user, team_lead_ids)
+
+        if team_lead_ids is not None:
+            current_employee_ids = set(
+                project.employees.values_list("id", flat=True)
+            )
+            if employee_ids is not None:
+                current_employee_ids |= {int(i) for i in employee_ids}
+
+            invalid_team_leads = {int(i) for i in team_lead_ids} - current_employee_ids
+
+            if invalid_team_leads:
+                return Response(
+                    {"team_leads": "All team leads must also be assigned to the project."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        serializer = self.get_serializer(project, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # -----------------------------------------
+        # Apply changes
+        # -----------------------------------------
         if employee_ids is not None:
             for emp_id in employee_ids:
                 project.employees.add(emp_id)
 
-        # -----------------------------------------
-        # Add team leads
-        # -----------------------------------------
-        team_lead_ids = data.pop("team_leads", None)
-
         if team_lead_ids is not None:
-
-            # Get current project employees
-            current_employee_ids = set(
-                project.employees.values_list(
-                    "id",
-                    flat=True
-                )
-            )
-
-            # Make sure all team leads are project employees
-            invalid_team_leads = (
-                set(team_lead_ids) - current_employee_ids
-            )
-
-            if invalid_team_leads:
-                return Response(
-                    {
-                        "team_leads":
-                            "All team leads must also be assigned to the project."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
             for emp_id in team_lead_ids:
                 project.team_leads.add(emp_id)
 
-        # -----------------------------------------
-        # Update other project fields
-        # -----------------------------------------
-        serializer = self.get_serializer(
-            project,
-            data=data,
-            partial=True
-        )
-
-        serializer.is_valid(
-            raise_exception=True
-        )
-
         serializer.save()
 
-        # -----------------------------------------
-        # Return updated project
-        # -----------------------------------------
         read_serializer = ProjectReadSerializer(
             project,
-            context={
-                "request": request
-            }
+            context={"request": request}
         )
-
-        return Response(
-            read_serializer.data
-        )
+        return Response(read_serializer.data)
 
 
 # ============================================================
@@ -207,24 +199,22 @@ class EmployeesNotInProjectView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, project_id):
-        company = getattr(request.user, "company", None)
-        if not company:
-            return Response({"detail": "User has no company assigned"}, status=status.HTTP_400_BAD_REQUEST)
-
-        project = get_object_or_404(Project, id=project_id)
-
-        if project.company != company:
-            return Response({"detail": "Not authorized for this project"}, status=status.HTTP_403_FORBIDDEN)
-
-        employees_not_in_project = (
-                Employee_db.objects.filter(
-                    department__company=company,
-                    is_deleted=False
-                )
-                .exclude(id__in=project.employees.values_list("id", flat=True))
+        if not getattr(request.user, "company", None):
+            return Response(
+                {"detail": "User has no company assigned"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = EmployeeSerializer(employees_not_in_project, many=True, context={'request': request})
+        # 404 (not 403) so other companies can't even tell the project exists
+        project = get_object_or_404(company_projects(request.user), id=project_id)
+
+        employees_not_in_project = company_employees(request.user).exclude(
+            id__in=project.employees.values_list("id", flat=True)
+        )
+
+        serializer = EmployeeSerializer(
+            employees_not_in_project, many=True, context={'request': request}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -236,29 +226,23 @@ class RemoveEmployeeFromProjectView(APIView):
 
     def delete(self, request, project_id, employee_id):
 
-        project = get_object_or_404(
-            Project,
-            pk=project_id
-        )
+        project = get_object_or_404(company_projects(request.user), pk=project_id)
 
+        # Archived employees can still be removed from a project
         employee = get_object_or_404(
             Employee_db,
-            pk=employee_id
+            pk=employee_id,
+            department__company=request.user.company,
         )
 
-        # Remove employee from project
         project.employees.remove(employee)
-
-        # Also remove employee from team leads
         project.team_leads.remove(employee)
 
         return Response(
-            {
-                'detail':
-                    f'Employee {employee.name} removed from project {project.name}.'
-            },
+            {'detail': f'Employee {employee.name} removed from project {project.name}.'},
             status=status.HTTP_200_OK
         )
+
 
 # ============================================================
 #  Employee Attendance Detail
@@ -268,7 +252,11 @@ class EmployeeAttendanceDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee_db, id=employee_id)
+        employee = get_object_or_404(
+            Employee_db,
+            id=employee_id,
+            department__company=request.user.company,
+        )
 
         # Date filter
         date_str = request.query_params.get('date')
@@ -295,22 +283,18 @@ class EmployeeAttendanceDetailView(APIView):
             employee=employee, date__range=[month_start, month_end]
         ).aggregate(total=Sum('total_hours'))['total'] or 0
 
-        # ==============================
-        # Total working hours (new logic)
-        # ==============================
+        # Total working hours
         all_days = [month_start + timedelta(days=i) for i in range((month_end - month_start).days + 1)]
-        sundays = [d for d in all_days if d.weekday() == 6]
         holidays = set(
             PublicHoliday.objects.filter(
-                company=employee.department.company,
+                company=request.user.company,
                 date__range=(month_start, month_end)
             ).values_list('date', flat=True)
         )
 
-        working_days = [d for d in all_days if d not in sundays and d not in holidays]
+        working_days = [d for d in all_days if d.weekday() != 6 and d not in holidays]
         total_working_hours = len(working_days) * 8
 
-        # Helper
         def format_hours(hours):
             if not hours:
                 return "00:00"
@@ -321,22 +305,15 @@ class EmployeeAttendanceDetailView(APIView):
         if attendance:
             serializer = EmployeeAttendanceDetailSerializer(attendance, context={'request': request})
             data = serializer.data
-            # Ensure correct total working hours
-            data["total_working_hours"] = total_working_hours
         else:
             emp_serializer = EmployeeSerializer(employee, context={'request': request})
             data = {
                 "employee": emp_serializer.data,
                 "detail": f"No attendance recorded on {selected_date}.",
                 "total_hours_formatted": "00:00",
-                "weekly_hours_formatted": format_hours(total_week),
-                "monthly_hours_formatted": format_hours(total_month),
-                "total_working_hours": total_working_hours,
                 "locations": []
             }
 
-
-        # Ensure calculations are consistent
         data["weekly_hours_formatted"] = format_hours(total_week)
         data["monthly_hours_formatted"] = format_hours(total_month)
         data["total_working_hours"] = total_working_hours
@@ -344,13 +321,21 @@ class EmployeeAttendanceDetailView(APIView):
         return Response(data, status=200)
 
 
+# ============================================================
+#  Employee's own project (employee app)
+# ============================================================
 class EmployeeProjectView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        employee = request.user.employee_db
+        employee = getattr(request.user, "employee_db", None)
+        if not employee:
+            return Response({"error": "Employee record not found"}, status=404)
 
-        project = Project.objects.filter(employees=employee).first()
+        project = Project.objects.filter(
+            employees=employee,
+            company=request.user.company,
+        ).first()
 
         if not project:
             return Response({"project": None})
@@ -362,37 +347,20 @@ class EmployeeProjectView(APIView):
             "latitude": project.latitude,
             "longitude": project.longitude
         })
-        
+
+
+# ============================================================
+#  Project counts
+# ============================================================
 class ProjectCountView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        projects = Project.objects.filter(
-    company=request.user.company
-   ) 
-
-        data = projects.aggregate(
+        data = company_projects(request.user).aggregate(
             total_projects=Count("id"),
-
-            completed=Count(
-                "id",
-                filter=Q(status="completed")
-            ),
-
-            in_progress=Count(
-                "id",
-                filter=Q(status="in_progress")
-            ),
-
-            pending=Count(
-                "id",
-                filter=Q(status="on_hold")
-            ),
-
-            high_priority=Count(
-                "id",
-                filter=Q(priority="high")
-            ),
+            completed=Count("id", filter=Q(status="completed")),
+            in_progress=Count("id", filter=Q(status="in_progress")),
+            pending=Count("id", filter=Q(status="on_hold")),
+            high_priority=Count("id", filter=Q(priority="high")),
         )
-
         return Response(data)

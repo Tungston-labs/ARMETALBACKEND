@@ -61,7 +61,9 @@ class ReimbursementDetailView(generics.RetrieveUpdateDestroyAPIView):
         user = self.request.user
 
         if getattr(user, "is_hr_admin", False) or getattr(user, "is_superadmin", False):
-            return Reimbursement.objects.all()
+            if not user.company:
+                return Reimbursement.objects.none()
+            return Reimbursement.objects.filter(employee__department__company=user.company)
 
         return Reimbursement.objects.filter(employee__user=user)
 
@@ -173,7 +175,10 @@ class DepartmentReimbursementListView(generics.ListAPIView):
 
     def get_queryset(self):
         department_id = self.kwargs.get("department_id")
-        return Reimbursement.objects.filter(employee__department_id=department_id).order_by("-created_at")
+        return Reimbursement.objects.filter(
+            employee__department_id=department_id,
+            employee__department__company=self.request.user.company,
+        ).order_by("-created_at")
 
 
 
@@ -185,15 +190,20 @@ class ReimbursementGroupedByDateView(APIView):
         user = request.user
 
         # ✅ HR/Admin: reimbursements of all employees in their company
-        if hasattr(user, "company"):  
-            reimbursements = Reimbursement.objects.filter(
-                employee__department__company=user.company
-            ).order_by("date")
-        else:
+        if user.is_hr or user.is_hr_admin:
+            if not user.company:
+                reimbursements = Reimbursement.objects.none()
+            else:
+                reimbursements = Reimbursement.objects.filter(
+                    employee__department__company=user.company
+                ).order_by("date")
+        elif getattr(user, "employee_profile", None):
             # ✅ Employee: only their own reimbursements
             reimbursements = Reimbursement.objects.filter(
                 employee__user=user
             ).order_by("date")
+        else:
+            reimbursements = Reimbursement.objects.none()
 
         grouped_data = defaultdict(list)
         for r in reimbursements:

@@ -335,15 +335,14 @@ class AttendanceAdminListView(generics.ListAPIView):
             ).order_by("-time_out")
 
         base_qs = Employee_db.objects.filter(is_deleted=False)
+        company = getattr(self.request.user, "company", None)
+        if not company:
+            return Employee_db.objects.none()
+        base_qs = base_qs.filter(department__company=company)
 
         if department_id:
             # Optional now: only filter by department if it's explicitly passed
             base_qs = base_qs.filter(department_id=department_id)
-        else:
-            # No department_id -> return the FULL list, scoped to the admin's company
-            company = getattr(self.request.user, "company", None)
-            if company:
-                base_qs = base_qs.filter(department__company=company)
 
         queryset = (
             base_qs
@@ -426,8 +425,15 @@ class AttendanceAdminListView(generics.ListAPIView):
         if not query:
             return super().get(request, *args, **kwargs)
 
-        employees = (Employee_db.objects.filter(name_search__icontains=query,is_deleted=False).select_related("department").prefetch_related("attendances")
-)
+        employees = (
+            Employee_db.objects.filter(
+                name_search__icontains=query,
+                is_deleted=False,
+                department__company=request.user.company,
+            )
+            .select_related("department")
+            .prefetch_related("attendances")
+        )
 
         final_results = []
 
@@ -537,10 +543,15 @@ def format_local_time(self, dt):
 
     return timezone.localtime(dt).strftime("%H:%M")
 class AttendanceAdminDetailView(RetrieveAPIView):
-    queryset = Attendance.objects.all()
     serializer_class = AttendanceDetailSerializer
     permission_classes = [IsAuthenticated, IsHRAdmin]
     lookup_field = 'employee_id'
+
+    def get_queryset(self):
+        company = self.request.user.company
+        if not company:
+            return Attendance.objects.none()
+        return Attendance.objects.filter(employee__department__company=company)
 
     def get_today_punch_times(self, employee_id):
         today = now().date()
@@ -574,7 +585,8 @@ class AttendanceAdminDetailView(RetrieveAPIView):
         date_str = request.query_params.get('date')
 
         base_attendance = Attendance.objects.filter(
-            employee__id=employee_id
+            employee__id=employee_id,
+            employee__department__company=request.user.company,
         ).order_by('-date').first()
 
         first_in, last_out = self.get_today_punch_times(employee_id)
@@ -711,7 +723,10 @@ class BackgroundLocationUpdateView(APIView):
         with pagination.
         """
         try:
-            employee = Employee_db.objects.get(id=employee_id,is_deleted=False)
+            employee = Employee_db.objects.get(
+                id=employee_id, is_deleted=False,
+                department__company=request.user.company,
+            )
         except Employee_db.DoesNotExist:
             return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -757,7 +772,9 @@ class BackgroundLocationUpdateView(APIView):
         Reverse geocode latitude & longitude to get location_name.
         """
         try:
-            employee = Employee_db.objects.get(id=employee_id)
+            employee = Employee_db.objects.get(
+                id=employee_id, department__company=request.user.company
+            )
         except Employee_db.DoesNotExist:
             return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
 

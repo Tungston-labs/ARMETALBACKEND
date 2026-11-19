@@ -74,9 +74,14 @@ class EmployeeDailyTaskDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 #  HR Admin: List All Tasks
 class HRDailyTaskListView(generics.ListAPIView):
-    queryset = DailyTask.objects.all()
     serializer_class = DailyTaskSerializer
     permission_classes = [permissions.IsAuthenticated, IsHRAdmin]
+
+    def get_queryset(self):
+        company = self.request.user.company
+        if not company:
+            return DailyTask.objects.none()
+        return DailyTask.objects.filter(employee__department__company=company)
 
 
 
@@ -112,7 +117,10 @@ class HRDailyTaskByEmployeeView(generics.ListAPIView):
 
     def get_queryset(self):
         employee_id = self.kwargs['employee_id']
-        queryset = DailyTask.objects.filter(employee__id=employee_id)
+        queryset = DailyTask.objects.filter(
+            employee__id=employee_id,
+            employee__department__company=self.request.user.company,
+        )
 
         # Optional date filter: ?date=2025-06-16
         date_str = self.request.query_params.get('date')

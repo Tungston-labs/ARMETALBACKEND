@@ -12,6 +12,26 @@ from attendance.serializers import AttendanceSessionSerializer
 
 
 # ============================================================
+# Company-scoped employee field
+# Only accepts employees from the requesting user's company
+# ============================================================
+
+class CompanyEmployeeField(serializers.PrimaryKeyRelatedField):
+
+    def get_queryset(self):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if not user or not user.is_authenticated:
+            return Employee_db.objects.none()
+
+        return Employee_db.objects.filter(
+            department__company=user.company,
+            is_deleted=False,
+        )
+
+
+# ============================================================
 # Employee Serializer
 # ============================================================
 
@@ -114,14 +134,12 @@ class ProjectBaseSerializer(serializers.ModelSerializer):
 
 class ProjectSerializer(serializers.ModelSerializer):
 
-    employees = serializers.PrimaryKeyRelatedField(
-        queryset=Employee_db.objects.all(),
+    employees = CompanyEmployeeField(
         many=True,
         required=False
     )
 
-    team_leads = serializers.PrimaryKeyRelatedField(
-        queryset=Employee_db.objects.all(),
+    team_leads = CompanyEmployeeField(
         many=True,
         required=False
     )
@@ -220,14 +238,12 @@ class ProjectReadSerializer(ProjectBaseSerializer):
 
 class ProjectWriteSerializer(ProjectBaseSerializer):
 
-    employees = serializers.PrimaryKeyRelatedField(
-        queryset=Employee_db.objects.all(),
+    employees = CompanyEmployeeField(
         many=True,
         required=False
     )
 
-    team_leads = serializers.PrimaryKeyRelatedField(
-        queryset=Employee_db.objects.all(),
+    team_leads = CompanyEmployeeField(
         many=True,
         required=False
     )
