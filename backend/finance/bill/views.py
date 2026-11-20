@@ -396,7 +396,7 @@ class ApprovedPurchaseOrderReferenceListView(APIView):
 
         base_qs = PurchaseOrder.objects.filter(
             company=company,
-            status__iexact="approved",
+            status__in=["approved", "ordered", "sent_to_vendor", "Approved", "Ordered", "Sent to Vendor"],
         ).select_related("vendor", "warehouse").prefetch_related("items__product")
 
         # If po_id or po_number is requested, return the detailed prefilled bill payload
@@ -543,7 +543,7 @@ class ApprovedPurchaseOrderDetailView(APIView):
         po = PurchaseOrder.objects.filter(
             id=po_id,
             company=company,
-            status__iexact="approved",
+            status__in=["approved", "ordered", "sent_to_vendor", "Approved", "Ordered", "Sent to Vendor"],
         ).select_related("vendor", "warehouse").prefetch_related("items__product").first()
 
         if not po:
