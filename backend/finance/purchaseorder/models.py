@@ -16,6 +16,7 @@ class PurchaseOrder(TimeStampedModel):
         ("pending", "Pending"),
         ("approved", "Approved"),
         ("ordered", "Ordered"),
+        ("sent_to_vendor", "Sent to Vendor"),
         ("partially_received", "Partially Received"),
         ("received", "Received"),
         ("cancelled", "Cancelled"),

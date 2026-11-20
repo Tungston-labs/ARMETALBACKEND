@@ -8,6 +8,7 @@ from user.models import User
 from finance.vendor.models import Vendor
 from finance.product.models import Product
 from finance.bill.models import Bill, BillItem
+from finance.accounting.models import ChartOfAccount
 
 
 class BillAPITestCase(APITestCase):
@@ -45,6 +46,21 @@ class BillAPITestCase(APITestCase):
             unit="PCS",
             tax_rate=Decimal("15.00"),
             created_by=self.user
+        )
+
+        ChartOfAccount.objects.create(
+            company=self.company,
+            account_code="5100",
+            account_name="Purchase Expense",
+            account_type="expense",
+            status="active",
+        )
+        ChartOfAccount.objects.create(
+            company=self.company,
+            account_code="1200",
+            account_name="Bank Account",
+            account_type="asset",
+            status="active",
         )
 
     def test_create_bill_auto_number_and_snapshot(self):
@@ -269,3 +285,89 @@ class BillAPITestCase(APITestCase):
 
         res_get = self.client.get(f"/api/finance/bill/{bill.id}/")
         self.assertEqual(res_get.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_approved_purchase_orders_reference_endpoint(self):
+        from finance.purchaseorder.models import PurchaseOrder, PurchaseOrderItem
+        from finance.warehouse.models import Warehouse
+
+        warehouse = Warehouse.objects.create(
+            company=self.company,
+            warehouse_name="Riyadh Central",
+            code="WH-001"
+        )
+
+        # 1. Approved PO (should be returned)
+        po_approved = PurchaseOrder.objects.create(
+            company=self.company,
+            vendor=self.vendor,
+            warehouse=warehouse,
+            po_number="PO-APP-001",
+            order_date="2026-04-10",
+            expected_delivery_date="2026-04-20",
+            payment_terms="NET 30",
+            status="approved",
+            subtotal=Decimal("2000.00"),
+            total_vat=Decimal("300.00"),
+            total_amount=Decimal("2300.00"),
+            created_by=self.user
+        )
+        PurchaseOrderItem.objects.create(
+            purchase_order=po_approved,
+            product=self.product,
+            description="High grade panel",
+            quantity=Decimal("10.00"),
+            rate=Decimal("200.00"),
+            vat_percentage=Decimal("15.00"),
+            vat_amount=Decimal("300.00"),
+            amount=Decimal("2000.00")
+        )
+
+        # 2. Draft PO (should NOT be returned)
+        PurchaseOrder.objects.create(
+            company=self.company,
+            vendor=self.vendor,
+            warehouse=warehouse,
+            po_number="PO-DRAFT-002",
+            order_date="2026-04-11",
+            status="draft",
+            total_amount=Decimal("500.00"),
+            created_by=self.user
+        )
+
+        # 3. Pending PO (should NOT be returned)
+        PurchaseOrder.objects.create(
+            company=self.company,
+            vendor=self.vendor,
+            warehouse=warehouse,
+            po_number="PO-PEND-003",
+            order_date="2026-04-12",
+            status="pending",
+            total_amount=Decimal("700.00"),
+            created_by=self.user
+        )
+
+        # Query list of approved POs
+        res_list = self.client.get("/api/finance/bill/purchase-orders/")
+        self.assertEqual(res_list.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_list.data["count"], 1)
+        self.assertEqual(res_list.data["results"][0]["po_number"], "PO-APP-001")
+        self.assertEqual(res_list.data["results"][0]["vendor_name"], "Chicking Vendor")
+        self.assertEqual(res_list.data["results"][0]["status"], "approved")
+
+        # Query detail via ID endpoint
+        res_detail = self.client.get(f"/api/finance/bill/purchase-orders/{po_approved.id}/")
+        self.assertEqual(res_detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_detail.data["po_reference"], "PO-APP-001")
+        self.assertEqual(res_detail.data["vendor"], self.vendor.id)
+        self.assertEqual(res_detail.data["bill_to_name"], "Chicking Vendor")
+        self.assertEqual(res_detail.data["bill_to_phone"], "+91 97783 77526")
+        self.assertEqual(res_detail.data["finance_contact_email"], "finance@chicking.com")
+        self.assertEqual(len(res_detail.data["items"]), 1)
+        self.assertEqual(res_detail.data["items"][0]["particular"], "High grade panel")
+        self.assertEqual(Decimal(res_detail.data["items"][0]["quantity"]), Decimal("10.00"))
+        self.assertEqual(Decimal(res_detail.data["items"][0]["rate"]), Decimal("200.00"))
+
+        # Query detail via query param (?po_id=...)
+        res_param = self.client.get(f"/api/finance/bill/purchase-orders/?po_id={po_approved.id}")
+        self.assertEqual(res_param.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_param.data["po_number"], "PO-APP-001")
