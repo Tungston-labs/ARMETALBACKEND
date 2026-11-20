@@ -94,6 +94,12 @@ class PurchaseOrderItemCreateSerializer(serializers.ModelSerializer):
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
+    vendor_name = serializers.CharField(
+        source="vendor.name",
+        read_only=True,
+    )
+    vendor_details = serializers.SerializerMethodField()
+
     items = PurchaseOrderItemCreateSerializer(
         many=True,
         write_only=True,
@@ -112,6 +118,8 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
             "id",
             "po_number",
             "vendor",
+            "vendor_name",
+            "vendor_details",
             "pr_reference",
             "order_date",
             "expected_delivery_date",
@@ -135,6 +143,8 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "po_number",
+            "vendor_name",
+            "vendor_details",
             "receipt_status",
             "bill_status",
             "subtotal",
@@ -142,6 +152,26 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
             "total_amount",
             "created_at",
         ]
+
+    def get_vendor_details(self, obj):
+        if not obj.vendor:
+            return None
+        v = obj.vendor
+        return {
+            "id": v.id,
+            "vendor_id": v.vendor_id,
+            "name": v.name,
+            "billing_address": v.billing_address,
+            "city": v.city,
+            "state": v.state,
+            "country": v.country,
+            "postal": v.postal,
+            "phno": v.phno,
+            "admin_email": v.admin_email,
+            "financial_email": v.financial_email,
+            "credit_limit": str(v.credit_limit) if v.credit_limit else "0.00",
+            "payment_term": v.payment_term,
+        }
 
     def validate_vendor(self, vendor):
         request = self.context.get("request")
@@ -392,6 +422,7 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
 
     created_by_name = serializers.SerializerMethodField()
     created_by_role = serializers.SerializerMethodField()
+    linked_bill = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseOrder
@@ -409,11 +440,20 @@ class PurchaseOrderListSerializer(serializers.ModelSerializer):
             "bill_status",
             "warehouse",
             "warehouse_name",
+            "linked_bill",
             "created_by",
             "created_by_name",
             "created_by_role",
             "created_at",
         ]
+
+    def get_linked_bill(self, obj):
+        from finance.bill.models import Bill
+        bill = Bill.objects.filter(
+            company=obj.company,
+            po_reference__iexact=obj.po_number
+        ).first()
+        return bill.bill_number if bill else "-"
 
     def get_created_by_name(self, obj):
         if not obj.created_by:
@@ -455,6 +495,16 @@ class VendorDropdownSerializer(serializers.ModelSerializer):
             "id",
             "vendor_id",
             "name",
+            "billing_address",
+            "city",
+            "state",
+            "country",
+            "postal",
+            "phno",
+            "admin_email",
+            "financial_email",
+            "credit_limit",
+            "payment_term",
         ]
 
 
@@ -468,15 +518,19 @@ class WarehouseDropdownSerializer(serializers.ModelSerializer):
         ]
 
 class ProductDropdownSerializer(serializers.ModelSerializer):
+    hs_code = serializers.CharField(source="hsn_sac_code", read_only=True)
+    name = serializers.CharField(source="product_name", read_only=True)
 
     class Meta:
         model = Product
         fields = [
             "id",
             "code",
+            "name",
             "product_name",
             "sku",
             "unit",
+            "hs_code",
             "hsn_sac_code",
             "cost_price",
             "tax_rate",

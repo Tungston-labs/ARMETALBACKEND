@@ -368,3 +368,190 @@ class BillDetailView(generics.RetrieveUpdateDestroyAPIView):
                     created_by=user,
                 )
 
+
+class ApprovedPurchaseOrderReferenceListView(APIView):
+    """
+    API view to list Approved Purchase Orders for selection as Bill reference,
+    or retrieve complete prefilled Bill data when po_id or po_number is provided.
+    Only approved purchase orders are returned.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="List Approved Purchase Orders for Bill Reference",
+        description="Returns approved purchase orders for the user's company to use as reference in creating a Bill.",
+        parameters=[
+            OpenApiParameter("search", str, description="Search by PO number, vendor name, or PR reference"),
+            OpenApiParameter("vendor", int, description="Filter by vendor ID"),
+            OpenApiParameter("po_id", int, description="Retrieve full prefill data for this PO ID"),
+            OpenApiParameter("po_number", str, description="Retrieve full prefill data for this PO Number"),
+        ],
+        responses={200: OpenApiResponse(description="Approved purchase orders or prefill details")}
+    )
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        company = getattr(user, "company", None)
+
+        from finance.purchaseorder.models import PurchaseOrder
+
+        base_qs = PurchaseOrder.objects.filter(
+            company=company,
+            status__iexact="approved",
+        ).select_related("vendor", "warehouse").prefetch_related("items__product")
+
+        # If po_id or po_number is requested, return the detailed prefilled bill payload
+        po_id = request.query_params.get("po_id")
+        po_number = request.query_params.get("po_number")
+
+        if po_id or po_number:
+            po = None
+            if po_id and str(po_id).isdigit():
+                po = base_qs.filter(id=int(po_id)).first()
+            if not po and po_number:
+                po = base_qs.filter(po_number__iexact=str(po_number).strip()).first()
+
+            if not po:
+                return Response(
+                    {"detail": "Approved purchase order not found for this company."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            return Response(self._build_po_prefill_data(po, company), status=status.HTTP_200_OK)
+
+        # Otherwise return list of approved purchase orders
+        search = request.query_params.get("search")
+        if search:
+            base_qs = base_qs.filter(
+                Q(po_number__icontains=search)
+                | Q(vendor__name__icontains=search)
+                | Q(pr_reference__icontains=search)
+            )
+
+        vendor_id = request.query_params.get("vendor")
+        if vendor_id and str(vendor_id).isdigit():
+            base_qs = base_qs.filter(vendor_id=int(vendor_id))
+
+        results = []
+        for po in base_qs.order_by("-order_date", "-id"):
+            results.append({
+                "id": po.id,
+                "po_number": po.po_number,
+                "vendor": po.vendor_id,
+                "vendor_name": po.vendor.name if po.vendor else "",
+                "order_date": po.order_date,
+                "expected_delivery_date": po.expected_delivery_date,
+                "payment_terms": po.payment_terms or "NET 10",
+                "status": po.status,
+                "subtotal": str(po.subtotal),
+                "total_vat": str(po.total_vat),
+                "discount": str(po.discount),
+                "round_off": str(po.round_off),
+                "total_amount": str(po.total_amount),
+                "warehouse_name": po.warehouse.warehouse_name if po.warehouse else "",
+                "items_count": po.items.count(),
+            })
+
+        return Response({
+            "count": len(results),
+            "results": results,
+        }, status=status.HTTP_200_OK)
+
+    @classmethod
+    def _build_po_prefill_data(cls, po, company):
+        vendor = po.vendor
+        address_parts = [
+            getattr(vendor, "billing_address", ""),
+            getattr(vendor, "city", ""),
+            getattr(vendor, "state", ""),
+            getattr(vendor, "country", ""),
+            getattr(vendor, "postal", ""),
+        ] if vendor else []
+        vendor_address = ", ".join([str(p).strip() for p in address_parts if p and str(p).strip()])
+
+        items_data = []
+        for idx, it in enumerate(po.items.all().select_related("product"), start=1):
+            prod = it.product
+            items_data.append({
+                "id": it.id,
+                "product": it.product_id,
+                "product_name": prod.product_name if prod else (it.description or f"Item {idx}"),
+                "particular": it.description or (prod.product_name if prod else f"Item {idx}"),
+                "quantity": str(it.quantity),
+                "qty": str(it.quantity),
+                "hs_code": it.hs_code or (getattr(prod, "hsn_sac_code", "") if prod else ""),
+                "rate": str(it.rate),
+                "vat_percentage": str(it.vat_percentage),
+                "vat": str(it.vat_percentage),
+                "vat_sar": str(it.vat_amount),
+                "amount": str(it.amount),
+            })
+
+        company_address = getattr(company, "address", "") or getattr(company, "registered_address", "")
+        company_phone = getattr(company, "phone", "") or getattr(company, "contact_number", "") or getattr(company, "phno", "")
+
+        return {
+            "purchase_order_id": po.id,
+            "po_reference": po.po_number,
+            "po_number": po.po_number,
+            "vendor": po.vendor_id,
+            "vendor_name": vendor.name if vendor else "",
+            # Bill To (Vendor Details)
+            "bill_to_name": vendor.name if vendor else "",
+            "bill_to_address": vendor_address,
+            "bill_to_phone": getattr(vendor, "phno", "") or getattr(vendor, "mobile", ""),
+            "bill_to_email": getattr(vendor, "admin_email", "") or getattr(vendor, "email", ""),
+            "finance_contact_email": getattr(vendor, "financial_email", "") or getattr(vendor, "admin_email", ""),
+            # From (Company Details)
+            "from_name": getattr(company, "name", "Tungston Labs"),
+            "from_address": company_address,
+            "from_phone": company_phone,
+            "from_email": getattr(company, "email", ""),
+            # Terms & Dates
+            "payment_terms": po.payment_terms or "NET 10",
+            "bill_date": timezone.now().date().isoformat(),
+            "due_date": po.expected_delivery_date.isoformat() if po.expected_delivery_date else None,
+            "due_date_note": "",
+            "note": f"Bill against Purchase Order {po.po_number}",
+            # Totals
+            "subtotal": str(po.subtotal),
+            "total_vat": str(po.total_vat),
+            "discount": str(po.discount),
+            "round_off": str(po.round_off),
+            "total_amount": str(po.total_amount),
+            # Line Items
+            "items": items_data,
+        }
+
+
+class ApprovedPurchaseOrderDetailView(APIView):
+    """
+    API view to retrieve the full prefill Bill data for a specific approved Purchase Order by ID.
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Get Approved Purchase Order Prefill Data for Bill",
+        description="Returns full prefilled bill metadata and items for a specific approved Purchase Order by ID.",
+        responses={200: OpenApiResponse(description="Prefill Bill data from Approved PO")}
+    )
+    def get(self, request, po_id, *args, **kwargs):
+        user = request.user
+        company = getattr(user, "company", None)
+
+        from finance.purchaseorder.models import PurchaseOrder
+
+        po = PurchaseOrder.objects.filter(
+            id=po_id,
+            company=company,
+            status__iexact="approved",
+        ).select_related("vendor", "warehouse").prefetch_related("items__product").first()
+
+        if not po:
+            return Response(
+                {"detail": "Approved purchase order not found for this company."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        data = ApprovedPurchaseOrderReferenceListView._build_po_prefill_data(po, company)
+        return Response(data, status=status.HTTP_200_OK)
+
