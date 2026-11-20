@@ -346,13 +346,30 @@ class BillAPITestCase(APITestCase):
             created_by=self.user
         )
 
-        # Query list of approved POs
+        # 4. Sent to Vendor PO (SHOULD be returned)
+        po_sent = PurchaseOrder.objects.create(
+            company=self.company,
+            vendor=self.vendor,
+            warehouse=warehouse,
+            po_number="PO-SENT-004",
+            order_date="2026-04-13",
+            status="sent_to_vendor",
+            total_amount=Decimal("1500.00"),
+            created_by=self.user
+        )
+
+        # Query list of approved / sent_to_vendor POs
         res_list = self.client.get("/api/finance/bill/purchase-orders/")
         self.assertEqual(res_list.status_code, status.HTTP_200_OK)
-        self.assertEqual(res_list.data["count"], 1)
-        self.assertEqual(res_list.data["results"][0]["po_number"], "PO-APP-001")
-        self.assertEqual(res_list.data["results"][0]["vendor_name"], "Chicking Vendor")
-        self.assertEqual(res_list.data["results"][0]["status"], "approved")
+        self.assertEqual(res_list.data["count"], 2)
+        po_numbers = [r["po_number"] for r in res_list.data["results"]]
+        self.assertIn("PO-APP-001", po_numbers)
+        self.assertIn("PO-SENT-004", po_numbers)
+
+        # Query detail via ID endpoint for sent_to_vendor PO
+        res_sent_detail = self.client.get(f"/api/finance/bill/purchase-orders/{po_sent.id}/")
+        self.assertEqual(res_sent_detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_sent_detail.data["po_reference"], "PO-SENT-004")
 
         # Query detail via ID endpoint
         res_detail = self.client.get(f"/api/finance/bill/purchase-orders/{po_approved.id}/")
