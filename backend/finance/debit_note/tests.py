@@ -68,6 +68,29 @@ class DebitNoteAPITestCase(APITestCase):
             vat_percentage=Decimal("15.00")
         )
 
+        from finance.accounting.models import ChartOfAccount
+        ChartOfAccount.objects.create(
+            company=self.company,
+            account_code="2100",
+            account_name="Accounts Payable",
+            account_type="liability",
+            status="active",
+        )
+        ChartOfAccount.objects.create(
+            company=self.company,
+            account_code="5100",
+            account_name="Purchase Expense",
+            account_type="expense",
+            status="active",
+        )
+        ChartOfAccount.objects.create(
+            company=self.company,
+            account_code="1400",
+            account_name="VAT Recoverable",
+            account_type="asset",
+            status="active",
+        )
+
     def test_create_debit_note_auto_increment_and_snapshot(self):
         payload = {
             "vendor": self.vendor.id,
@@ -301,3 +324,57 @@ class DebitNoteAPITestCase(APITestCase):
 
         res_get = self.client.get(f"/api/finance/debit-notes/{dn.id}/")
         self.assertEqual(res_get.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_create_debit_note_with_frontend_snapshot_payload(self):
+        payload = {
+            "bill_id": self.bill.id,
+            "vendor_id": self.vendor.id,
+            "bill_value": "15000.00",
+            "already_debited": "10000.00",
+            "remaining_balance": "5000.00",
+            "issue_date": "2026-04-28",
+            "reason": "damaged_goods",
+            "status": "pending",
+            "sub_total": "634.78",
+            "total_vat": "95.22",
+            "debit_amount": "730.00",
+            "items": [
+                {
+                    "bill_item": self.bill_item.id,
+                    "product": self.product.id,
+                    "item_name": "Product 1",
+                    "reason_detail": "Invoiced at wrong unit price",
+                    "qty": "1",
+                    "rate": "634.78",
+                    "vat": "15",
+                    "vat_amount": "95.22",
+                    "amount": "730.00"
+                }
+            ]
+        }
+        res = self.client.post("/api/finance/debit-notes/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Decimal(str(res.data["bill_value"])), Decimal("15000.00"))
+        self.assertEqual(Decimal(str(res.data["already_debited"])), Decimal("10000.00"))
+        self.assertEqual(Decimal(str(res.data["remaining_balance"])), Decimal("5000.00"))
+        self.assertEqual(Decimal(str(res.data["debit_amount"])), Decimal("730.00"))
+
+    def test_status_filtering_case_insensitive(self):
+        dn = DebitNote.objects.create(
+            company=self.company,
+            vendor=self.vendor,
+            issue_date="2026-04-28",
+            reason="damaged_goods",
+            status="pending",
+            debit_amount=Decimal("1000.00")
+        )
+
+        # Test lowercase
+        res_lower = self.client.get("/api/finance/debit-notes/?status=pending")
+        self.assertEqual(res_lower.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(res_lower.data["results"]), 1)
+
+        # Test Titlecase (as sent by UI dropdown)
+        res_title = self.client.get("/api/finance/debit-notes/?status=Pending")
+        self.assertEqual(res_title.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(res_title.data["results"]), 1)

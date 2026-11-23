@@ -25,7 +25,7 @@ def money(value):
 
 
 def get_account(company, code, expected_type):
-    """Return an active account configured for the company."""
+    """Return an active account configured for the company or auto-create standard system account."""
     account = ChartOfAccount.objects.filter(
         company=company,
         account_code=code,
@@ -33,10 +33,70 @@ def get_account(company, code, expected_type):
         status="active",
     ).first()
 
+    if account:
+        return account
+
+    name_hints = {
+        "2100": "Accounts Payable",
+        "5100": "Purchase Expense",
+        "1400": "VAT Recoverable",
+    }
+    target_name = name_hints.get(code, f"Account {code}")
+
+    # Check by type and name match
+    account = ChartOfAccount.objects.filter(
+        company=company,
+        account_type=expected_type,
+        account_name__icontains=target_name.split()[0],
+        status="active",
+    ).first()
+
+    if account:
+        return account
+
+    # Auto-create if code is available for this company
+    if not ChartOfAccount.objects.filter(company=company, account_code=code).exists():
+        return ChartOfAccount.objects.create(
+            company=company,
+            account_code=code,
+            account_name=target_name,
+            account_type=expected_type,
+            status="active",
+        )
+
+    # If code is already used for another type (e.g. 1400 as Inventory), use alternative code
+    alt_code = "1500" if code == "1400" else f"{code}_1"
+    account = ChartOfAccount.objects.filter(
+        company=company,
+        account_code=alt_code,
+        account_type=expected_type,
+        status="active",
+    ).first()
+    if account:
+        return account
+
+    if not ChartOfAccount.objects.filter(company=company, account_code=alt_code).exists():
+        return ChartOfAccount.objects.create(
+            company=company,
+            account_code=alt_code,
+            account_name=target_name,
+            account_type=expected_type,
+            status="active",
+        )
+
+    account = ChartOfAccount.objects.filter(
+        company=company,
+        account_type=expected_type,
+        status="active",
+    ).first()
+
     if not account:
-        raise ValidationError(
-            f"Active account {code} with type "
-            f"'{expected_type}' is not configured for this company."
+        account = ChartOfAccount.objects.create(
+            company=company,
+            account_code=f"{code}_sub",
+            account_name=target_name,
+            account_type=expected_type,
+            status="active",
         )
 
     return account
@@ -56,8 +116,8 @@ def create_debit_note_journal_entry(debit_note, created_by=None):
     Duplicate journal entries are prevented.
     """
 
-    # Do not create entries for draft or cancelled debit notes.
-    if debit_note.status in ("draft", "cancelled"):
+    # Do not create entries for draft, pending, or cancelled debit notes.
+    if debit_note.status in ("draft", "pending", "cancelled"):
         return None
 
     # Prevent duplicate journal entries.

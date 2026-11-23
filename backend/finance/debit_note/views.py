@@ -88,6 +88,7 @@ class DebitNoteListCreateView(generics.ListCreateAPIView):
     search_fields = [
         "dn_number",
         "bill_ref",
+        "bill__bill_number",
         "vendor__name",
         "bill_to_name",
         "reason",
@@ -139,7 +140,7 @@ class DebitNoteListCreateView(generics.ListCreateAPIView):
                 created_by=user,
             )
 
-            if debit_note.status not in ("draft", "cancelled"):
+            if debit_note.status not in ("draft", "pending", "cancelled"):
                 try:
                     create_debit_note_journal_entry(
                         debit_note,
@@ -272,53 +273,38 @@ class DebitNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     @transaction.atomic
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        previous_status = instance.status
-        already_posted = self.has_journal_entry(instance)
 
-        if already_posted:
-            # Once posted, financial details must not be changed.
-            if request.method == "PUT":
-                raise DRFValidationError({
-                    "detail": (
-                        "This debit note already has a posted journal entry. "
-                        "Financial details cannot be replaced."
-                    )
-                })
-
-            allowed_fields = {"notes", "applied_amount"}
+        # If already applied to pay bills, financial details cannot be changed
+        applied_val = Decimal(str(instance.applied_amount or "0.00"))
+        if applied_val > Decimal("0.00") or instance.status == "closed":
+            allowed_fields = {"notes", "applied_amount", "status"}
             submitted_fields = set(request.data.keys())
             forbidden_fields = submitted_fields - allowed_fields
-
             if forbidden_fields:
                 raise DRFValidationError({
-                    "detail": (
-                        "This debit note is already posted. Only notes and "
-                        "applied_amount can be updated."
-                    ),
+                    "detail": "This debit note has already been applied towards bills. Financial details cannot be changed.",
                     "restricted_fields": sorted(forbidden_fields),
                 })
 
-        
+        # Remove previous auto journal entry so that updated amounts can be re-posted accurately
+        JournalEntry.objects.filter(
+            company=instance.company,
+            source="auto",
+            source_module="debit_note",
+            source_id=str(instance.pk),
+        ).delete()
+
         response = super().update(request, *args, **kwargs)
 
         instance.refresh_from_db()
 
-        print(
-            f"Debit Note {instance.pk}: "
-            f"previous_status={previous_status}, "
-            f"current_status={instance.status}"
-        )
-
-        if previous_status == "draft" and instance.status == "open":
+        if instance.status not in ("draft", "pending", "cancelled"):
             try:
                 entry = create_debit_note_journal_entry(
                     instance,
                     created_by=request.user,
                 )
-                print("Journal entry created:", entry.pk if entry else None)
-
             except DjangoValidationError as exc:
-                print("Journal validation error:", exc.messages)
                 raise DRFValidationError({"detail": exc.messages})
 
         return response
@@ -327,14 +313,13 @@ class DebitNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        if self.has_journal_entry(instance):
-            raise DRFValidationError({
-                "detail": (
-                    "This debit note has a posted journal entry and cannot "
-                    "be deleted. Implement a journal reversal workflow "
-                    "before allowing cancellation or deletion."
-                )
-            })
+        # Clean up auto journal entry before deletion
+        JournalEntry.objects.filter(
+            company=instance.company,
+            source="auto",
+            source_module="debit_note",
+            source_id=str(instance.pk),
+        ).delete()
 
         return super().destroy(request, *args, **kwargs)
 
@@ -413,17 +398,43 @@ class BillDebitNoteDetailsView(APIView):
             if max_debitable_qty < Decimal("0.00"):
                 max_debitable_qty = Decimal("0.00")
 
+            qty_val = max_debitable_qty if max_debitable_qty > Decimal("0.00") else billed_qty
+            rate_val = b_item.rate or Decimal("0.00")
+            vat_pct_val = b_item.vat_percentage or Decimal("0.00")
+            vat_amt_val = (qty_val * rate_val * vat_pct_val) / Decimal("100.00")
+            amt_val = (qty_val * rate_val) + vat_amt_val
+
             items_data.append({
+                "id": b_item.id,
                 "bill_item_id": b_item.id,
+                "bill_item": b_item.id,
                 "product_id": b_item.product_id,
+                "product": b_item.product_id,
                 "product_name": b_item.product.product_name if b_item.product else b_item.particular,
                 "particular": b_item.particular,
+                "reason_detail": "Invoiced at wrong unit price",
                 "billed_qty": billed_qty,
                 "already_debited_qty": already_debited_qty,
                 "max_debitable_qty": max_debitable_qty,
-                "unit_price": b_item.rate or Decimal("0.00"),
-                "vat_percentage": b_item.vat_percentage or Decimal("0.00"),
+                "quantity": qty_val,
+                "qty": qty_val,
+                "rate": rate_val,
+                "unit_price": rate_val,
+                "vat_percentage": vat_pct_val,
+                "vat": vat_pct_val,
+                "vat_amount": vat_amt_val,
+                "amount": amt_val,
             })
+
+        vendor_address = bill.bill_to_address or (bill.vendor.billing_address if bill.vendor else "")
+        vendor_phone = bill.bill_to_phone or (bill.vendor.phno if bill.vendor else "")
+        vendor_email = bill.finance_contact_email or (bill.vendor.financial_email or bill.vendor.admin_email if bill.vendor else "")
+        vendor_name = bill.bill_to_name or (bill.vendor.name if bill.vendor else "")
+
+        from_company_name = bill.from_name or getattr(bill.company, "name", getattr(company, "name", "Tungston Labs"))
+        from_address = bill.from_address or getattr(company, "address", "")
+        from_phone = bill.from_phone or getattr(company, "phone_number", "")
+        from_email = bill.from_email or getattr(company, "email", "")
 
         return Response({
             "message": "Bill details for debit note retrieved successfully.",
@@ -431,7 +442,23 @@ class BillDebitNoteDetailsView(APIView):
                 "bill_id": bill.id,
                 "bill_number": bill.bill_number,
                 "vendor": bill.vendor_id,
-                "vendor_name": bill.vendor.name if bill.vendor else bill.bill_to_name,
+                "vendor_id": bill.vendor_id,
+                "vendor_name": vendor_name,
+                "vendor_address": vendor_address,
+                "vendor_phone": vendor_phone,
+                "vendor_email": vendor_email,
+                "bill_to_name": vendor_name,
+                "bill_to_address": vendor_address,
+                "bill_to_phone": vendor_phone,
+                "finance_contact_email": vendor_email,
+                "from_company_name": from_company_name,
+                "from_address": from_address,
+                "from_phone_number": from_phone,
+                "from_email": from_email,
+                "company_name": from_company_name,
+                "company_address": from_address,
+                "company_phone": from_phone,
+                "company_email": from_email,
                 "bill_date": bill.bill_date,
                 "bill_value": bill_value,
                 "already_debited_amount": already_debited_amount,

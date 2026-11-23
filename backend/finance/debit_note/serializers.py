@@ -8,6 +8,10 @@ from finance.product.models import Product
 
 class DebitNoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source="product.product_name")
+    reason_detail = serializers.CharField(source="description", required=False, allow_blank=True)
+    qty = serializers.DecimalField(source="quantity", max_digits=10, decimal_places=2, required=False)
+    unit_price = serializers.DecimalField(source="rate", max_digits=15, decimal_places=2, required=False)
+    vat = serializers.DecimalField(source="vat_percentage", max_digits=5, decimal_places=2, required=False)
 
     class Meta:
         model = DebitNoteItem
@@ -18,11 +22,15 @@ class DebitNoteItemSerializer(serializers.ModelSerializer):
             "product_name",
             "item_name",
             "description",
+            "reason_detail",
             "billed_qty",
             "already_debited_qty",
             "quantity",
+            "qty",
             "rate",
+            "unit_price",
             "vat_percentage",
+            "vat",
             "vat_amount",
             "amount",
         ]
@@ -30,41 +38,88 @@ class DebitNoteItemSerializer(serializers.ModelSerializer):
 
 
 class DebitNoteListSerializer(serializers.ModelSerializer):
-    vendor_name = serializers.ReadOnlyField(source="vendor.name")
+    vendor_name = serializers.SerializerMethodField()
     bill_number = serializers.ReadOnlyField(source="bill.bill_number")
+    against_bill = serializers.SerializerMethodField()
+    debit_note_number = serializers.CharField(source="dn_number", read_only=True)
+    debitNoteNo = serializers.CharField(source="dn_number", read_only=True)
     reason_name = serializers.CharField(source="get_reason_display", read_only=True)
     status_name = serializers.CharField(source="get_status_display", read_only=True)
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    bill_amount = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    bill_value = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    after_applied = serializers.DecimalField(source="balance", max_digits=15, decimal_places=2, read_only=True)
+    remaining_amount = serializers.DecimalField(source="balance", max_digits=15, decimal_places=2, read_only=True)
+    date_issued = serializers.DateField(source="issue_date", read_only=True)
 
     class Meta:
         model = DebitNote
         fields = [
             "id",
             "dn_number",
+            "debit_note_number",
+            "debitNoteNo",
             "vendor",
             "vendor_name",
             "bill",
             "bill_number",
             "bill_ref",
+            "against_bill",
             "issue_date",
+            "date_issued",
             "reason",
             "reason_name",
+            "bill_amount",
+            "bill_value",
             "debit_amount",
             "applied_amount",
+            "after_applied",
+            "remaining_amount",
             "balance",
             "status",
             "status_name",
             "created_at",
         ]
 
+    def get_vendor_name(self, obj):
+        if obj.vendor:
+            return obj.vendor.name
+        return obj.bill_to_name or "-"
+
+    def get_against_bill(self, obj):
+        if obj.bill and obj.bill.bill_number:
+            return obj.bill.bill_number
+        return obj.bill_ref or "-"
+
 
 class DebitNoteSerializer(serializers.ModelSerializer):
     dn_number = serializers.CharField(required=False, allow_blank=True)
+    debit_note_number = serializers.CharField(source="dn_number", required=False, allow_blank=True)
     vendor_name = serializers.ReadOnlyField(source="vendor.name")
     bill_number = serializers.ReadOnlyField(source="bill.bill_number")
+    against_bill = serializers.SerializerMethodField()
     reason_name = serializers.CharField(source="get_reason_display", read_only=True)
     status_name = serializers.CharField(source="get_status_display", read_only=True)
     balance = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    bill_amount = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    after_applied = serializers.DecimalField(source="balance", max_digits=15, decimal_places=2, read_only=True)
+    remaining_amount = serializers.DecimalField(source="balance", max_digits=15, decimal_places=2, read_only=True)
+
+    company_name = serializers.CharField(source="from_company_name", required=False, allow_blank=True)
+    company_address = serializers.CharField(source="from_address", required=False, allow_blank=True)
+    company_phone = serializers.CharField(source="from_phone_number", required=False, allow_blank=True)
+    company_email = serializers.CharField(source="from_email", required=False, allow_blank=True)
+
+    vendor_address = serializers.CharField(source="bill_to_address", required=False, allow_blank=True)
+    vendor_phone = serializers.CharField(source="bill_to_phone", required=False, allow_blank=True)
+    vendor_email = serializers.CharField(source="finance_contact_email", required=False, allow_blank=True)
+
+    bill_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    vendor_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    bill_value = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+    already_debited = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+    remaining_balance = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+
     items = DebitNoteItemSerializer(many=True, required=False)
 
     class Meta:
@@ -73,28 +128,45 @@ class DebitNoteSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "dn_number",
+            "debit_note_number",
             "vendor",
+            "vendor_id",
             "vendor_name",
             "bill",
+            "bill_id",
             "bill_number",
             "bill_ref",
+            "against_bill",
+            "bill_amount",
+            "bill_value",
+            "already_debited",
+            "remaining_balance",
             "issue_date",
             "reason",
             "reason_name",
             "debit_amount",
             "applied_amount",
+            "after_applied",
+            "remaining_amount",
             "balance",
             "status",
             "status_name",
             # Snapshots
             "from_company_name",
+            "company_name",
             "from_address",
+            "company_address",
             "from_phone_number",
+            "company_phone",
             "from_email",
+            "company_email",
             "bill_to_name",
             "bill_to_address",
+            "vendor_address",
             "bill_to_phone",
+            "vendor_phone",
             "finance_contact_email",
+            "vendor_email",
             # Totals
             "sub_total",
             "total_vat",
@@ -114,8 +186,40 @@ class DebitNoteSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def get_against_bill(self, obj):
+        if obj.bill and obj.bill.bill_number:
+            return obj.bill.bill_number
+        return obj.bill_ref or "-"
+
+    def validate(self, attrs):
+        if "bill" not in attrs and "bill_id" in self.initial_data and self.initial_data["bill_id"]:
+            from finance.bill.models import Bill
+            try:
+                attrs["bill"] = Bill.objects.get(id=self.initial_data["bill_id"])
+            except Bill.DoesNotExist:
+                raise serializers.ValidationError({"bill": "Bill does not exist."})
+
+        if "vendor" not in attrs and "vendor_id" in self.initial_data and self.initial_data["vendor_id"]:
+            from finance.vendor.models import Vendor
+            try:
+                attrs["vendor"] = Vendor.objects.get(id=self.initial_data["vendor_id"])
+            except Vendor.DoesNotExist:
+                raise serializers.ValidationError({"vendor": "Vendor does not exist."})
+
+        bill = attrs.get("bill") or getattr(self.instance, "bill", None)
+        if bill and "vendor" not in attrs and not getattr(self.instance, "vendor", None):
+            if bill.vendor:
+                attrs["vendor"] = bill.vendor
+
+        if not attrs.get("dn_number") and self.initial_data.get("debit_note_number"):
+            attrs["dn_number"] = self.initial_data["debit_note_number"]
+
+        return attrs
+
     def create(self, validated_data):
         items_data = validated_data.pop("items", [])
+        validated_data.pop("bill_id", None)
+        validated_data.pop("vendor_id", None)
 
         if validated_data.get("bill") and not validated_data.get("bill_ref"):
             validated_data["bill_ref"] = validated_data["bill"].bill_number
@@ -181,6 +285,14 @@ class DebitNoteSerializer(serializers.ModelSerializer):
                     debit_note.sub_total + debit_note.total_vat - discount
                 )
                 needs_save = True
+        else:
+            if not debit_note.sub_total or debit_note.sub_total == Decimal("0.00"):
+                debit_note.sub_total = (
+                    (debit_note.debit_amount or Decimal("0.00"))
+                    - (debit_note.total_vat or Decimal("0.00"))
+                    + (debit_note.discount or Decimal("0.00"))
+                )
+                needs_save = True
 
         debit_note.update_status_from_applied_amount()
         if needs_save:
@@ -190,6 +302,8 @@ class DebitNoteSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop("items", None)
+        validated_data.pop("bill_id", None)
+        validated_data.pop("vendor_id", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -223,6 +337,13 @@ class DebitNoteSerializer(serializers.ModelSerializer):
             instance.debit_amount = (
                 instance.sub_total + instance.total_vat - discount
             )
+        else:
+            if not instance.sub_total or instance.sub_total == Decimal("0.00"):
+                instance.sub_total = (
+                    (instance.debit_amount or Decimal("0.00"))
+                    - (instance.total_vat or Decimal("0.00"))
+                    + (instance.discount or Decimal("0.00"))
+                )
 
         instance.update_status_from_applied_amount()
         instance.save()

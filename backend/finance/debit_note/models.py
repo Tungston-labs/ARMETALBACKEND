@@ -7,6 +7,9 @@ from shared.models import TimeStampedModel
 class DebitNote(TimeStampedModel):
     STATUS_CHOICES = (
         ("open", "Open"),
+        ("pending", "Pending"),
+        ("issued", "Issued"),
+        ("applied", "Applied"),
         ("partially_applied", "Partially Applied"),
         ("closed", "Closed"),
         ("cancelled", "Cancelled"),
@@ -16,6 +19,9 @@ class DebitNote(TimeStampedModel):
     REASON_CHOICES = (
         ("returned_goods", "Returned Goods"),
         ("damaged_goods", "Damaged Goods"),
+        ("short_delivery", "Short Delivery"),
+        ("purchase_return", "Purchase Return"),
+        ("billing_error", "Billing Error"),
         ("defective_items", "Defective Items"),
         ("overbilling", "Overbilling"),
         ("quality_issue", "Quality Issue"),
@@ -131,6 +137,31 @@ class DebitNote(TimeStampedModel):
         default="",
     )
 
+    # Bill Snapshot
+    bill_value = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        null=True,
+        blank=True,
+    )
+
+    already_debited = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        null=True,
+        blank=True,
+    )
+
+    remaining_balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        null=True,
+        blank=True,
+    )
+
     # Financial Breakdown
     sub_total = models.DecimalField(
         max_digits=15,
@@ -171,7 +202,7 @@ class DebitNote(TimeStampedModel):
         return bal if bal > Decimal("0.00") else Decimal("0.00")
 
     def update_status_from_applied_amount(self):
-        if self.status in ["cancelled", "draft"]:
+        if self.status in ["cancelled", "draft", "pending", "issued", "applied"]:
             return
 
         d_amt = Decimal(str(self.debit_amount or 0.00))
