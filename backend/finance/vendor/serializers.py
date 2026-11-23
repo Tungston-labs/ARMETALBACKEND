@@ -299,40 +299,75 @@ class VendorPurchaseOrderSerializer(serializers.ModelSerializer):
 class VendorPaymentListSerializer(serializers.ModelSerializer):
     vendor_name = serializers.ReadOnlyField(source="vendor.name")
     bill_number = serializers.ReadOnlyField(source="bill.bill_number")
+    payment_no = serializers.CharField(source="receipt_number", read_only=True)
+    receipt_no = serializers.CharField(source="receipt_number", read_only=True)
+    payment_number = serializers.CharField(source="receipt_number", read_only=True)
     payment_type_name = serializers.CharField(source="get_payment_type_display", read_only=True)
     payment_method_name = serializers.CharField(source="get_payment_method_display", read_only=True)
     status_name = serializers.CharField(source="get_status_display", read_only=True)
+    amount = serializers.DecimalField(source="amount_paid", max_digits=15, decimal_places=2, read_only=True)
+    amount_received = serializers.DecimalField(source="amount_paid", max_digits=15, decimal_places=2, read_only=True)
+    bill_total = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    bill_amount = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    already_paid = serializers.DecimalField(source="bill.amount_paid", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    balance_due = serializers.DecimalField(source="bill.balance", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    outstanding_amount = serializers.DecimalField(source="bill.balance", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
 
     class Meta:
         model = VendorPayment
         fields = [
             "id",
             "receipt_number",
+            "receipt_no",
+            "payment_no",
+            "payment_number",
             "vendor",
             "vendor_name",
             "bill",
             "bill_number",
+            "bill_total",
+            "bill_amount",
+            "already_paid",
+            "balance_due",
+            "outstanding_amount",
             "payment_date",
             "payment_type",
             "payment_type_name",
             "payment_method",
             "payment_method_name",
             "amount_paid",
+            "amount",
+            "amount_received",
+            "reference_number",
+            "bank_name",
+            "account_holder",
+            "iban",
+            "notes",
             "status",
             "status_name",
             "created_at",
+            "updated_at",
         ]
 
 
 class VendorPaymentSerializer(serializers.ModelSerializer):
     receipt_number = serializers.CharField(required=False, allow_blank=True)
+    payment_no = serializers.CharField(source="receipt_number", read_only=True)
+    receipt_no = serializers.CharField(source="receipt_number", read_only=True)
+    payment_number = serializers.CharField(source="receipt_number", read_only=True)
     vendor_name = serializers.ReadOnlyField(source="vendor.name")
     bill_number = serializers.ReadOnlyField(source="bill.bill_number")
     payment_type_name = serializers.CharField(source="get_payment_type_display", read_only=True)
     payment_method_name = serializers.CharField(source="get_payment_method_display", read_only=True)
     status_name = serializers.CharField(source="get_status_display", read_only=True)
+    bill_total = serializers.DecimalField(source="bill.total_amount", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
     bill_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    already_paid = serializers.DecimalField(source="bill.amount_paid", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
+    balance_due = serializers.DecimalField(source="bill.balance", max_digits=15, decimal_places=2, read_only=True, default=Decimal("0.00"))
     outstanding_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
+    amount = serializers.DecimalField(source="amount_paid", max_digits=15, decimal_places=2, required=False)
+    amount_received = serializers.DecimalField(source="amount_paid", max_digits=15, decimal_places=2, required=False)
+    amount_paid = serializers.DecimalField(max_digits=15, decimal_places=2, required=False)
 
     class Meta:
         model = VendorPayment
@@ -340,22 +375,33 @@ class VendorPaymentSerializer(serializers.ModelSerializer):
             "id",
             "company",
             "receipt_number",
+            "receipt_no",
+            "payment_no",
+            "payment_number",
             "vendor",
             "vendor_name",
             "bill",
             "bill_number",
+            "bill_total",
+            "bill_amount",
+            "already_paid",
+            "balance_due",
+            "outstanding_amount",
             "payment_date",
             "payment_type",
             "payment_type_name",
             "payment_method",
             "payment_method_name",
             "amount_paid",
+            "amount",
+            "amount_received",
             "reference_number",
+            "bank_name",
+            "account_holder",
+            "iban",
             "notes",
             "status",
             "status_name",
-            "bill_amount",
-            "outstanding_amount",
             "created_by",
             "created_at",
             "updated_at",
@@ -363,7 +409,10 @@ class VendorPaymentSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "company",
+            "bill_total",
             "bill_amount",
+            "already_paid",
+            "balance_due",
             "outstanding_amount",
             "created_by",
             "created_at",
@@ -371,6 +420,31 @@ class VendorPaymentSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, attrs):
+        # Support aliases for amount
+        if "amount_paid" not in attrs:
+            if "amount" in self.initial_data:
+                attrs["amount_paid"] = self.initial_data["amount"]
+            elif "amount_received" in self.initial_data:
+                attrs["amount_paid"] = self.initial_data["amount_received"]
+
+        if "amount_paid" not in attrs and not self.instance:
+            raise serializers.ValidationError({"amount_paid": "This field is required."})
+
+        # Support aliases for vendor and bill
+        if "vendor" not in attrs and "vendor_id" in self.initial_data:
+            from finance.vendor.models import Vendor
+            try:
+                attrs["vendor"] = Vendor.objects.get(id=self.initial_data["vendor_id"])
+            except Vendor.DoesNotExist:
+                raise serializers.ValidationError({"vendor": "Vendor does not exist."})
+
+        if "bill" not in attrs and "bill_id" in self.initial_data and self.initial_data["bill_id"]:
+            from finance.bill.models import Bill
+            try:
+                attrs["bill"] = Bill.objects.get(id=self.initial_data["bill_id"])
+            except Bill.DoesNotExist:
+                raise serializers.ValidationError({"bill": "Bill does not exist."})
+
         vendor = attrs.get("vendor") or getattr(self.instance, "vendor", None)
         bill = attrs.get("bill") or getattr(self.instance, "bill", None)
 
@@ -690,98 +764,6 @@ class VendorPurchaseOrderSerializer(serializers.ModelSerializer):
             "payment_status",
         ]
 
-class VendorPaymentListSerializer(serializers.ModelSerializer):
-    vendor_name = serializers.ReadOnlyField(source="vendor.name")
-    bill_number = serializers.ReadOnlyField(source="bill.bill_number")
-    payment_type_name = serializers.CharField(source="get_payment_type_display", read_only=True)
-    payment_method_name = serializers.CharField(source="get_payment_method_display", read_only=True)
-    status_name = serializers.CharField(source="get_status_display", read_only=True)
-
-    class Meta:
-        model = VendorPayment
-        fields = [
-            "id",
-            "receipt_number",
-            "vendor",
-            "vendor_name",
-            "bill",
-            "bill_number",
-            "payment_date",
-            "payment_type",
-            "payment_type_name",
-            "payment_method",
-            "payment_method_name",
-            "amount_paid",
-            "status",
-            "status_name",
-            "created_at",
-        ]
-
-
-class VendorPaymentSerializer(serializers.ModelSerializer):
-    receipt_number = serializers.CharField(required=False, allow_blank=True)
-    vendor_name = serializers.ReadOnlyField(source="vendor.name")
-    bill_number = serializers.ReadOnlyField(source="bill.bill_number")
-    payment_type_name = serializers.CharField(source="get_payment_type_display", read_only=True)
-    payment_method_name = serializers.CharField(source="get_payment_method_display", read_only=True)
-    status_name = serializers.CharField(source="get_status_display", read_only=True)
-    bill_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-    outstanding_amount = serializers.DecimalField(max_digits=15, decimal_places=2, read_only=True)
-
-    class Meta:
-        model = VendorPayment
-        fields = [
-            "id",
-            "company",
-            "receipt_number",
-            "vendor",
-            "vendor_name",
-            "bill",
-            "bill_number",
-            "payment_date",
-            "payment_type",
-            "payment_type_name",
-            "payment_method",
-            "payment_method_name",
-            "amount_paid",
-            "reference_number",
-            "notes",
-            "status",
-            "status_name",
-            "bill_amount",
-            "outstanding_amount",
-            "created_by",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = [
-            "id",
-            "company",
-            "bill_amount",
-            "outstanding_amount",
-            "created_by",
-            "created_at",
-            "updated_at",
-        ]
-
-    def validate(self, attrs):
-        vendor = attrs.get("vendor") or getattr(self.instance, "vendor", None)
-        bill = attrs.get("bill") or getattr(self.instance, "bill", None)
-
-        if bill and vendor and bill.vendor and bill.vendor != vendor:
-            raise serializers.ValidationError({
-                "bill": "Selected bill does not belong to the selected vendor."
-            })
-
-        return attrs
-
-
-class VendorPaymentKPISerializer(serializers.Serializer):
-    total_payments = serializers.DecimalField(max_digits=15, decimal_places=2)
-    payments_this_month = serializers.DecimalField(max_digits=15, decimal_places=2)
-    outstanding = serializers.DecimalField(max_digits=15, decimal_places=2)
-    advance_payments = serializers.DecimalField(max_digits=15, decimal_places=2)
-
 
 from rest_framework import serializers
 
@@ -854,7 +836,7 @@ class VendorBillListSerializer(serializers.ModelSerializer):
 from .models import VendorPayment
 
 
-class VendorPaymentListSerializer(serializers.ModelSerializer):
+class VendorDetailPaymentListSerializer(serializers.ModelSerializer):
 
     payment_number = serializers.CharField(
         source="receipt_number",

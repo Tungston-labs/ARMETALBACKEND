@@ -1,7 +1,8 @@
 import csv
 from decimal import Decimal
 
-from django.db.models import Sum, Q
+from django.db import models, transaction
+from django.db.models import Sum, Q, F, Count
 from django.http import HttpResponse
 from django.utils import timezone
 
@@ -11,7 +12,6 @@ from rest_framework import (
     filters,
     status,
 )
-from django.db import transaction
 from rest_framework.decorators import action
 
 from rest_framework.permissions import IsAuthenticated
@@ -918,6 +918,137 @@ class VendorPaymentViewSet(viewsets.ModelViewSet):
                 "message": "Vendor payment deleted successfully."
             }
         )
+
+    @action(detail=False, methods=["get"], url_path="kpi")
+    def kpi(self, request):
+        user = request.user
+        company = user.company
+
+        today = timezone.localdate()
+
+        queryset = self.get_queryset()
+
+        vendor_id = request.query_params.get("vendor")
+        if vendor_id and str(vendor_id).isdigit():
+            queryset = queryset.filter(vendor_id=int(vendor_id))
+
+        start_date = (
+            request.query_params.get("start_date")
+            or request.query_params.get("from_date")
+            or request.query_params.get("payment_date_after")
+        )
+        end_date = (
+            request.query_params.get("end_date")
+            or request.query_params.get("to_date")
+            or request.query_params.get("payment_date_before")
+        )
+
+        if start_date:
+            queryset = queryset.filter(payment_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(payment_date__lte=end_date)
+
+        total_payments_made = queryset.count()
+
+        total_paid_out = queryset.filter(
+            status__in=["completed", "cleared"]
+        ).aggregate(
+            total=Sum("amount_paid")
+        )["total"] or Decimal("0.00")
+
+        paid_this_month = queryset.filter(
+            status__in=["completed", "cleared"],
+            payment_date__year=today.year,
+            payment_date__month=today.month,
+        ).aggregate(
+            total=Sum("amount_paid")
+        )["total"] or Decimal("0.00")
+
+        pending_clearance = queryset.filter(
+            status__in=["pending", "pending_clearance"]
+        ).count()
+
+        failed_payments = queryset.filter(
+            status__in=["cancelled", "failed"]
+        ).count()
+
+        advance_payments = queryset.filter(
+            payment_type="advance_payment",
+            status__in=["completed", "cleared"]
+        ).aggregate(
+            total=Sum("amount_paid")
+        )["total"] or Decimal("0.00")
+
+        from finance.bill.models import Bill
+        bill_qs = Bill.objects.filter(company=company)
+        if vendor_id and str(vendor_id).isdigit():
+            bill_qs = bill_qs.filter(vendor_id=int(vendor_id))
+
+        outstanding = bill_qs.exclude(status="paid").aggregate(
+            total=Sum(models.F("total_amount") - models.F("amount_paid"))
+        )["total"] or Decimal("0.00")
+
+        data = {
+            "total_payments_made": total_payments_made,
+            "totalPaymentsMade": total_payments_made,
+            "total_paid_out": total_paid_out,
+            "totalPaidOut": total_paid_out,
+            "total_payments": total_paid_out,
+            "paid_this_month": paid_this_month,
+            "paidThisMonth": paid_this_month,
+            "payments_this_month": paid_this_month,
+            "pending_clearance": pending_clearance,
+            "pendingClearance": pending_clearance,
+            "failed_payments": failed_payments,
+            "failedPayments": failed_payments,
+            "advance_payments": advance_payments,
+            "outstanding": outstanding,
+        }
+
+        return Response(
+            {
+                "message": "Vendor payment KPI metrics retrieved successfully.",
+                "data": data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="vendor_payments_export.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Payment No",
+            "Vendor",
+            "Bill No",
+            "Payment Date",
+            "Payment Type",
+            "Payment Method",
+            "Amount Paid (SAR)",
+            "Reference Number",
+            "Status",
+            "Notes",
+        ])
+
+        for payment in queryset:
+            writer.writerow([
+                payment.receipt_number,
+                payment.vendor.name if payment.vendor else "",
+                payment.bill.bill_number if payment.bill else "",
+                payment.payment_date,
+                payment.get_payment_type_display(),
+                payment.get_payment_method_display(),
+                payment.amount_paid,
+                payment.reference_number,
+                payment.get_status_display(),
+                payment.notes,
+            ])
+
+        return response
+
     
 
 from decimal import Decimal
@@ -1512,7 +1643,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import Vendor, VendorPayment
-from .serializers import VendorPaymentListSerializer
+from .serializers import VendorDetailPaymentListSerializer
 from shared.pagination import CustomPagination
 
 
@@ -1709,7 +1840,7 @@ class VendorPaymentListView(APIView):
         # Serialize paginated records
         # -----------------------------------
 
-        serializer = VendorPaymentListSerializer(
+        serializer = VendorDetailPaymentListSerializer(
             page,
             many=True,
             context={"request": request},

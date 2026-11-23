@@ -65,6 +65,21 @@ class CustomerSerializer(
         read_only=True
     )
 
+    address = serializers.CharField(
+        source="billing_address",
+        read_only=True
+    )
+
+    phone_number = serializers.CharField(
+        source="phno",
+        read_only=True
+    )
+
+    email = serializers.CharField(
+        source="financial_email",
+        read_only=True
+    )
+
     # ---------------------------------------------------------
     # CUSTOMER FINANCIAL SUMMARY
     # ---------------------------------------------------------
@@ -102,6 +117,7 @@ class CustomerSerializer(
 
             # Billing address
             "billing_address",
+            "address",
             "city",
             "state",
             "country",
@@ -109,8 +125,10 @@ class CustomerSerializer(
 
             # Contact
             "phno",
+            "phone_number",
             "admin_email",
             "financial_email",
+            "email",
             "technical_email",
 
             "client_status",

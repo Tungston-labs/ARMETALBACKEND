@@ -155,8 +155,28 @@ class Quotation(TimeStampedModel):
             from .utils import generate_next_quote_number
             self.quote_number = generate_next_quote_number(self.company)
 
-        if self.customer and not self.bill_to_name:
-            self.bill_to_name = getattr(self.customer, "customer_name", "")
+        if self.customer:
+            if not self.bill_to_name:
+                self.bill_to_name = (
+                    getattr(self.customer, "customer_name", "")
+                    or getattr(self.customer, "company_name", "")
+                )
+            if not self.bill_to_address:
+                addr_parts = [
+                    getattr(self.customer, "billing_address", ""),
+                    getattr(self.customer, "city", ""),
+                    getattr(self.customer, "state", ""),
+                    getattr(self.customer, "country", ""),
+                    getattr(self.customer, "postal", ""),
+                ]
+                self.bill_to_address = ", ".join([p for p in addr_parts if p and str(p).strip()])
+            if not self.bill_to_phone:
+                self.bill_to_phone = getattr(self.customer, "phno", "")
+            if not self.finance_contact_email:
+                self.finance_contact_email = (
+                    getattr(self.customer, "financial_email", "")
+                    or getattr(self.customer, "admin_email", "")
+                )
 
         super().save(*args, **kwargs)
 

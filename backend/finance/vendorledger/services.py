@@ -160,7 +160,7 @@ def sync_vendor_payment_ledger(payment, created_by=None):
 
     credit_amount = (
         payment.amount_paid
-        if payment.status == "completed"
+        if payment.status in ["completed", "cleared"]
         else ZERO
     )
 
