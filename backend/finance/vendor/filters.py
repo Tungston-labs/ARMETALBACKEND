@@ -12,6 +12,8 @@ class VendorPaymentFilter(django_filters.FilterSet):
     payment_date = django_filters.DateFilter(field_name="payment_date")
     start_date = django_filters.DateFilter(field_name="payment_date", lookup_expr="gte")
     end_date = django_filters.DateFilter(field_name="payment_date", lookup_expr="lte")
+    from_date = django_filters.DateFilter(field_name="payment_date", lookup_expr="gte")
+    to_date = django_filters.DateFilter(field_name="payment_date", lookup_expr="lte")
     payment_date_after = django_filters.DateFilter(field_name="payment_date", lookup_expr="gte")
     payment_date_before = django_filters.DateFilter(field_name="payment_date", lookup_expr="lte")
 
@@ -26,6 +28,8 @@ class VendorPaymentFilter(django_filters.FilterSet):
             "payment_date",
             "start_date",
             "end_date",
+            "from_date",
+            "to_date",
             "payment_date_after",
             "payment_date_before",
         ]

@@ -343,7 +343,7 @@ def sync_bill_payment_status(bill):
     completed_total = (
         VendorPayment.objects.filter(
             bill=bill,
-            status="completed"
+            status__in=["completed", "cleared"]
         ).aggregate(
             total=models.Sum("amount_paid")
         )["total"]
@@ -384,6 +384,8 @@ class VendorPayment(TimeStampedModel):
         ("completed", "Completed"),
         ("pending", "Pending"),
         ("cancelled", "Cancelled"),
+        ("cleared", "Cleared"),
+        ("failed", "Failed"),
     )
 
     id = models.BigAutoField(primary_key=True)
@@ -436,6 +438,24 @@ class VendorPayment(TimeStampedModel):
 
     reference_number = models.CharField(
         max_length=100,
+        blank=True,
+        default="",
+    )
+
+    bank_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    account_holder = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    iban = models.CharField(
+        max_length=60,
         blank=True,
         default="",
     )
