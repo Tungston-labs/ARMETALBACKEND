@@ -12,13 +12,11 @@ class Bill(TimeStampedModel):
     """
 
     STATUS_CHOICES = (
-        ("draft", "Draft"),
-        ("unpaid", "Unpaid"),
-        ("partially_paid", "Partially Paid"),
-        ("paid", "Paid"),
-        ("overdue", "Overdue"),
-        ("cancelled", "Cancelled"),
-    )
+    ("draft", "Draft"),
+    ("send_for_approval", "Send for Approval"),
+    ("received", "Received"),
+    ("cancelled", "Cancelled"),
+)
 
     PAYMENT_TERMS_CHOICES = (
         ("immediate", "Due on Receipt"),
