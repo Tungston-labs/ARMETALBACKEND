@@ -127,3 +127,67 @@ class ChartOfAccount(TimeStampedModel):
 
     def __str__(self):
         return f"{self.account_code} - {self.account_name}"
+    
+
+from django.core.exceptions import ValidationError
+from shared.models import TimeStampedModel
+
+class CompanyAccountMapping(TimeStampedModel):
+
+    PURPOSE_CHOICES = (
+        ("receivable", "Accounts Receivable"),
+        ("payable", "Accounts Payable"),
+        ("bank", "Bank"),
+        ("cash", "Cash"),
+        ("inventory", "Inventory"),
+        ("vat_payable", "VAT Payable"),
+        ("vat_recoverable", "VAT Recoverable"),
+        ("sales_revenue", "Sales Revenue"),
+        ("sales_returns", "Sales Returns"),
+        ("purchase_expense", "Purchase Expense"),
+        ("cogs", "Cost of Goods Sold"),
+        ("round_off_gain", "Round Off Gain"),
+        ("round_off_loss", "Round Off Loss"),
+    )
+
+    company = models.ForeignKey(
+        "superadmin.Company",
+        on_delete=models.CASCADE,
+        related_name="account_mappings"
+    )
+
+    purpose = models.CharField(
+        max_length=50,
+        choices=PURPOSE_CHOICES
+    )
+
+    account = models.ForeignKey(
+        "accounting.ChartOfAccount",
+        on_delete=models.PROTECT,
+        related_name="company_mappings"
+    )
+
+    class Meta:
+        db_table = "company_account_mapping"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "purpose"],
+                name="unique_company_account_purpose"
+            )
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.company_id and self.account_id:
+            if self.company_id != self.account.company_id:
+                raise ValidationError({
+                    "account": "The selected account must belong to this company."
+                })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.company_id} - {self.purpose} - {self.account.account_name}"

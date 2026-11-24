@@ -5,15 +5,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from finance.accounting.models import ChartOfAccount
+from finance.accounting.account_mapping import get_company_account
 from finance.invoice.models import Invoice
 from finance.journal.models import JournalEntry, JournalEntryLine
-
-
-# Replace these example codes with your actual account codes.
-RECEIVABLE_ACCOUNT_CODE = "1100"
-SALES_REVENUE_ACCOUNT_CODE = "4100"
-VAT_PAYABLE_ACCOUNT_CODE = "2200"
 
 
 def money(value):
@@ -23,18 +17,18 @@ def money(value):
     )
 
 
-def get_account(company, account_code, account_type):
-    account = ChartOfAccount.objects.filter(
-        company=company,
-        account_code=account_code,
-        account_type=account_type,
-        status="active",
-    ).first()
+def get_mapped_account(company, purpose, expected_type):
+    """
+    Retrieve a company's mapped account and validate its account type.
+    """
 
-    if not account:
+    account = get_company_account(company, purpose)
+
+    if account.account_type != expected_type:
         raise ValidationError(
-            f"Active {account_type} account "
-            f"{account_code} was not found for this company."
+            f"Mapped account for '{purpose}' must be of type "
+            f"'{expected_type}', but '{account.account_name}' "
+            f"is configured as '{account.account_type}'."
         )
 
     return account
@@ -48,6 +42,10 @@ def create_invoice_journal_entry(invoice, created_by=None):
     Debit: Accounts Receivable
     Credit: Sales Revenue
     Credit: VAT Payable
+
+    Round-off:
+    Positive adjustment -> Credit Round Off Gain
+    Negative adjustment -> Debit Round Off Loss
 
     This service does not record customer payments.
     """
@@ -90,24 +88,30 @@ def create_invoice_journal_entry(invoice, created_by=None):
             "Invoice discount cannot exceed the subtotal."
         )
 
-    receivable_account = get_account(
+    if vat_amount < Decimal("0.00"):
+        raise ValidationError(
+            "VAT amount cannot be negative."
+        )
+
+    # Get company-specific mapped accounts.
+    receivable_account = get_mapped_account(
         invoice.company,
-        RECEIVABLE_ACCOUNT_CODE,
+        "receivable",
         "asset",
     )
 
-    revenue_account = get_account(
+    revenue_account = get_mapped_account(
         invoice.company,
-        SALES_REVENUE_ACCOUNT_CODE,
+        "sales_revenue",
         "revenue",
     )
 
     vat_account = None
 
     if vat_amount > Decimal("0.00"):
-        vat_account = get_account(
+        vat_account = get_mapped_account(
             invoice.company,
-            VAT_PAYABLE_ACCOUNT_CODE,
+            "vat_payable",
             "liability",
         )
 
@@ -115,12 +119,34 @@ def create_invoice_journal_entry(invoice, created_by=None):
     debit_total = total_amount
     credit_total = revenue_amount + vat_amount
 
-    adjustment = debit_total - credit_total
+    adjustment = money(debit_total - credit_total)
 
     if adjustment != round_off:
         raise ValidationError(
             "Invoice totals do not reconcile. Check subtotal, "
             "discount, VAT, round-off, and total amount."
+        )
+
+    # Get round-off account only when an adjustment is required.
+    round_off_account = None
+    round_off_purpose = None
+
+    if adjustment > Decimal("0.00"):
+        round_off_purpose = "round_off_gain"
+
+        round_off_account = get_mapped_account(
+            invoice.company,
+            round_off_purpose,
+            "revenue",
+        )
+
+    elif adjustment < Decimal("0.00"):
+        round_off_purpose = "round_off_loss"
+
+        round_off_account = get_mapped_account(
+            invoice.company,
+            round_off_purpose,
+            "expense",
         )
 
     user = created_by or invoice.created_by
@@ -139,6 +165,7 @@ def create_invoice_journal_entry(invoice, created_by=None):
         posted_at=timezone.now(),
     )
 
+    # Debit Accounts Receivable.
     JournalEntryLine.objects.create(
         journal_entry=entry,
         account=receivable_account,
@@ -147,6 +174,7 @@ def create_invoice_journal_entry(invoice, created_by=None):
         credit_amount=Decimal("0.00"),
     )
 
+    # Credit Sales Revenue.
     if revenue_amount > Decimal("0.00"):
         JournalEntryLine.objects.create(
             journal_entry=entry,
@@ -156,6 +184,7 @@ def create_invoice_journal_entry(invoice, created_by=None):
             credit_amount=revenue_amount,
         )
 
+    # Credit VAT Payable.
     if vat_account and vat_amount > Decimal("0.00"):
         JournalEntryLine.objects.create(
             journal_entry=entry,
@@ -165,18 +194,25 @@ def create_invoice_journal_entry(invoice, created_by=None):
             credit_amount=vat_amount,
         )
 
-    # Add a rounding line when necessary.
+    # Add round-off adjustment when necessary.
     if adjustment > Decimal("0.00"):
-        # A positive difference is a debit-side adjustment.
-        # Configure the appropriate account before enabling this case.
-        raise ValidationError(
-            "A debit-side rounding adjustment requires a configured "
-            "round-off account."
+        # Credit Round Off Gain.
+        JournalEntryLine.objects.create(
+            journal_entry=entry,
+            account=round_off_account,
+            description=f"Round Off Gain - {invoice.invoice_number}",
+            debit_amount=Decimal("0.00"),
+            credit_amount=adjustment,
         )
 
-    if adjustment < Decimal("0.00"):
-        raise ValidationError(
-            "Invoice journal totals do not balance."
+    elif adjustment < Decimal("0.00"):
+        # Debit Round Off Loss.
+        JournalEntryLine.objects.create(
+            journal_entry=entry,
+            account=round_off_account,
+            description=f"Round Off Loss - {invoice.invoice_number}",
+            debit_amount=abs(adjustment),
+            credit_amount=Decimal("0.00"),
         )
 
     if not entry.is_balanced:

@@ -14,7 +14,10 @@ import json
 from decimal import Decimal
 from hr.finance.models import FinanceCategory
 from hr.employee.models import Employee_db
-
+from django.db import transaction
+from finance.accounting.default_accounts import (
+    create_default_accounts_and_mappings,
+)
 
 COUNTRY_CURRENCY = {
     "IN": "INR",
@@ -193,6 +196,7 @@ class CompanyCreateSerializer(serializers.ModelSerializer):
     # ---------------------------------------------------------
     # CREATE
     # ---------------------------------------------------------
+    @transaction.atomic
     def create(self, validated_data):
 
         modules = self.initial_data.get("modules")
