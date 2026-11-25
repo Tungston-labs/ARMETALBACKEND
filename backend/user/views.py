@@ -14,13 +14,19 @@ from rest_framework.authentication import BasicAuthentication
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import OTP, User, generate_otp
-from .serializers import SendOTPSerializer, VerifyOTPSerializer, ResetPasswordSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .serializers import (
+    SendOTPSerializer, VerifyOTPSerializer, ResetPasswordSerializer,
+    SafeTokenRefreshSerializer,
+)
 
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
+class SafeTokenRefreshView(TokenRefreshView):
+    serializer_class = SafeTokenRefreshSerializer
 
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
