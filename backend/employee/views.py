@@ -953,13 +953,10 @@ class EmployeesInMyDepartmentView(APIView):
 
 # ------------------------profile view for employee
 
-class EmployeeSelfView(APIView):
-    permission_classes = [IsAuthenticated,IsEmployee]
-
     def get(self, request):
-        if not hasattr(request.user, 'employee_db'):
+        employee = Employee_db.objects.filter(user=request.user, is_deleted=False).first()
+        if not employee:
             return Response({'error': 'Employee profile not found.'}, status=404)
-        employee = request.user.employee_db
         return Response(EmployeeSerializer(employee).data)
 
 
@@ -993,7 +990,18 @@ class EmployeeDocumentSummaryView(APIView):
 
 
 
+class MyDocumentsView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        try:
+            employee = Employee_db.objects.get(user=request.user, is_deleted=False)
+        except Employee_db.DoesNotExist:
+            return Response({'detail': 'Employee not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        emp_doc, _ = EmpDocument.objects.get_or_create(employee=employee)
+        serializer = EmpDocumentSerializer(emp_doc, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
@@ -1131,20 +1139,16 @@ class ReminderListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        employee = user.employee_db
+        employee = get_object_or_404(Employee_db, user=self.request.user, is_deleted=False)
         date_str = self.request.query_params.get("date")
         qs = ScheduleReminder.objects.filter(employee=employee, is_expired=False)
         if date_str:
             qs = qs.filter(scheduled_datetime__date=date_str)
         return qs
 
-    
     def perform_create(self, serializer):
-        employee = self.request.user.employee_db
-        # Just save reminder with employee automatically
-        reminder = serializer.save(employee=employee)
-        return reminder
+        employee = get_object_or_404(Employee_db, user=self.request.user, is_deleted=False)
+        serializer.save(employee=employee)
 
 
 
@@ -1153,14 +1157,11 @@ class ReminderListCreateView(generics.ListCreateAPIView):
 
 
 class ReminderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ScheduleReminder.objects.all()
     serializer_class = ScheduleReminderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # restrict to logged-in user's reminders
-        user = self.request.user
-        employee = user.employee_db
+        employee = get_object_or_404(Employee_db, user=self.request.user, is_deleted=False)
         return ScheduleReminder.objects.filter(employee=employee)
 
 

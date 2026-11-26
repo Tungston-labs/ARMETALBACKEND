@@ -21,7 +21,7 @@ urlpatterns = [
     path('upload-image/', views.UploadImageView.as_view(), name='upload-temp-image'),
     path('upload-image/<int:pk>/', views.UploadImageDetailView.as_view(), name='upload-image-detail'),
     path('employees/my-department/', views.EmployeesInMyDepartmentView.as_view(), name='employees-in-my-department'),
-
+    path('employee/my-documents/', views.MyDocumentsView.as_view(), name='my-documents'),
 
     path('admin/dashboard-summary/', views.DashboardSummaryView.as_view(), name='dashboard-summary'),
     path('dashboard/employee/<int:id>/', views.EmployeeDashboardAPIView.as_view(), name='employee-dashboard'),

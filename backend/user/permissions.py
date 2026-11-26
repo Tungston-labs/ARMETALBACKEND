@@ -16,8 +16,9 @@ class IsEmployee(permissions.BasePermission):
 
 class IsHRorIsEmployee(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and (
-            request.user.is_hr_admin or request.user.is_employee
+        u = request.user
+        return u.is_authenticated and (
+            u.is_hr_admin or u.is_hr or u.is_employee
         )
 class IsCompanyActive(permissions.BasePermission):
     """
