@@ -20,8 +20,8 @@ class CompanyJWTAuthentication(JWTAuthentication):
             company = user.company
 
         # Employee
-        elif hasattr(user, "employee_db"):
-            employee = user.employee_db
+        elif hasattr(user, "employee_profile") or hasattr(user, "employee_db"):
+            employee = getattr(user, "employee_profile", getattr(user, "employee_db", None))
 
             if (
                 employee and

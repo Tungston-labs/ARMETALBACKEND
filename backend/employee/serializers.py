@@ -773,7 +773,9 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
         exclude = ['password']
 
     def get_company_logo(self, obj):
-        company = obj.user.company
+        company = getattr(obj.user, "company", None) if obj.user else None
+        if not company and obj.department:
+            company = obj.department.company
         if company and company.logo:
             request = self.context.get("request")
             return request.build_absolute_uri(company.logo.url) if request else company.logo.url

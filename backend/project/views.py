@@ -328,14 +328,18 @@ class EmployeeProjectView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        employee = getattr(request.user, "employee_db", None)
+        employee = getattr(request.user, "employee_profile", getattr(request.user, "employee_db", None))
         if not employee:
             return Response({"error": "Employee record not found"}, status=404)
 
-        project = Project.objects.filter(
-            employees=employee,
-            company=request.user.company,
-        ).first()
+        company = getattr(request.user, "company", None)
+        if not company and employee.department:
+            company = employee.department.company
+
+        project_qs = Project.objects.filter(employees=employee)
+        if company:
+            project_qs = project_qs.filter(company=company)
+        project = project_qs.first()
 
         if not project:
             return Response({"project": None})

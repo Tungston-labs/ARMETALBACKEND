@@ -167,7 +167,7 @@ class MyDepartmentHeadEmailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        employee = getattr(request.user, "employee_db", None)
+        employee = getattr(request.user, "employee_profile", getattr(request.user, "employee_db", None))
 
         if not employee:
             return Response({"error": "Employee record not found"}, status=404)

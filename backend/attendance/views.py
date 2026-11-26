@@ -74,16 +74,16 @@ class AttendanceSwipeView(APIView):
 
 
             if punch_type == "onsite":
-                project_location = (float(project.latitude), float(project.longitude))
-                employee_location = (emp_lat, emp_lon)
-                distance_project = geodesic(employee_location, project_location).meters
+                has_proj_coords = project and project.latitude is not None and project.longitude is not None
+                company = employee.department.company if (employee.department and employee.department.company) else None
+                has_comp_coords = company and company.latitude is not None and company.longitude is not None
 
-                company = employee.department.company
-                company_location = (float(company.latitude), float(company.longitude))
-                distance_company = geodesic(employee_location, company_location).meters
+                employee_location = (emp_lat, emp_lon)
+                distance_project = geodesic(employee_location, (float(project.latitude), float(project.longitude))).meters if has_proj_coords else float('inf')
+                distance_company = geodesic(employee_location, (float(company.latitude), float(company.longitude))).meters if has_comp_coords else float('inf')
 
                 # Allow if within 50m of project OR company
-                if distance_project > 50 and distance_company > 50:
+                if (has_proj_coords or has_comp_coords) and distance_project > 50 and distance_company > 50:
                     return Response(
                         {"error": f"You are too far from project/company site "
                                 f"(Project: {int(distance_project)}m, Company: {int(distance_company)}m). "
@@ -92,26 +92,28 @@ class AttendanceSwipeView(APIView):
                     )
                 
             elif punch_type == "bench":
-                company = employee.department.company
-                company_location = (float(company.latitude), float(company.longitude))
-                employee_location = (emp_lat, emp_lon)
-                distance = geodesic(employee_location, company_location).meters
-                if distance > 50:
-                    return Response(
-                        {"error": f"Bench employees must punch from company location ({int(distance)}m). Allowed within 50m."},
-                        status=400
-                    )    
+                company = employee.department.company if (employee.department and employee.department.company) else None
+                if company and company.latitude is not None and company.longitude is not None:
+                    company_location = (float(company.latitude), float(company.longitude))
+                    employee_location = (emp_lat, emp_lon)
+                    distance = geodesic(employee_location, company_location).meters
+                    if distance > 50:
+                        return Response(
+                            {"error": f"Bench employees must punch from company location ({int(distance)}m). Allowed within 50m."},
+                            status=400
+                        )    
 
             elif punch_type == "company":
-                company = employee.department.company
-                company_location = (float(company.latitude), float(company.longitude))
-                employee_location = (emp_lat, emp_lon)
-                distance = geodesic(employee_location, company_location).meters
-                if distance > 50:
-                    return Response(
-                        {"error": f"You are too far from company location ({int(distance)}m). Must be within 50m."},
-                        status=400
-                    )
+                company = employee.department.company if (employee.department and employee.department.company) else None
+                if company and company.latitude is not None and company.longitude is not None:
+                    company_location = (float(company.latitude), float(company.longitude))
+                    employee_location = (emp_lat, emp_lon)
+                    distance = geodesic(employee_location, company_location).meters
+                    if distance > 50:
+                        return Response(
+                            {"error": f"You are too far from company location ({int(distance)}m). Must be within 50m."},
+                            status=400
+                        )
 
             elif punch_type == "variant":
                 # Variant employees can punch in/out from anywhere
@@ -239,7 +241,7 @@ class AddPunchOutNoteView(APIView):
     def patch(self, request):
         note = request.data.get('note', '').strip()
         user = request.user
-        employee = getattr(user, 'employee_db', None)
+        employee = getattr(user, 'employee_profile', getattr(user, 'employee_db', None))
 
         if not employee:
             return Response({'error': 'Employee not found'}, status=404)
@@ -472,7 +474,7 @@ class AttendanceDetailByDateView(APIView):
 
     def get(self, request):
         user = request.user
-        employee = getattr(user, 'employee_profile', None)
+        employee = getattr(user, 'employee_profile', getattr(user, 'employee_db', None))
         print("USER ID:", request.user.id)
         print("USERNAME:", request.user.username)
         print("HAS EMPLOYEE:", hasattr(request.user, "employee_db"))
@@ -722,11 +724,20 @@ class BackgroundLocationUpdateView(APIView):
         Return background location logs for the given employee filtered by date
         with pagination.
         """
+        company = getattr(request.user, "company", None)
+        if not company:
+            emp = getattr(request.user, "employee_profile", getattr(request.user, "employee_db", None))
+            if emp and emp.department:
+                company = emp.department.company
+
         try:
-            employee = Employee_db.objects.get(
-                id=employee_id, is_deleted=False,
-                department__company=request.user.company,
-            )
+            if company:
+                employee = Employee_db.objects.get(
+                    id=employee_id, is_deleted=False,
+                    department__company=company,
+                )
+            else:
+                employee = Employee_db.objects.get(id=employee_id, is_deleted=False)
         except Employee_db.DoesNotExist:
             return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -771,10 +782,20 @@ class BackgroundLocationUpdateView(APIView):
         Save background location updates from mobile app.
         Reverse geocode latitude & longitude to get location_name.
         """
+        company = getattr(request.user, "company", None)
+        if not company:
+            emp = getattr(request.user, "employee_profile", getattr(request.user, "employee_db", None))
+            if emp and emp.department:
+                company = emp.department.company
+
         try:
-            employee = Employee_db.objects.get(
-                id=employee_id, department__company=request.user.company
-            )
+            if company:
+                employee = Employee_db.objects.get(
+                    id=employee_id, is_deleted=False,
+                    department__company=company,
+                )
+            else:
+                employee = Employee_db.objects.get(id=employee_id, is_deleted=False)
         except Employee_db.DoesNotExist:
             return Response({"error": "Employee not found"}, status=status.HTTP_404_NOT_FOUND)
 
