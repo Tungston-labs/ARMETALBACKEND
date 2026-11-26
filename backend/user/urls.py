@@ -1,10 +1,10 @@
 from django.urls import path
-from .views import CustomTokenObtainPairView,LogoutView,ChangePasswordView,SendOTPView,VerifyOTPView,ResetPasswordView,UpdateFCMTokenView
+from .views import CustomTokenObtainPairView,LogoutView,ChangePasswordView,SendOTPView,VerifyOTPView,ResetPasswordView,UpdateFCMTokenView,SafeTokenRefreshView
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+     path('token/refresh/', SafeTokenRefreshView.as_view(), name='token_refresh'),
     path('logout/', LogoutView.as_view(), name='common-logout'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('forgot-password/send-otp/', SendOTPView.as_view()),

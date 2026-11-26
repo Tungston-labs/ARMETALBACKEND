@@ -6,7 +6,8 @@ User = get_user_model()
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
@@ -208,7 +209,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
         return data
 
-
+    
+class SafeTokenRefreshSerializer(TokenRefreshSerializer):
+     def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except User.DoesNotExist:
+            raise InvalidToken("User no longer exists")
+        
+        
 from rest_framework import serializers
 from .models import OTP, User
 
