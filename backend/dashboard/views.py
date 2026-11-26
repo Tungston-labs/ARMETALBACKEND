@@ -1141,7 +1141,7 @@ class WeeklyAttendanceStatsView(APIView):
                         continue
 
                     # Convert datetime to local time
-                    punch_time = first_time_in.time()
+                    punch_time = first_time_in
 
                     if punch_time > self.LATE_TIME:
                         late_count += 1
